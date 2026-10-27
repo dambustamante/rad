@@ -53,12 +53,18 @@ def revisar() -> list[tuple[str, str, str]]:
         if shutil.which(cliente):
             resultados.append((OK, cliente, "instalado"))
         else:
-            resultados.append((AVISO, cliente, f"necesario para /producto; instalar con: brew install {cliente}"))
-        resultados.append(_variable(env, variable_token, "necesario para /producto"))
+            resultados.append((AVISO, cliente, f"necesario en la fase 2 (comentarios en MR o PR); instalar con: brew install {cliente}"))
+        resultados.append(_variable(env, variable_token, "necesario en la fase 2 (comentarios en MR o PR)"))
     else:
-        resultados.append((AVISO, "GIT_PLATAFORMA", "definir gitlab o github en .env; necesario para /producto"))
+        resultados.append((AVISO, "GIT_PLATAFORMA", "definir gitlab o github en .env; necesario en la fase 2"))
 
-    for variable in ("SONAR_URL", "SONAR_ORGANIZACION", "SONAR_TOKEN"):
+    tipo_sonar = env.get("SONAR_TIPO", "").strip().lower()
+    if tipo_sonar in ("sonarqube", "sonarcloud"):
+        resultados.append((OK, "SONAR_TIPO", tipo_sonar))
+    else:
+        resultados.append((AVISO, "SONAR_TIPO", "definir sonarqube o sonarcloud en .env; necesario para /revisar"))
+    variables_sonar = ["SONAR_URL", "SONAR_TOKEN"] + (["SONAR_ORGANIZACION"] if tipo_sonar == "sonarcloud" else [])
+    for variable in variables_sonar:
         resultados.append(_variable(env, variable, "necesario para /revisar"))
 
     if shutil.which("gitleaks"):

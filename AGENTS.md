@@ -17,7 +17,7 @@ más alto en que aparece; los niveles inferiores solo lo referencian.
 | 1 | ADR de arquitectura vigentes | `arquitectura/` (espejo, solo lectura) |
 | 2 | Estándares de arquitectura vigentes | `arquitectura/` (espejo, solo lectura) |
 | 3 | Decisiones del equipo (ADR-EQ) vigentes | `equipo/` |
-| 4 | SonarCloud | API de SonarCloud |
+| 4 | Sonar (SonarQube o SonarCloud) | API de Sonar; solo lectura |
 
 - Arquitectura prevalece siempre. Si una decisión del equipo choca con arquitectura, la
   decisión del equipo queda suspendida hasta resolver el choque (`equipo/COHERENCIA.md`).
@@ -44,7 +44,7 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, pu
 
 1. **Solo lectura sobre lo ajeno.** `productos/*/repos/` y `arquitectura/` no se editan a mano.
    Nunca se hace commit, push, merge, MR ni PR en los repositorios de los productos.
-2. **Nada sale sin confirmación.** Ninguna escritura hacia la plataforma git, SonarCloud o Jira ocurre sin
+2. **Nada sale sin confirmación.** Ninguna escritura hacia la plataforma git, Sonar o Jira ocurre sin
    una vista previa y la confirmación explícita del usuario.
 3. **Nada se ejecuta solo.** Sin cron, tareas programadas ni procesos en segundo plano.
 4. **Sin secretos.** Las conexiones (URLs, organización) y los tokens viven solo en `.env`, que

@@ -6,7 +6,7 @@ contra:
 1. los ADR de arquitectura,
 2. los estándares de arquitectura,
 3. las decisiones del equipo (ADR-EQ),
-4. SonarCloud.
+4. Sonar (SonarQube, incluida la Community Edition, o SonarCloud).
 
 El resultado es una ficha por repositorio y por producto, con hallazgos respaldados por
 evidencia. `radiografia` no modifica los repositorios que revisa.
@@ -16,7 +16,7 @@ evidencia. `radiografia` no modifica los repositorios que revisa.
 - macOS con Python 3.11 o superior, `git` y `make`.
 - [Cursor](https://cursor.com), para los comandos que requieren criterio.
 - Acceso de lectura por git (SSH o HTTPS) a los repositorios de arquitectura y de los productos, en GitLab o GitHub.
-- Un token de SonarCloud y, para validar repositorios, un token de la plataforma git.
+- Un token de Sonar con permiso de lectura. El token de la plataforma git (GitLab o GitHub) se necesita recién en la fase 2.
 
 ## Inicio rápido
 

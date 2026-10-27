@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv doctor sync-arquitectura coherencia actualizar test
+.PHONY: help venv doctor sync-arquitectura coherencia repos actualizar test
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -26,7 +26,10 @@ coherencia: $(ENTORNO) ## Actualiza equipo/COHERENCIA.md y lista los pares por e
 	@$(PYTHON) herramientas/coherencia.py generar
 	@$(PYTHON) herramientas/coherencia.py preparar
 
-actualizar: doctor sync-arquitectura coherencia ## Ejecuta la parte automática de /actualizar
+repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los productos
+	@$(PYTHON) herramientas/productos.py sincronizar
+
+actualizar: doctor sync-arquitectura coherencia repos ## Ejecuta la parte automática de /actualizar
 
 test: $(ENTORNO) ## Ejecuta las pruebas de las herramientas
 	@$(PYTHON) -m unittest discover -s herramientas/pruebas -t herramientas/pruebas -v

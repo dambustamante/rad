@@ -22,7 +22,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from comun import RAIZ, ErrorRadiografia, cargar_config, git, normalizar
+from comun import RAIZ, ErrorRadiografia, actualizar_clon, cargar_config, git, normalizar, resolver_commit
 
 TIPOS = ("adr", "estandar", "referencia")
 VIGENCIAS = ("vigente", "pendiente", "no_vigente")
@@ -79,39 +79,17 @@ def leer_fuentes(config: dict) -> tuple[list[dict], dict[str, list[str]]]:
     return fuentes, {v: [str(e) for e in estados.get(v, [])] for v in VIGENCIAS}
 
 
-def resolver_url(url: str, raiz: Path) -> str:
-    """Una ruta local existente se usa como ruta absoluta; cualquier otra cosa es una URL de git."""
-    candidata = Path(url).expanduser()
-    if not candidata.is_absolute():
-        candidata = raiz / candidata
-    return str(candidata.resolve()) if candidata.is_dir() else url
-
-
 # --- Sincronización ----------------------------------------------------------------------------
 
 def sincronizar_fuente(fuente: dict, raiz: Path) -> str:
     """Deja la copia de la fuente en el commit de su ref y devuelve ese commit."""
-    url = resolver_url(fuente["url"], raiz)
     cache = raiz / ".cache" / "arquitectura" / fuente["id"]
-    if (cache / ".git").exists():
-        git("remote", "set-url", "origin", url, cwd=cache)
-        git("fetch", "--quiet", "--prune", "--tags", "--force", "origin", cwd=cache)
-    else:
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        if cache.exists():
-            shutil.rmtree(cache)
-        git("clone", "--quiet", url, str(cache))
-
-    commit = None
-    for candidato in (f"origin/{fuente['ref']}", f"refs/tags/{fuente['ref']}", fuente["ref"]):
-        try:
-            commit = git("rev-parse", "--verify", "--quiet", f"{candidato}^{{commit}}", cwd=cache)
-            break
-        except ErrorRadiografia:
-            continue
-    if not commit:
-        raise ErrorRadiografia(f"La ref '{fuente['ref']}' no existe en la fuente '{fuente['id']}'.")
-    git("checkout", "--quiet", "--detach", commit, cwd=cache)
+    actualizar_clon(fuente["url"], cache, raiz)
+    try:
+        commit = resolver_commit(cache, fuente["ref"])
+    except ErrorRadiografia as error:
+        raise ErrorRadiografia(f"La ref '{fuente['ref']}' no existe en la fuente '{fuente['id']}'.") from error
+    git("checkout", "--quiet", "--force", "--detach", commit, cwd=cache)
 
     origen = (cache / fuente["ruta"]).resolve()
     if not origen.is_dir() or cache.resolve() not in (origen, *origen.parents):

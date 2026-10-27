@@ -17,18 +17,16 @@ ref y la ruta existan antes de escribir harness.yaml. Los comentarios de harness
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
-import shutil
 import sys
 from pathlib import Path
 
-from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from comun import RAIZ, ErrorRadiografia, git
-from sync_arquitectura import PATRON_ID_ADR, TIPOS, VIGENCIAS, leer_fuentes, resolver_url, secciones
+from comun import (RAIZ, ErrorRadiografia, clon_de_inspeccion, escribir_yaml_conservador, git,
+                   leer_yaml_conservador, rama_por_defecto, resolver_commit, ruta_existe)
+from sync_arquitectura import PATRON_ID_ADR, TIPOS, VIGENCIAS, leer_fuentes, secciones
 
 CARPETAS_IGNORADAS = {".git", "node_modules", "site", "dist", "build"}
 PROFUNDIDAD_MAXIMA = 5
@@ -36,24 +34,12 @@ PROFUNDIDAD_MAXIMA = 5
 
 # --- harness.yaml conservando comentarios ------------------------------------------------------
 
-def _yaml() -> YAML:
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.width = 120
-    return yaml
-
-
 def leer_harness(raiz: Path):
-    archivo = raiz / "harness.yaml"
-    if not archivo.exists():
-        raise ErrorRadiografia(f"No existe {archivo}.")
-    return _yaml().load(archivo.read_text(encoding="utf-8"))
+    return leer_yaml_conservador(raiz / "harness.yaml")
 
 
 def escribir_harness(raiz: Path, datos) -> None:
-    with (raiz / "harness.yaml").open("w", encoding="utf-8") as archivo:
-        _yaml().dump(datos, archivo)
+    escribir_yaml_conservador(raiz / "harness.yaml", datos)
 
 
 def lista_fuentes(datos) -> CommentedSeq:
@@ -65,61 +51,11 @@ def lista_fuentes(datos) -> CommentedSeq:
     return fuentes
 
 
-# --- Repositorio en caché ----------------------------------------------------------------------
-
-def preparar_repositorio(url: str, raiz: Path) -> Path:
-    """Clona o actualiza el repositorio en .cache/inspeccion/ y devuelve su carpeta."""
-    url_resuelta = resolver_url(url, raiz)
-    clave = hashlib.sha1(url_resuelta.encode("utf-8")).hexdigest()[:12]
-    cache = raiz / ".cache" / "inspeccion" / clave
-    try:
-        if (cache / ".git").exists():
-            git("fetch", "--quiet", "--prune", "--tags", "--force", "origin", cwd=cache)
-        else:
-            cache.parent.mkdir(parents=True, exist_ok=True)
-            if cache.exists():
-                shutil.rmtree(cache)
-            git("clone", "--quiet", "--no-checkout", url_resuelta, str(cache))
-    except ErrorRadiografia as error:
-        raise ErrorRadiografia(f"No se pudo acceder a '{url}'. Verifique la URL y sus credenciales de git. Detalle: {error}") from error
-    return cache
-
-
-def rama_por_defecto(cache: Path) -> str:
-    try:
-        return git("symbolic-ref", "--short", "refs/remotes/origin/HEAD", cwd=cache).removeprefix("origin/")
-    except ErrorRadiografia:
-        ramas = git("branch", "-r", "--format=%(refname:short)", cwd=cache).split()
-        for candidata in ("origin/main", "origin/master"):
-            if candidata in ramas:
-                return candidata.removeprefix("origin/")
-        raise ErrorRadiografia("No se pudo determinar la rama por defecto del repositorio.")
-
-
-def resolver_commit(cache: Path, ref: str) -> str:
-    for candidato in (f"origin/{ref}", f"refs/tags/{ref}", ref):
-        try:
-            return git("rev-parse", "--verify", "--quiet", f"{candidato}^{{commit}}", cwd=cache)
-        except ErrorRadiografia:
-            continue
-    raise ErrorRadiografia(f"La ref '{ref}' no existe en el repositorio.")
-
-
-def ruta_existe(cache: Path, commit: str, ruta: str) -> bool:
-    ruta = ruta.strip("/")
-    if ruta in ("", "."):
-        return True
-    try:
-        return git("cat-file", "-t", f"{commit}:{ruta}", cwd=cache) == "tree"
-    except ErrorRadiografia:
-        return False
-
-
 # --- Inspección --------------------------------------------------------------------------------
 
 def inspeccionar(url: str, raiz: Path) -> dict:
     """Describe el repositorio para proponer fuentes: rama por defecto y carpetas con documentos."""
-    cache = preparar_repositorio(url, raiz)
+    cache = clon_de_inspeccion(url, raiz)
     rama = rama_por_defecto(cache)
     commit = resolver_commit(cache, rama)
     archivos = git("ls-tree", "-r", "--name-only", commit, cwd=cache).splitlines()
@@ -180,7 +116,7 @@ def agregar(raiz: Path, id_fuente: str, url: str, ref: str, ruta: str, tipo: str
     if estado_por_defecto and estado_por_defecto not in VIGENCIAS:
         raise ErrorRadiografia(f"estado_por_defecto inválido; valores válidos: {', '.join(VIGENCIAS)}.")
 
-    cache = preparar_repositorio(url, raiz)
+    cache = clon_de_inspeccion(url, raiz)
     commit = resolver_commit(cache, ref)
     if not ruta_existe(cache, commit, ruta):
         raise ErrorRadiografia(f"La ruta '{ruta}' no existe en la ref '{ref}' de '{url}'.")

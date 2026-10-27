@@ -70,7 +70,7 @@ HTTP (`ruta:línea`)" sí lo es.
 
 | Principio | Señal a buscar |
 |---|---|
-| S | Una clase o servicio mezcla reglas de negocio, acceso a datos y llamadas a sistemas externos; clases de gran tamaño o complejidad (SonarCloud aporta el dato) |
+| S | Una clase o servicio mezcla reglas de negocio, acceso a datos y llamadas a sistemas externos; clases de gran tamaño o complejidad (Sonar aporta el dato) |
 | O | Cadenas de `if` o `switch` por tipo que crecen con cada variante (por ejemplo, por tipo de transacción o de regla) |
 | L | Implementaciones que lanzan "operación no soportada" o ignoran el contrato de su abstracción |
 | I | Interfaces grandes con implementaciones vacías o que lanzan excepciones |
