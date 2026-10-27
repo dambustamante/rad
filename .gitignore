@@ -1,0 +1,13 @@
+# Entorno y secretos
+.venv/
+.env
+__pycache__/
+*.pyc
+
+# Copias de trabajo descargadas (no se versionan)
+.cache/
+productos/*/repos/
+productos/*/reportes/*/crudo/
+
+# Sistema
+.DS_Store

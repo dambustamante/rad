@@ -1,0 +1,31 @@
+# Configuración global de radiografia.
+# Las conexiones (URLs, organización) y los tokens no van aquí: viven en .env (ver .env.example).
+
+version: 1
+
+arquitectura:
+  # Repositorios git donde arquitectura publica sus documentos (GitLab, GitHub o una carpeta local).
+  # Se administran con el comando /arquitectura. /actualizar los copia en arquitectura/<id>/ y
+  # registra el commit en arquitectura/fuentes.lock.
+  #
+  # Campos de cada fuente:
+  #   id: decision-records          nombre de la carpeta en arquitectura/
+  #   url: git@gitlab.com:grupo/proyecto.git   URL de git o ruta local
+  #   ref: main                     rama o tag a seguir
+  #   ruta: docs/adrs               carpeta dentro del repositorio
+  #   tipo: adr                     adr | estandar | referencia
+  #   estado_por_defecto: vigente   opcional: vigencia de los documentos sin sección "Estado"
+  #                                 (útil para estándares); sin este campo son NO DETERMINADO
+  fuentes: []
+
+  # Cómo se interpreta la sección "Estado" de cada documento.
+  # Un valor que no aparezca en estas listas se reporta como NO DETERMINADO.
+  estados:
+    vigente: [Aprobado]
+    pendiente: [Propuesto, En revisión]
+    no_vigente: [Reemplazado, Deprecado, Rechazado, Obsoleto]
+
+publicacion:
+  # Fuentes (ADR o reglas) cuyos hallazgos pueden publicarse en un MR o PR (fase 2).
+  # Vacía: no se publica nada. Se agrega una fuente solo cuando su tasa de falsos positivos es baja.
+  publicables: []
