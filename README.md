@@ -43,7 +43,7 @@ El orden habitual es:
 | 1 | `/arquitectura` | pide los repositorios de arquitectura, los inspecciona y propone las fuentes |
 | 2 | `/actualizar` | descarga los documentos, genera `arquitectura/INDICE.md` y verifica que las decisiones del equipo no choquen con arquitectura (`equipo/COHERENCIA.md`) |
 | 3 | `/producto <nombre>` | pide los repositorios del producto, los inspecciona y los registra |
-| 3b | `/adr <producto>` | opcional: reglas propias del producto, mejoras a partir de hallazgos y excepciones con vencimiento |
+| 3b | `/adr <producto>` | opcional: reglas propias del producto, mejoras a partir de hallazgos, excepciones con vencimiento y ADR propuestos desde las historias de Jira (`--desde-historias`) |
 | 4 | `/revisar <producto>` | revisa **un repositorio por conversación**: parte automática, AS IS, comparación con lo decidido y C4 inferido. Abrir un chat nuevo para cada repositorio |
 | 5 | `/triar <producto>` | genera un archivo para marcar la decisión sobre cada hallazgo y muestra la calibración |
 
@@ -96,6 +96,7 @@ productos/<producto>/
 ├── INDICE.md · producto.yaml
 ├── decisiones/               nivel 3: ADR-<SIGLA>-NNN, su INDICE.md y su COHERENCIA.md
 ├── proveedor/                documentación del producto comprado, tal cual llega, y su INDICE.md
+├── historias/                historias de usuario (Jira o CSV): INDICE.md con cambios y candidatas a ADR
 ├── as-is/                    fichas por repositorio y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión
 ├── triaje/ · agendas/

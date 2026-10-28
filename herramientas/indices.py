@@ -99,6 +99,10 @@ def indice_producto(raiz: Path, producto: str) -> Path:
     lineas += ["", "## Accesos", ""]
     if lineas_proveedor:
         lineas.append(lineas_proveedor)
+    if (carpeta / "historias" / "INDICE.md").exists():
+        import historias
+        lineas.append(f"- Historias de usuario: [historias/INDICE.md](historias/INDICE.md) "
+                      f"({len(historias.candidatas(raiz, producto))} candidata(s) por analizar)")
     if (carpeta / "as-is" / "PRODUCTO.md").exists():
         lineas.append("- AS IS del producto: [as-is/PRODUCTO.md](as-is/PRODUCTO.md)")
     if revisiones:

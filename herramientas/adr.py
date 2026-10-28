@@ -3,6 +3,7 @@
 Uso:
   python herramientas/adr.py listar <producto>
   python herramientas/adr.py nuevo <producto> --tipo decision|mejora|excepcion --titulo TEXTO [--desde H-0001,H-0002]
+                                   [--historias CLAVE-1,CLAVE-2]
   python herramientas/adr.py validar <producto> [--id ADR-XX-NNN]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
@@ -159,7 +160,7 @@ def slug(texto: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", normalizar(texto)).strip("-")[:60] or "decision"
 
 
-def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str]) -> Path:
+def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], historias: list[str] | None = None) -> Path:
     if tipo not in TIPOS:
         raise ErrorRadiografia(f"Tipo '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}.")
     if producto not in productos.leer_productos(raiz):
@@ -197,8 +198,27 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str]) -
                               + "\n".join(filas) + "\n", 1)
         texto = texto.replace("- **Hallazgos de origen:** —", f"- **Hallazgos de origen:** {', '.join(desde)}", 1)
 
+    if historias:
+        import historias as modulo_historias
+        guardadas, analisis = modulo_historias.historias_de(raiz, producto), modulo_historias.analisis_de(raiz, producto)
+        inexistentes = [c for c in historias if c not in guardadas]
+        if inexistentes:
+            raise ErrorRadiografia(f"Historias que no existen (ejecutar historias.py sincronizar): {', '.join(inexistentes)}.")
+        filas = ["| Historia | Tipo | Título | Requisito citado |", "|---|---|---|---|"]
+        for clave in historias:
+            h = guardadas[clave]
+            enlace = f"[{clave}]({h['url']})" if h.get("url") else clave
+            cita = (analisis.get(clave) or {}).get("cita") or (h.get("criterios") or "NO DETERMINADO").split("\n")[0]
+            filas.append(f"| {enlace} | {h.get('tipo') or '—'} | {h['titulo'].replace('|', '/')} | {str(cita).replace('|', '/')} |")
+        texto = texto.replace("- **Restricciones:** <técnicas, regulatorias u operativas>",
+                              "- **Restricciones:** <técnicas, regulatorias u operativas>\n- **Historias que la originan:**\n\n"
+                              + "\n".join(filas) + "\n", 1)
+        texto = texto.replace("- **Historias de origen:** —", f"- **Historias de origen:** {', '.join(historias)}", 1)
+
     archivo = carpeta / f"{id_adr}-{slug(titulo)}.md"
     archivo.write_text(texto, encoding="utf-8")
+    if historias:
+        modulo_historias.vincular(raiz, producto, id_adr, historias)
     return archivo
 
 
@@ -207,9 +227,13 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str]) -
 def listar(raiz: Path, producto: str) -> list[dict]:
     if producto not in productos.leer_productos(raiz):
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
+    import historias as modulo_historias
+    avisos = modulo_historias.atencion(raiz, producto)
     filas = []
     for adr in leer_decisiones_producto(raiz, producto).values():
         efecto = estado_excepcion(adr) if adr["tipo"] == "excepcion" else ("se evalúa" if adr["tipo"] == "decision" and adr["evaluado"] else "—")
+        if adr["id"] in avisos:
+            efecto = f"{efecto} · revisar: {'; '.join(avisos[adr['id']])}"
         filas.append({"id": adr["id"], "titulo": adr["titulo"], "tipo": adr["tipo"], "estado": adr["estado"],
                       "vence": valor(adr["campos"], "vence"), "efecto": efecto, "archivo": Path(adr["archivo"]).name})
     carpeta = raiz / "productos" / producto / "decisiones"
@@ -236,6 +260,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--tipo", required=True, choices=TIPOS)
     p.add_argument("--titulo", required=True)
     p.add_argument("--desde", default="")
+    p.add_argument("--historias", default="")
     p = sub.add_parser("validar")
     p.add_argument("producto")
     p.add_argument("--id")
@@ -252,7 +277,8 @@ def main(argumentos: list[str] | None = None) -> int:
                       + (f" · vence {f['vence']}" if f["vence"] else ""))
         elif o.accion == "nuevo":
             ids = [i.strip() for i in o.desde.split(",") if i.strip()]
-            print(f"Creado: {nuevo(raiz, o.producto, o.tipo, o.titulo, ids).relative_to(raiz)}")
+            claves = [c.strip() for c in o.historias.split(",") if c.strip()]
+            print(f"Creado: {nuevo(raiz, o.producto, o.tipo, o.titulo, ids, claves).relative_to(raiz)}")
         if o.accion in ("listar", "nuevo"):
             import indices
             indices.indice_producto(raiz, o.producto)

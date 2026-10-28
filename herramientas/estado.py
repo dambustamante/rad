@@ -28,6 +28,7 @@ def dias_desde(fecha_iso: str | None) -> int | None:
 def revisar_estado(raiz: Path) -> dict:
     import adr
     import coherencia
+    import historias
     import hallazgos
     import productos
     import proveedor
@@ -54,7 +55,14 @@ def revisar_estado(raiz: Path) -> dict:
         ultima_revision = max((r["codigo"]["fecha"] for r in al_dia), default=None)
         consolidar = bool(repos) and len(al_dia) == len(repos) and (
             not producto_md.exists() or (ultima_revision and date.fromtimestamp(producto_md.stat().st_mtime).isoformat() < ultima_revision))
+        try:
+            fuente_historias = historias.leer_config(raiz, nombre)["fuente"]
+        except ErrorRadiografia:
+            fuente_historias = "ninguna"
         estado_productos.append({
+            "historias_fuente": fuente_historias,
+            "historias_pendientes": len(historias.candidatas(raiz, nombre)),
+            "historias_atencion": sorted(historias.atencion(raiz, nombre)),
             "nombre": nombre,
             "repos": len(repos),
             "sin_automatica": [r["repo"] for r in repos if r["situacion"] == "falta la parte automática"],
@@ -101,6 +109,12 @@ def que_sigue(estado: dict) -> list[str]:
             pasos.append(f"{p['nombre']}: {p['triaje']} hallazgo(s) esperando decisión: `/triar {p['nombre']}`.")
         if p["excepciones"]:
             pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/adr {p['nombre']}`.")
+        if p["historias_atencion"]:
+            pasos.append(f"{p['nombre']}: ADR con historias de origen modificadas o retiradas ({', '.join(p['historias_atencion'])}): "
+                         f"`/adr {p['nombre']}`.")
+        if p["historias_pendientes"]:
+            pasos.append(f"{p['nombre']}: {p['historias_pendientes']} historia(s) candidata(s) a ADR por analizar: "
+                         f"`/adr {p['nombre']} --desde-historias`.")
         if p["sin_indexar"]:
             pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) del proveedor sin indexar: ver "
                          f"`productos/{p['nombre']}/proveedor/INDICE.md`.")

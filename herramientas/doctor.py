@@ -67,6 +67,9 @@ def revisar() -> list[tuple[str, str, str]]:
     for variable in variables_sonar:
         resultados.append(_variable(env, variable, "necesario para /revisar"))
 
+    for variable in ("JIRA_URL", "JIRA_EMAIL", "JIRA_TOKEN"):
+        resultados.append(_variable(env, variable, "necesario solo para productos con historias en Jira"))
+
     if shutil.which("pdftotext"):
         resultados.append((OK, "pdftotext", "instalado"))
     else:

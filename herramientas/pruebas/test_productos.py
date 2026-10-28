@@ -182,6 +182,17 @@ class PruebaProductos(unittest.TestCase):
         codigo, salida = self.ejecutar("sigla", "motor-fraudes", "--asignar", "MF")
         self.assertIn("su sigla no se puede cambiar", salida)
 
+    def test_configurar_historias(self) -> None:
+        self.agregar("motor-fraudes", "fraude-core", self.java, "main")
+        codigo, salida = self.ejecutar("historias", "motor-fraudes", "--fuente", "jira")
+        self.assertIn("hay que indicar --jql o --tablero", salida)
+        codigo, salida = self.ejecutar("historias", "motor-fraudes", "--fuente", "jira", "--tablero", "12",
+                                       "--etiqueta", "motor-fraudes", "--campo-tipo", "Tipo")
+        self.assertEqual(codigo, 0, salida)
+        texto = (self.raiz / "productos" / "motor-fraudes" / "producto.yaml").read_text(encoding="utf-8")
+        self.assertIn("tablero: 12", texto)
+        self.assertIn("# Producto motor-fraudes", texto, "se conservan los comentarios")
+
 
 if __name__ == "__main__":
     unittest.main()

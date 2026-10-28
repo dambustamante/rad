@@ -41,8 +41,8 @@ herramientas (`.json`, `.lock`) viven siempre en una carpeta `estado/` y no se e
 arquitectura/        niveles 1 y 2: INDICE.md, decisiones/<fuente>/, estandares/<fuente>/, estado/
 equipo/              nivel 3: INDICE.md, COHERENCIA.md, decisiones/ (ADR-EQ), plantillas/, estado/
 productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), proveedor/ (documentación del
-                     producto comprado, tal cual llega), as-is/, revisiones/, triaje/, agendas/,
-                     estado/ (hallazgos.json, coherencia.json, texto extraído del proveedor), repos/
+                     producto comprado, tal cual llega), historias/ (índice de historias de usuario y
+                     exportaciones CSV), as-is/, revisiones/, triaje/, agendas/, estado/, repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
 .cursor/commands/    comandos de Cursor (/estado, /arquitectura, /actualizar, /producto, /adr, /revisar, /triar)
@@ -102,7 +102,7 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | `/arquitectura` | agrega o retira los repositorios de donde se descargan los documentos de arquitectura |
 | `/actualizar` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR-EQ y actualiza los repositorios |
 | `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
-| `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos y excepciones con vencimiento |
+| `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos, excepciones con vencimiento y propuestas a partir de historias de usuario de Jira |
 | `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 

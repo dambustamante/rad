@@ -80,6 +80,7 @@ renumera. En las decisiones del producto todos los criterios son de `revisión d
 - **Vence:** —
 - **Referencia de aprobación de arquitectura:** —
 - **Hallazgos de origen:** —
+- **Historias de origen:** —
 
 Valores:
 
@@ -92,3 +93,5 @@ Valores:
 - **Referencia de aprobación de arquitectura** (solo si exceptúa un documento de arquitectura):
   ticket, acta o correo. Sin ella, la excepción queda registrada pero inactiva.
 - **Hallazgos de origen** (solo `mejora`): `H-NNNN` separados por comas.
+- **Historias de origen**: claves de Jira (por ejemplo `FRAUD-123`) de las historias que originan la
+  decisión. Si una de ellas cambia o se retira, el ADR queda marcado para revisión.
