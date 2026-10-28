@@ -1,4 +1,5 @@
-"""Documentación del proveedor de un producto comprado: productos/<producto>/proveedor/.
+"""Documentación externa de un producto: la del proveedor (proveedor/) y la de cada integración con
+terceros (integraciones/<id>/docs/).
 
 Uso:
   python herramientas/proveedor.py indexar [<producto>]
@@ -148,24 +149,50 @@ def clasificar_contrato(archivo: Path, texto: str) -> dict | None:
             "titulo": info.get("title"), "version": str(info.get("version", "")), "operaciones": operaciones, "canales": canales}
 
 
-# --- Índice ------------------------------------------------------------------------------------
+# --- Colecciones de documentos ---------------------------------------------------------------
+#
+# Una colección es una carpeta de documentos externos que se indexa igual: la del proveedor
+# (`proveedor/`) y la de cada integración con terceros (`integraciones/<id>/docs/`). Los documentos
+# se identifican por su ruta dentro de la colección; los de una integración, con el prefijo
+# `integraciones/<id>/docs/`.
 
-def carpetas(raiz: Path, producto: str) -> tuple[Path, Path]:
+PREFIJO_INTEGRACIONES = "integraciones/"
+
+
+def base_producto(raiz: Path, producto: str) -> Path:
     base = raiz / "productos" / producto
     if not (base / "producto.yaml").exists():
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
-    return base / "proveedor", base / "estado" / "proveedor"
+    return base
 
 
-def indexar(raiz: Path, producto: str) -> dict:
-    origen, destino = carpetas(raiz, producto)
+def carpetas(raiz: Path, producto: str, coleccion: str = "proveedor") -> tuple[Path, Path]:
+    """(carpeta de originales, carpeta de estado) de una colección."""
+    base = base_producto(raiz, producto)
+    if coleccion == "proveedor":
+        return base / "proveedor", base / "estado" / "proveedor"
+    id_integracion = coleccion.removeprefix(PREFIJO_INTEGRACIONES).removesuffix("/docs")
+    return base / "integraciones" / id_integracion / "docs", base / "estado" / "integraciones" / id_integracion
+
+
+def colecciones(raiz: Path, producto: str) -> list[str]:
+    base = base_producto(raiz, producto)
+    nombres = ["proveedor"]
+    integraciones = base / "integraciones"
+    if integraciones.exists():
+        nombres += [f"{PREFIJO_INTEGRACIONES}{c.name}/docs" for c in sorted(integraciones.iterdir()) if (c / "docs").is_dir()]
+    return nombres
+
+
+def indexar_coleccion(raiz: Path, producto: str, coleccion: str) -> dict:
+    origen, destino = carpetas(raiz, producto, coleccion)
     origen.mkdir(parents=True, exist_ok=True)
     destino.mkdir(parents=True, exist_ok=True)
     archivo_indice = destino / "indice.json"
     anterior = json.loads(archivo_indice.read_text(encoding="utf-8")) if archivo_indice.exists() else {}
     documentos: dict[str, dict] = {}
     procesados = 0
-    for archivo in sorted(p for p in origen.rglob("*") if p.is_file() and p.name not in IGNORADOS):
+    for archivo in sorted(p for p in origen.rglob("*") if p.is_file() and p.name not in IGNORADOS | {".gitkeep"}):
         relativo = archivo.relative_to(origen).as_posix()
         huella = hashlib.sha256(archivo.read_bytes()).hexdigest()
         texto_extraido = destino / "texto" / f"{relativo}.txt"
@@ -189,16 +216,25 @@ def indexar(raiz: Path, producto: str) -> dict:
     for relativo in set(anterior) - set(documentos):
         (destino / "texto" / f"{relativo}.txt").unlink(missing_ok=True)
     archivo_indice.write_text(json.dumps(documentos, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-    escribir_indice_md(origen, producto, documentos)
-    return {"documentos": documentos, "procesados": procesados,
-            "eliminados": sorted(set(anterior) - set(documentos))}
+    titulo = (f"Documentación del proveedor de {producto}" if coleccion == "proveedor"
+              else f"Documentación de la integración {coleccion.removeprefix(PREFIJO_INTEGRACIONES).removesuffix('/docs')}")
+    escribir_indice_md(origen, titulo, documentos)
+    return {"documentos": documentos, "procesados": procesados, "eliminados": sorted(set(anterior) - set(documentos))}
 
 
-def escribir_indice_md(origen: Path, producto: str, documentos: dict[str, dict]) -> None:
+def indexar(raiz: Path, producto: str) -> dict:
+    """Indexa la documentación del proveedor y la de cada integración. Devuelve el resultado del proveedor
+    y, en `integraciones`, el de cada integración."""
+    resultado = indexar_coleccion(raiz, producto, "proveedor")
+    resultado["integraciones"] = {c: indexar_coleccion(raiz, producto, c) for c in colecciones(raiz, producto) if c != "proveedor"}
+    return resultado
+
+
+def escribir_indice_md(origen: Path, titulo: str, documentos: dict[str, dict]) -> None:
     contratos = [d for d in documentos.values() if d["contrato"]]
     otros = [d for d in documentos.values() if d["estado"] == "indexado" and not d["contrato"]]
     pendientes = [d for d in documentos.values() if d["estado"] != "indexado"]
-    lineas = [f"# Documentación del proveedor de {producto}", "",
+    lineas = [f"# {titulo}", "",
               "> Archivo generado por `herramientas/proveedor.py indexar`. No se edita a mano. Los documentos se "
               "copian tal cual en esta carpeta.", "",
               f"Documentos: {len(documentos)} · indexados: {len(documentos) - len(pendientes)} · no indexados: {len(pendientes)}", ""]
@@ -225,43 +261,59 @@ def escribir_indice_md(origen: Path, producto: str, documentos: dict[str, dict])
     (origen / "INDICE.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
 
-def documentos_indexados(raiz: Path, producto: str) -> dict[str, dict]:
-    _, destino = carpetas(raiz, producto)
+def documentos_indexados(raiz: Path, producto: str, coleccion: str = "proveedor") -> dict[str, dict]:
+    _, destino = carpetas(raiz, producto, coleccion)
     archivo = destino / "indice.json"
     return json.loads(archivo.read_text(encoding="utf-8")) if archivo.exists() else {}
 
 
-def texto_de(raiz: Path, producto: str, relativo: str) -> str:
-    _, destino = carpetas(raiz, producto)
-    documento = documentos_indexados(raiz, producto).get(relativo)
+def separar(ruta: str) -> tuple[str, str]:
+    """(colección, ruta dentro de la colección) a partir de una ruta como la cita el usuario."""
+    ruta = ruta.removeprefix("proveedor/")
+    if ruta.startswith(PREFIJO_INTEGRACIONES):
+        partes = ruta.split("/", 3)
+        if len(partes) < 4 or partes[2] != "docs":
+            raise ErrorRadiografia(f"Ruta '{ruta}' inválida; formato: integraciones/<id>/docs/<archivo>.")
+        return "/".join(partes[:3]), partes[3]
+    return "proveedor", ruta
+
+
+def texto_de(raiz: Path, producto: str, ruta: str) -> str:
+    coleccion, relativo = separar(ruta)
+    _, destino = carpetas(raiz, producto, coleccion)
+    documento = documentos_indexados(raiz, producto, coleccion).get(relativo)
+    donde = "la documentación del proveedor (ver proveedor/INDICE.md)" if coleccion == "proveedor" else f"{coleccion}/INDICE.md"
     if documento is None:
-        raise ErrorRadiografia(f"'{relativo}' no está en la documentación del proveedor (ver proveedor/INDICE.md).")
+        raise ErrorRadiografia(f"'{ruta}' no está en {donde}." if coleccion != "proveedor" else
+                               f"'{ruta}' no está en la documentación del proveedor (ver proveedor/INDICE.md).")
     if documento["estado"] != "indexado":
-        raise ErrorRadiografia(f"'{relativo}' no está indexado: {documento['motivo']}.")
+        raise ErrorRadiografia(f"'{ruta}' no está indexado: {documento['motivo']}.")
     return (destino / "texto" / f"{relativo}.txt").read_text(encoding="utf-8")
 
 
 # --- Búsqueda ----------------------------------------------------------------------------------
 
 def buscar(raiz: Path, producto: str, consulta: str, limite: int = 20) -> list[dict]:
-    """Coincidencias de todas las palabras de la consulta en una misma línea, con página si la hay."""
+    """Coincidencias de todas las palabras en una misma línea, en todas las colecciones, con página si la hay."""
     palabras = [normalizar(p) for p in consulta.split() if p.strip()]
     if not palabras:
         raise ErrorRadiografia("La búsqueda necesita al menos una palabra.")
     resultados = []
-    for relativo, documento in sorted(documentos_indexados(raiz, producto).items()):
-        if documento["estado"] != "indexado":
-            continue
-        pagina = 1
-        # split("\n") y no splitlines(): splitlines() descarta el salto de página que marca el cambio de página.
-        for numero, linea in enumerate(texto_de(raiz, producto, relativo).split("\n"), start=1):
-            pagina += linea.count(SALTO_PAGINA)
-            if all(p in normalizar(linea) for p in palabras):
-                resultados.append({"archivo": relativo, "linea": numero,
-                                   "pagina": pagina if documento["paginas"] else None,
-                                   "texto": " ".join(linea.replace(SALTO_PAGINA, " ").split())[:200]})
-                if len(resultados) >= limite:
-                    return resultados
+    for coleccion in colecciones(raiz, producto):
+        prefijo = "" if coleccion == "proveedor" else f"{coleccion}/"
+        for relativo, documento in sorted(documentos_indexados(raiz, producto, coleccion).items()):
+            if documento["estado"] != "indexado":
+                continue
+            pagina = 1
+            # split("\n") y no splitlines(): splitlines() descarta el salto de página que marca el cambio de página.
+            for numero, linea in enumerate(texto_de(raiz, producto, prefijo + relativo).split("\n"), start=1):
+                pagina += linea.count(SALTO_PAGINA)
+                if all(p in normalizar(linea) for p in palabras):
+                    resultados.append({"archivo": prefijo + relativo, "linea": numero,
+                                       "pagina": pagina if documento["paginas"] else None,
+                                       "texto": " ".join(linea.replace(SALTO_PAGINA, " ").split())[:200]})
+                    if len(resultados) >= limite:
+                        return resultados
     return resultados
 
 
@@ -272,7 +324,7 @@ def productos_con_proveedor(raiz: Path) -> list[str]:
 # --- Programa principal ------------------------------------------------------------------------
 
 def main(argumentos: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Documentación del proveedor.")
+    parser = argparse.ArgumentParser(description="Documentación del proveedor y de las integraciones.")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
     sub = parser.add_subparsers(dest="accion", required=True)
     p = sub.add_parser("indexar")
@@ -287,17 +339,20 @@ def main(argumentos: list[str] | None = None) -> int:
         if o.accion == "indexar":
             for producto in [o.producto] if o.producto else productos_con_proveedor(raiz):
                 r = indexar(raiz, producto)
-                docs = r["documentos"].values()
-                no_indexados = [d for d in docs if d["estado"] != "indexado"]
-                if not r["documentos"]:
-                    print(f"[{producto}] Sin documentación del proveedor (copiar los archivos en productos/{producto}/proveedor/).")
-                    continue
-                print(f"[{producto}] {len(r['documentos'])} documento(s), {sum(1 for d in docs if d['contrato'])} contrato(s), "
-                      f"{len(no_indexados)} no indexado(s). Procesados ahora: {r['procesados']}.")
-                for d in no_indexados:
-                    print(f"  No indexado: {d['archivo']}: {d['motivo']}")
-                if r["eliminados"]:
-                    print(f"  Ya no están: {', '.join(r['eliminados'])}")
+                for coleccion, resultado in [("proveedor", r), *r["integraciones"].items()]:
+                    docs = resultado["documentos"].values()
+                    no_indexados = [d for d in docs if d["estado"] != "indexado"]
+                    if not resultado["documentos"]:
+                        if coleccion == "proveedor":
+                            print(f"[{producto}] Sin documentación del proveedor (copiar los archivos en productos/{producto}/proveedor/).")
+                        continue
+                    print(f"[{producto}] {coleccion}: {len(resultado['documentos'])} documento(s), "
+                          f"{sum(1 for d in docs if d['contrato'])} contrato(s), {len(no_indexados)} no indexado(s). "
+                          f"Procesados ahora: {resultado['procesados']}.")
+                    for d in no_indexados:
+                        print(f"  No indexado: {d['archivo']}: {d['motivo']}")
+                    if resultado["eliminados"]:
+                        print(f"  Ya no están: {', '.join(resultado['eliminados'])}")
                 import indices
                 indices.indice_producto(raiz, producto)
         elif o.accion == "buscar":

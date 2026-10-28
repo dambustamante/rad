@@ -29,6 +29,7 @@ def revisar_estado(raiz: Path) -> dict:
     import adr
     import coherencia
     import historias
+    import integraciones
     import hallazgos
     import productos
     import proveedor
@@ -60,6 +61,7 @@ def revisar_estado(raiz: Path) -> dict:
         except ErrorRadiografia:
             fuente_historias = "ninguna"
         estado_productos.append({
+            "integraciones_incompletas": [f["id"] for f in integraciones.listar(raiz, nombre) if f["errores"] or f["pendientes"]],
             "historias_fuente": fuente_historias,
             "historias_pendientes": len(historias.candidatas(raiz, nombre)),
             "historias_atencion": sorted(historias.atencion(raiz, nombre)),
@@ -109,6 +111,9 @@ def que_sigue(estado: dict) -> list[str]:
             pasos.append(f"{p['nombre']}: {p['triaje']} hallazgo(s) esperando decisión: `/triar {p['nombre']}`.")
         if p["excepciones"]:
             pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/adr {p['nombre']}`.")
+        if p["integraciones_incompletas"]:
+            pasos.append(f"{p['nombre']}: fichas de integración por completar ({', '.join(p['integraciones_incompletas'])}): "
+                         f"`/producto {p['nombre']}` → integraciones.")
         if p["historias_atencion"]:
             pasos.append(f"{p['nombre']}: ADR con historias de origen modificadas o retiradas ({', '.join(p['historias_atencion'])}): "
                          f"`/adr {p['nombre']}`.")

@@ -99,6 +99,13 @@ def indice_producto(raiz: Path, producto: str) -> Path:
     lineas += ["", "## Accesos", ""]
     if lineas_proveedor:
         lineas.append(lineas_proveedor)
+    if (carpeta / "integraciones").exists():
+        import integraciones
+        fichas = integraciones.listar(raiz, producto)
+        if fichas:
+            incompletas = sum(1 for f in fichas if f["errores"] or f["pendientes"])
+            lineas.append(f"- Integraciones con terceros: [integraciones/INDICE.md](integraciones/INDICE.md) "
+                          f"({len(fichas)} ficha(s), {incompletas} por completar)")
     if (carpeta / "historias" / "INDICE.md").exists():
         import historias
         lineas.append(f"- Historias de usuario: [historias/INDICE.md](historias/INDICE.md) "

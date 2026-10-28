@@ -9,6 +9,7 @@ __pycache__/
 productos/*/repos/
 productos/*/revisiones/*/crudo/
 productos/*/estado/proveedor/texto/
+productos/*/estado/integraciones/*/texto/
 
 # Sistema
 .DS_Store

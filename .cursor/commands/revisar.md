@@ -132,8 +132,9 @@ Reglas del registro:
   reformular para que pase.
 - `incumplimiento` exige `cita_documento`. Sin cita, el hallazgo es `diseño`, `error` o `deuda`.
 - Si la evidencia viene de la documentación del proveedor (un contrato, un código de error, un tiempo
-  o un límite que el código no respeta), agregar `documento_proveedor` (ruta dentro de `proveedor/`)
-  y `cita_proveedor` (texto copiado tal cual). Para encontrar el texto:
+  o un límite que el código no respeta), agregar `documento_proveedor` (ruta dentro de `proveedor/`,
+  o `integraciones/<id>/docs/<archivo>` para la documentación de un tercero) y `cita_proveedor`
+  (texto copiado tal cual). Para encontrar el texto:
   `.venv/bin/python herramientas/proveedor.py buscar <producto> "<palabras>"`.
 - Severidad de un criterio de un ADR-EQ: la de su tabla, salvo motivo explícito en el detalle.
 - No repetir los hallazgos automáticos ni los de Sonar del paquete. Si un problema ya está como

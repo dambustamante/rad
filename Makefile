@@ -32,7 +32,7 @@ coherencia: $(ENTORNO) ## Actualiza equipo/COHERENCIA.md y lista los pares por e
 repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los productos
 	@$(PYTHON) herramientas/productos.py sincronizar
 
-proveedor: $(ENTORNO) ## Indexa la documentación del proveedor de todos los productos
+proveedor: $(ENTORNO) ## Indexa la documentación del proveedor y de las integraciones de todos los productos
 	@$(PYTHON) herramientas/proveedor.py indexar
 
 historias: $(ENTORNO) ## Sincroniza las historias de usuario de los productos que las tienen configuradas

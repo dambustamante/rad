@@ -96,6 +96,7 @@ productos/<producto>/
 ├── INDICE.md · producto.yaml
 ├── decisiones/               nivel 3: ADR-<SIGLA>-NNN, su INDICE.md y su COHERENCIA.md
 ├── proveedor/                documentación del producto comprado, tal cual llega, y su INDICE.md
+├── integraciones/<id>/       ficha (integracion.yaml) y documentación de cada tercero; INDICE.md
 ├── historias/                historias de usuario (Jira o CSV): INDICE.md con cambios y candidatas a ADR
 ├── as-is/                    fichas por repositorio y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión

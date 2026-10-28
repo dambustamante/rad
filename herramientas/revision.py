@@ -35,6 +35,7 @@ from datetime import date
 from pathlib import Path
 
 import hallazgos as registro_hallazgos
+import integraciones
 import productos
 import proveedor
 import verificaciones
@@ -310,6 +311,24 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
                    "Las evaluaciones heredadas se conservan al cerrar; si un archivo cambiado afecta a alguna, incluirla en el lote.",
                    "", "Archivos cambiados:", ""]
         lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
+        lineas.append("")
+
+    fichas = integraciones.para_repo(raiz, producto, repo)
+    if fichas:
+        lineas += ["## Integraciones declaradas", "",
+                   "Fichas de `integraciones/` que corresponden a este repositorio. Contrastarlas con el código: integraciones "
+                   "del código sin ficha (EQ-001.6, EQ-002.5), timeouts frente al p95 del tercero (EQ-003.1), política ante "
+                   "falla declarada frente a la implementada (EQ-003.4; la ficha cuenta como documentación de la política). "
+                   f"Su documentación se busca con `proveedor.py buscar {producto}` y se cita como "
+                   "`integraciones/<id>/docs/<archivo>`.", "",
+                   "| Integración | Dirección | Protocolo | Autenticación | p95 (ms) | Límite (rps) | Política ante falla | Contrato |",
+                   "|---|---|---|---|---|---|---|---|"]
+        for f in fichas:
+            sla, limites = f.get("sla") or {}, f.get("limites") or {}
+            lineas.append(f"| `{f['id']}` {f.get('nombre') or ''} | {f.get('direccion')} | {f.get('protocolo')} | {f.get('autenticacion')} "
+                          f"| {sla.get('p95_ms') if sla.get('p95_ms') is not None else '—'} "
+                          f"| {limites.get('rps') if limites.get('rps') is not None else '—'} | {f.get('politica_ante_falla')} "
+                          f"| {('integraciones/' + f['id'] + '/docs/' + f['contrato']) if f.get('contrato') else '—'} |")
         lineas.append("")
 
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
