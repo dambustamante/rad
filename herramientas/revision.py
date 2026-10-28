@@ -5,9 +5,11 @@ Uso:
   python herramientas/revision.py paquete <producto> <repo>
   python herramientas/revision.py evaluar <producto> <repo> --fuente F [--criterio C] --resultado R --motivo TEXTO
                                           [--evidencia ruta:línea ...] [--cita-documento TEXTO]
+                                          [--documento-proveedor RUTA --cita-proveedor TEXTO]
   python herramientas/revision.py hallazgo <producto> <repo> --fuente F [--criterio C] --categoria CAT --severidad SEV
                                            --titulo TEXTO --detalle TEXTO --evidencia ruta:línea [--evidencia ...]
                                            --fragmento TEXTO [--cita-documento TEXTO]
+                                           [--documento-proveedor RUTA --cita-proveedor TEXTO]
   python herramientas/revision.py cerrar <producto> <repo> [--archivos-leidos N]
   python herramientas/revision.py producto <producto> [--narrativa ARCHIVO]
 
@@ -30,6 +32,7 @@ from pathlib import Path
 
 import hallazgos as registro_hallazgos
 import productos
+import proveedor
 import verificaciones
 from adr import excepciones_activas, excepciones_pendientes
 from coherencia import (cita_existe, leer_arquitectura_vigente, leer_decisiones_producto, suspendidos as criterios_suspendidos,
@@ -230,6 +233,23 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
         lineas += [f"- `{c['archivo']}:{c['linea']}` {c['fragmento'][:100]}" for c in coincidencias] or ["Ninguna."]
         lineas.append("")
 
+    documentos_proveedor = proveedor.documentos_indexados(raiz, producto)
+    if documentos_proveedor:
+        contratos = [d for d in documentos_proveedor.values() if d["contrato"]]
+        otros = [d for d in documentos_proveedor.values() if d["estado"] == "indexado" and not d["contrato"]]
+        lineas += ["## Documentación del proveedor", "",
+                   "Usarla cuando el repositorio integra el producto comprado o expone algo que el proveedor define: "
+                   "verificar que el código respete sus contratos, códigos de error, tiempos y límites. Buscar con "
+                   f"`.venv/bin/python herramientas/proveedor.py buscar {producto} \"<palabras>\"`; el texto de cada documento "
+                   f"está en `productos/{producto}/estado/proveedor/texto/<archivo>.txt`.", ""]
+        lineas += [f"- Contrato `proveedor/{d['archivo']}`: {d['contrato']['tipo']} «{d['contrato']['titulo'] or '—'}» "
+                   f"versión {d['contrato']['version'] or '—'}" for d in contratos]
+        lineas += [f"- Documento `proveedor/{d['archivo']}`" + (f" ({d['paginas']} páginas)" if d["paginas"] else "") for d in otros]
+        sin_indexar = [d for d in documentos_proveedor.values() if d["estado"] != "indexado"]
+        if sin_indexar:
+            lineas.append(f"- {len(sin_indexar)} documento(s) no indexado(s): ver `proveedor/INDICE.md`")
+        lineas.append("")
+
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
     exceptuados = [e for e in control if e.get("exceptuado")]
     control = [e for e in control if not e.get("exceptuado")]
@@ -315,10 +335,23 @@ def texto_fuente(raiz: Path, elemento: dict) -> str:
     return (raiz / elemento["archivo"]).read_text(encoding="utf-8", errors="replace")
 
 
+def validar_cita_proveedor(raiz: Path, producto: str, documento: str | None, cita: str | None) -> dict | None:
+    """Valida una cita de la documentación del proveedor y la devuelve normalizada, o None si no hay."""
+    if not documento and not cita:
+        return None
+    if not documento or not cita:
+        raise ErrorRadiografia("--documento-proveedor y --cita-proveedor se usan juntos.")
+    documento = documento.removeprefix("proveedor/")
+    if not cita_existe(cita, proveedor.texto_de(raiz, producto, documento)):
+        raise ErrorRadiografia(f"La --cita-proveedor no aparece textualmente en '{documento}'. Copiarla tal como está escrita.")
+    return {"documento": documento, "texto": cita.strip()}
+
+
 # --- Registro de evaluaciones y hallazgos ------------------------------------------------------
 
 def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, resultado: str, motivo: str,
-            evidencias: list[str], cita_documento: str | None) -> None:
+            evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
+            cita_proveedor: str | None = None) -> None:
     ctx = contexto(raiz, producto, repo)
     if resultado not in RESULTADOS:
         raise ErrorRadiografia(f"Resultado '{resultado}' inválido; valores válidos: {', '.join(RESULTADOS)}.")
@@ -330,18 +363,20 @@ def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | N
         validar_evidencia(ctx["destino"], evidencia)
     if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
         raise ErrorRadiografia("La --cita-documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
+    cita_del_proveedor = validar_cita_proveedor(raiz, producto, documento_proveedor, cita_proveedor)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     trabajo["evaluaciones"][elemento["clave"]] = {
         "fuente": fuente, "criterio": criterio, "nivel": elemento["nivel"], "titulo": elemento["titulo"],
         "resultado": resultado, "motivo": motivo.strip(), "evidencia": lista, "cita_documento": cita_documento,
-        "modo": elemento["modo"],
+        "cita_proveedor": cita_del_proveedor, "modo": elemento["modo"],
     }
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
 
 
 def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, categoria: str,
                        severidad: str, titulo: str, detalle: str, evidencias: list[str], fragmento: str,
-                       cita_documento: str | None) -> None:
+                       cita_documento: str | None, documento_proveedor: str | None = None,
+                       cita_proveedor: str | None = None) -> None:
     ctx = contexto(raiz, producto, repo)
     if categoria not in CATEGORIAS:
         raise ErrorRadiografia(f"Categoría '{categoria}' inválida; valores válidos: {', '.join(CATEGORIAS)}.")
@@ -360,12 +395,13 @@ def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criter
         raise ErrorRadiografia("Un hallazgo de categoría 'incumplimiento' requiere --cita-documento con el texto incumplido.")
     if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
         raise ErrorRadiografia("La --cita-documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
+    cita_del_proveedor = validar_cita_proveedor(raiz, producto, documento_proveedor, cita_proveedor)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     trabajo["hallazgos"].append({
         "huella": registro_hallazgos.huella(repo, ctx["rama"], fuente, criterio, lista[0]["archivo"], texto_comparable(fragmento)),
         "nivel": elemento["nivel"], "fuente": fuente, "criterio": criterio, "categoria": categoria, "severidad": severidad,
         "titulo": titulo.strip(), "detalle": detalle.strip(), "evidencia": lista, "fragmento": fragmento.strip(),
-        "cita_documento": cita_documento, "origen": "revision", "modo": elemento["modo"],
+        "cita_documento": cita_documento, "cita_proveedor": cita_del_proveedor, "origen": "revision", "modo": elemento["modo"],
     })
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
 
@@ -528,6 +564,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--motivo", required=True)
     p.add_argument("--evidencia", action="append", default=[])
     p.add_argument("--cita-documento")
+    p.add_argument("--documento-proveedor")
+    p.add_argument("--cita-proveedor")
     p = sub.add_parser("hallazgo")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -540,6 +578,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--evidencia", action="append", default=[])
     p.add_argument("--fragmento", required=True)
     p.add_argument("--cita-documento")
+    p.add_argument("--documento-proveedor")
+    p.add_argument("--cita-proveedor")
     p = sub.add_parser("cerrar")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -557,11 +597,12 @@ def main(argumentos: list[str] | None = None) -> int:
         elif o.accion == "paquete":
             print(f"Paquete: {generar_paquete(raiz, o.producto, o.repo).relative_to(raiz)}")
         elif o.accion == "evaluar":
-            evaluar(raiz, o.producto, o.repo, o.fuente, o.criterio, o.resultado, o.motivo, o.evidencia, o.cita_documento)
+            evaluar(raiz, o.producto, o.repo, o.fuente, o.criterio, o.resultado, o.motivo, o.evidencia, o.cita_documento,
+                    o.documento_proveedor, o.cita_proveedor)
             print(f"Evaluado: {clave_de(o.fuente, o.criterio)} = {o.resultado}")
         elif o.accion == "hallazgo":
             registrar_hallazgo(raiz, o.producto, o.repo, o.fuente, o.criterio, o.categoria, o.severidad, o.titulo,
-                               o.detalle, o.evidencia, o.fragmento, o.cita_documento)
+                               o.detalle, o.evidencia, o.fragmento, o.cita_documento, o.documento_proveedor, o.cita_proveedor)
             print(f"Hallazgo registrado: {clave_de(o.fuente, o.criterio)} · {o.severidad} · {o.titulo}")
         elif o.accion == "cerrar":
             r = cerrar(raiz, o.producto, o.repo, o.archivos_leidos)

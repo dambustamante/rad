@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv doctor sync-arquitectura coherencia repos indices actualizar revisar test
+.PHONY: help venv doctor sync-arquitectura coherencia repos proveedor indices actualizar revisar test
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -29,10 +29,13 @@ coherencia: $(ENTORNO) ## Actualiza equipo/COHERENCIA.md y lista los pares por e
 repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los productos
 	@$(PYTHON) herramientas/productos.py sincronizar
 
+proveedor: $(ENTORNO) ## Indexa la documentación del proveedor de todos los productos
+	@$(PYTHON) herramientas/proveedor.py indexar
+
 indices: $(ENTORNO) ## Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py
 
-actualizar: doctor sync-arquitectura coherencia repos indices ## Ejecuta la parte automática de /actualizar
+actualizar: doctor sync-arquitectura coherencia repos proveedor indices ## Ejecuta la parte automática de /actualizar
 
 revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)

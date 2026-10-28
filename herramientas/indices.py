@@ -85,10 +85,20 @@ def indice_producto(raiz: Path, producto: str) -> Path:
     else:
         lineas.append("Sin ADR. Se crean con `/adr`.")
 
+    if (carpeta / "proveedor" / "INDICE.md").exists():
+        import proveedor
+        docs = proveedor.documentos_indexados(raiz, producto).values()
+        lineas_proveedor = (f"- Documentación del proveedor: [proveedor/INDICE.md](proveedor/INDICE.md) "
+                            f"({sum(1 for d in docs if d['contrato'])} contrato(s), "
+                            f"{sum(1 for d in docs if d['estado'] != 'indexado')} sin indexar)")
+    else:
+        lineas_proveedor = None
     revisiones = sorted(p.name for p in (carpeta / "revisiones").iterdir() if p.is_dir()) if (carpeta / "revisiones").exists() else []
     agendas = sorted(p.name for p in (carpeta / "agendas").glob("*.md")) if (carpeta / "agendas").exists() else []
     pendientes_triaje = len(triaje.pendientes(registro))
     lineas += ["", "## Accesos", ""]
+    if lineas_proveedor:
+        lineas.append(lineas_proveedor)
     if (carpeta / "as-is" / "PRODUCTO.md").exists():
         lineas.append("- AS IS del producto: [as-is/PRODUCTO.md](as-is/PRODUCTO.md)")
     if revisiones:

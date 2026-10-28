@@ -19,6 +19,7 @@ revisa ni escribe en ningún sistema externo.
 - Acceso de lectura por git (SSH o HTTPS) a los repositorios de arquitectura y de los productos,
   en GitLab o GitHub.
 - `gitleaks` (`brew install gitleaks`), para buscar secretos.
+- `pdftotext` (`brew install poppler`), para leer la documentación del proveedor en PDF.
 - Un token de Sonar con permiso de lectura. El token de la plataforma git se necesita recién en la
   fase 2.
 
@@ -68,6 +69,7 @@ representativos, triar sus hallazgos y medir el consumo de Cursor antes de revis
 | `productos/<p>/agendas/` | hallazgos para conversar con el equipo |
 | `equipo/COHERENCIA.md` | coherencia de las decisiones del equipo con arquitectura |
 | `productos/<p>/decisiones/` | ADR del producto, su índice y su coherencia con arquitectura y con el equipo |
+| `productos/<p>/proveedor/INDICE.md` | documentación del proveedor: contratos reconocidos, documentos indexados y los que no se pudieron leer |
 | `arquitectura/INDICE.md` | documentos de arquitectura con su estado y su regla rápida |
 
 ## Estructura
@@ -90,6 +92,7 @@ equipo/                       nivel 3: decisiones del equipo
 productos/<producto>/
 ├── INDICE.md · producto.yaml
 ├── decisiones/               nivel 3: ADR-<SIGLA>-NNN, su INDICE.md y su COHERENCIA.md
+├── proveedor/                documentación del producto comprado, tal cual llega, y su INDICE.md
 ├── as-is/                    fichas por repositorio y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión
 ├── triaje/ · agendas/

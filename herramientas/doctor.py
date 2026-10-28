@@ -67,6 +67,11 @@ def revisar() -> list[tuple[str, str, str]]:
     for variable in variables_sonar:
         resultados.append(_variable(env, variable, "necesario para /revisar"))
 
+    if shutil.which("pdftotext"):
+        resultados.append((OK, "pdftotext", "instalado"))
+    else:
+        resultados.append((AVISO, "pdftotext", "necesario para leer documentación del proveedor en PDF; instalar con: brew install poppler"))
+
     if shutil.which("gitleaks"):
         resultados.append((OK, "gitleaks", "instalado"))
     else:

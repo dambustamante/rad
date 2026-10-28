@@ -16,7 +16,8 @@ este comando: siempre mediante el script.
    ```
 
    - Si el producto existe, mostrar sus repositorios en una tabla (`id`, `tipo`, `rama`, `sonar`,
-     `estado`) y preguntar: agregar repositorios, retirar uno o nada.
+     `estado`) y preguntar: agregar repositorios, retirar uno, cargar documentación del proveedor o
+     nada.
    - Si no existe, informar que se creará y pedir una descripción de una frase. Al crearse, el
      script le asigna una sigla (por ejemplo `MF` para motor-fraudes) para numerar sus ADR. Mostrarla
      y ofrecer cambiarla mientras el producto no tenga ADR:
@@ -75,6 +76,25 @@ este comando: siempre mediante el script.
 
 8. **Cerrar** con la tabla final del producto y el resultado de la descarga, y sugerir
    `/revisar <producto>` para obtener la línea base AS IS de los repositorios nuevos.
+
+## Documentación del proveedor
+
+Para un producto comprado (o cualquier producto con documentación de un tercero):
+
+1. Pedir al usuario que copie los archivos, tal como vienen, en `productos/<producto>/proveedor/`
+   (manuales, guías, contratos OpenAPI o AsyncAPI, notas de versión; PDF, Word, PowerPoint, Excel,
+   HTML, markdown o texto). Puede organizarlos en subcarpetas como prefiera.
+2. Indexar:
+
+   ```sh
+   .venv/bin/python herramientas/proveedor.py indexar <producto>
+   ```
+
+3. Mostrar el resultado: contratos reconocidos (con título y versión), documentos indexados y, sobre
+   todo, los **no indexados** con su motivo y la acción sugerida (por ejemplo, guardar un `.doc` como
+   `.docx`, o pedir al proveedor un PDF con texto en lugar de uno escaneado).
+
+Los originales nunca se modifican. `/actualizar` vuelve a indexar solo lo que cambió.
 
 ## Reglas
 
