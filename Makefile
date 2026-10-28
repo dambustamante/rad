@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv doctor sync-arquitectura coherencia repos proveedor indices actualizar revisar test
+.PHONY: help venv estado doctor sync-arquitectura coherencia repos proveedor indices actualizar revisar test
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -15,6 +15,9 @@ $(ENTORNO): requirements.txt
 	@touch $(ENTORNO)
 
 venv: $(ENTORNO) ## Crea o actualiza el entorno de Python
+
+estado: $(ENTORNO) ## Muestra el estado general y qué sigue (sin red ni IA)
+	@$(PYTHON) herramientas/estado.py
 
 doctor: $(ENTORNO) ## Verifica herramientas, configuración y variables (sin mostrar valores)
 	@$(PYTHON) herramientas/doctor.py

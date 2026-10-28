@@ -33,7 +33,10 @@ make venv                 # crea el entorno de Python
 make doctor               # verifica herramientas y configuración (no muestra valores)
 ```
 
-**2. En Cursor, en este orden**
+**2. En Cursor**
+
+Ante la duda, empezar por `/estado`: muestra en qué situación está todo y qué comando sigue.
+El orden habitual es:
 
 | Paso | Comando | Qué pasa |
 |---|---|---|
@@ -106,7 +109,7 @@ El contrato de trabajo completo está en [AGENTS.md](AGENTS.md).
 
 ## Estado
 
-**MVP:** `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar` y `/triar`.
+**MVP:** `/estado`, `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar` y `/triar`.
 
 **Fase 2:** revisión de ramas (`--rama`, `--desde`) con publicación en el MR o PR (GitLab o GitHub),
 reporte semanal, historias de deuda en Jira y pruebas de integración y de carga.

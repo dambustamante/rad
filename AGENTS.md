@@ -45,7 +45,7 @@ productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), provee
                      estado/ (hallazgos.json, coherencia.json, texto extraído del proveedor), repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
-.cursor/commands/    comandos de Cursor (/arquitectura, /actualizar, /producto, /adr, /revisar, /triar)
+.cursor/commands/    comandos de Cursor (/estado, /arquitectura, /actualizar, /producto, /adr, /revisar, /triar)
 harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
@@ -98,6 +98,7 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 
 | Comando | Qué hace |
 |---|---|
+| `/estado` | muestra el estado general y qué sigue; es el punto de entrada (sin red ni IA) |
 | `/arquitectura` | agrega o retira los repositorios de donde se descargan los documentos de arquitectura |
 | `/actualizar` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR-EQ y actualiza los repositorios |
 | `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
