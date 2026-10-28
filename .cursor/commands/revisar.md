@@ -31,6 +31,12 @@ make revisar P=<producto> R=<repo>
 .venv/bin/python herramientas/revision.py paquete <producto> <repo>
 ```
 
+Si el repositorio ya tuvo una revisión de código y su código cambió, el paquete es **incremental**:
+lista los archivos cambiados, pide evaluar solo los elementos afectados y muestra aparte los
+heredados, que se conservan solos al cerrar. El AS IS y los borradores C4 se copian de la revisión
+anterior: actualizar solo las partes que el cambio afecta. Si el usuario pide una revisión completa,
+generar el paquete con `--completa`.
+
 Leer el paquete completo antes de abrir cualquier archivo del repositorio. Contiene el mapa del
 repositorio, los archivos señalados por patrón, los hallazgos automáticos ya registrados (no
 repetirlos) y la lista exacta de lo que hay que evaluar, incluidos los criterios de las decisiones

@@ -2,7 +2,7 @@
 
 Uso:
   python herramientas/revision.py pendientes <producto>
-  python herramientas/revision.py paquete <producto> <repo>
+  python herramientas/revision.py paquete <producto> <repo> [--completa]
   python herramientas/revision.py evaluar <producto> <repo> --fuente F [--criterio C] --resultado R --motivo TEXTO
                                           [--evidencia ruta:línea ...] [--cita-documento TEXTO]
                                           [--documento-proveedor RUTA --cita-proveedor TEXTO]
@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 
 import yaml
@@ -40,7 +41,7 @@ import verificaciones
 from adr import excepciones_activas, excepciones_pendientes
 from coherencia import (cita_existe, leer_arquitectura_vigente, leer_decisiones_producto, suspendidos as criterios_suspendidos,
                         texto_comparable)
-from comun import RAIZ, ErrorRadiografia, normalizar
+from comun import RAIZ, ErrorRadiografia, git, normalizar
 from revisar import MARCA_REVISION, decisiones_con_criterios, leer_json, reemplazar_bloque, veredicto
 
 MARCA_COMPARACION = ("<!-- comparacion:inicio -->", "<!-- comparacion:fin -->")
@@ -52,6 +53,8 @@ SEVERIDADES = ("bloqueante", "alta", "media", "baja")
 SECCIONES_AS_IS = ("Propósito", "Arquitectura real", "Componentes y contenedores", "Integraciones", "Contratos",
                    "Datos", "Configuración y despliegue", "Observabilidad", "Riesgos y deuda principales")
 VENTANA_FRAGMENTO = 3
+UMBRAL_INCREMENTAL = 0.4   # si cambió más de esta fracción de archivos, la revisión es completa
+MINIMO_ARCHIVOS_UMBRAL = 20  # en repositorios más chicos el umbral no se aplica
 SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
 
 SENALES = {
@@ -202,7 +205,43 @@ def arbol(destino: Path, profundidad: int = 3) -> list[str]:
     return [f"{'  ' * (c.count('/'))}- {c.split('/')[-1]}/ ({n} archivos)" for c, n in sorted(conteo.items())]
 
 
-def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
+# --- Revisión incremental ---------------------------------------------------------------------
+
+def base_incremental(raiz: Path, producto: str, repo: str, ctx: dict, completa: bool) -> dict | None:
+    """Revisión de código anterior contra la cual trabajar de forma incremental, o None para una completa."""
+    codigo = ctx["estado"].get("codigo")
+    if completa or not codigo or codigo["commit"] == ctx["commit"]:
+        return None
+    previo = leer_trabajo(raiz, producto, codigo["id"], repo)
+    if not previo["evaluaciones"]:
+        return None
+    try:
+        cambiados = sorted(set(git("diff", "--name-only", codigo["commit"], ctx["commit"], cwd=ctx["destino"]).splitlines()))
+        total = len(git("ls-tree", "-r", "--name-only", ctx["commit"], cwd=ctx["destino"]).splitlines())
+    except ErrorRadiografia:
+        return None
+    if total >= MINIMO_ARCHIVOS_UMBRAL and len(cambiados) > UMBRAL_INCREMENTAL * total:
+        return None
+    return {"id": codigo["id"], "commit": codigo["commit"], "cambiados": cambiados}
+
+
+def heredables(raiz: Path, producto: str, repo: str, base: dict) -> dict[str, dict]:
+    """Evaluaciones (y sus hallazgos) de la revisión base que no tocan archivos cambiados."""
+    previo = leer_trabajo(raiz, producto, base["id"], repo)
+    cambiados = set(base["cambiados"])
+    resultado = {}
+    for clave, evaluacion in previo["evaluaciones"].items():
+        if evaluacion["resultado"] == "NO DETERMINADO":
+            continue
+        hallazgos_clave = [h for h in previo["hallazgos"] if clave_de(h["fuente"], h["criterio"]) == clave]
+        archivos = {e["archivo"] for e in evaluacion.get("evidencia", [])}
+        archivos |= {e["archivo"] for h in hallazgos_clave for e in h["evidencia"]}
+        if not archivos & cambiados:
+            resultado[clave] = {"evaluacion": evaluacion, "hallazgos": hallazgos_clave}
+    return resultado
+
+
+def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False) -> Path:
     ctx = contexto(raiz, producto, repo)
     destino, registro = ctx["destino"], ctx["registro"]
     archivos = sorted(p.relative_to(destino).as_posix() for p in destino.rglob("*")
@@ -253,12 +292,33 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
             lineas.append(f"- {len(sin_indexar)} documento(s) no indexado(s): ver `proveedor/INDICE.md`")
         lineas.append("")
 
+    base = base_incremental(raiz, producto, repo, ctx, completa)
+    trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
+    trabajo["incremental"] = base
+    guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
+    heredados = heredables(raiz, producto, repo, base) if base else {}
+    if base:
+        anterior = carpeta_revision(raiz, producto, base["id"])
+        for origen, destino_copia in ((anterior / "revision" / f"{repo}-asis.md", carpeta / "revision" / f"{repo}-asis.md"),
+                                      (anterior / "borradores" / repo, carpeta / "borradores" / repo)):
+            if origen.exists() and not destino_copia.exists():
+                destino_copia.parent.mkdir(parents=True, exist_ok=True)
+                (shutil.copytree if origen.is_dir() else shutil.copy2)(origen, destino_copia)
+        lineas += ["## Revisión incremental", "",
+                   f"Base: revisión `{base['id']}` (commit `{base['commit'][:12]}`). Cambiaron {len(base['cambiados'])} archivo(s). "
+                   "El AS IS y los borradores C4 se copiaron de la revisión base: actualizar solo lo que cambió. "
+                   "Las evaluaciones heredadas se conservan al cerrar; si un archivo cambiado afecta a alguna, incluirla en el lote.",
+                   "", "Archivos cambiados:", ""]
+        lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
+        lineas.append("")
+
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
     exceptuados = [e for e in control if e.get("exceptuado")]
-    control = [e for e in control if not e.get("exceptuado")]
+    heredados_control = [e for e in control if not e.get("exceptuado") and e["clave"] in heredados]
+    control = [e for e in control if not e.get("exceptuado") and e["clave"] not in heredados]
     lineas += ["## Qué evaluar", "",
-               "Cada elemento se evalúa con `evaluar` (CUMPLE, NO CUMPLE, NO APLICA o NO DETERMINADO). "
-               "Todo NO CUMPLE requiere al menos un `hallazgo` con la misma fuente y criterio.", ""]
+               "Cada elemento se evalúa en el lote (CUMPLE, NO CUMPLE, NO APLICA o NO DETERMINADO). "
+               "Todo NO CUMPLE requiere al menos un hallazgo con la misma fuente y criterio.", ""]
     for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura vigentes"), (2, "Nivel 2: estándares de arquitectura vigentes"),
                           (3, "Nivel 3: criterios de revisión de código de las decisiones del equipo y del producto")):
         del_nivel = [e for e in control if e["nivel"] == nivel]
@@ -269,6 +329,11 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
         lineas += ["| Fuente | Criterio | Título | Regla o criterio | Modo |", "|---|---|---|---|---|"]
         lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {e['titulo']} | {e['texto'].replace('|', '/')} | {e['modo']} |"
                    for e in del_nivel] + [""]
+    if heredados_control:
+        lineas += [f"### Heredados de la revisión {base['id']} (no evaluar salvo que un cambio los afecte)", "",
+                   "| Fuente | Criterio | Resultado anterior |", "|---|---|---|"]
+        lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {heredados[e['clave']]['evaluacion']['resultado']} |"
+                   for e in heredados_control] + [""]
     if exceptuados:
         lineas += ["### No evaluar: exceptuados por un ADR del producto", "",
                    "Se registran solos como NO APLICA al cerrar.", ""]
@@ -501,6 +566,16 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
     ctx = contexto(raiz, producto, repo)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
+    if trabajo.get("incremental"):
+        base = trabajo["incremental"]
+        for clave, heredado in heredables(raiz, producto, repo, base).items():
+            if clave in trabajo["evaluaciones"] or clave not in {e["clave"] for e in control}:
+                continue
+            trabajo["evaluaciones"][clave] = {**heredado["evaluacion"], "heredada_de": base["id"],
+                                              "motivo": f"{heredado['evaluacion']['motivo']} (heredada de {base['id']})"}
+            for hallazgo in heredado["hallazgos"]:
+                if all(h["huella"] != hallazgo["huella"] for h in trabajo["hallazgos"]):
+                    trabajo["hallazgos"].append(hallazgo)
     for e in control:
         if e.get("exceptuado"):
             trabajo["evaluaciones"][e["clave"]] = {
@@ -644,6 +719,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p = sub.add_parser("paquete")
     p.add_argument("producto")
     p.add_argument("repo")
+    p.add_argument("--completa", action="store_true", help="revisión completa aunque haya una revisión anterior")
     p = sub.add_parser("evaluar")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -688,7 +764,7 @@ def main(argumentos: list[str] | None = None) -> int:
             for e in pendientes(raiz, o.producto):
                 print(f"  {e['repo']} ({e['tipo']}): {e['situacion']}")
         elif o.accion == "paquete":
-            print(f"Paquete: {generar_paquete(raiz, o.producto, o.repo).relative_to(raiz)}")
+            print(f"Paquete: {generar_paquete(raiz, o.producto, o.repo, o.completa).relative_to(raiz)}")
         elif o.accion == "evaluar":
             evaluar(raiz, o.producto, o.repo, o.fuente, o.criterio, o.resultado, o.motivo, o.evidencia, o.cita_documento,
                     o.documento_proveedor, o.cita_proveedor)

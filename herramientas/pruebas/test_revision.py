@@ -22,6 +22,7 @@ import sync_arquitectura  # noqa: E402
 from comun import RAIZ  # noqa: E402
 from test_productos import crear_repo  # noqa: E402
 from test_revisar import CONTROLADOR, README  # noqa: E402
+from test_sync_arquitectura import commit  # noqa: E402
 
 ADR_TIMEOUTS = """\
 # ADR-010: Timeouts obligatorios
@@ -67,7 +68,7 @@ class PruebaRevision(unittest.TestCase):
                 pendiente: [Propuesto]
                 no_vigente: [Reemplazado]
             """), encoding="utf-8")
-        core = base / "fraude-core"
+        core = self.core = base / "fraude-core"
         crear_repo(core, "main", {"README.md": README, "src/main/java/EvaluacionController.java": CONTROLADOR})
         with contextlib.redirect_stdout(io.StringIO()):
             sync_arquitectura.main(["--raiz", str(self.raiz)])
@@ -237,6 +238,47 @@ class PruebaRevision(unittest.TestCase):
         self.assertNotIn("Faltan", salida)
         trabajo = json.loads((carpeta / "fraude-core.json").read_text(encoding="utf-8"))
         self.assertEqual(len(trabajo["hallazgos"]), 1, "registrar el mismo lote dos veces no duplica hallazgos")
+
+    def nueva_revision_automatica(self, archivo: str, contenido: str) -> None:
+        (self.core / archivo).write_text(contenido, encoding="utf-8")
+        commit(self.core, f"Cambia {archivo}")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.automatica = revisar.revisar(self.raiz, "motor-fraudes", usar_sonar=False)
+
+    def test_revision_incremental(self) -> None:
+        self.completar()
+        self.assertEqual(self.ejecutar("cerrar", "motor-fraudes", "fraude-core")[0], 0)
+
+        # Cambio que no toca la evidencia: todo se hereda, incluidos los hallazgos abiertos.
+        self.nueva_revision_automatica("README.md", README + "\nCambio menor.\n")
+        codigo, salida = self.ejecutar("paquete", "motor-fraudes", "fraude-core")
+        paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
+        self.assertIn("## Revisión incremental", paquete)
+        self.assertIn("- `README.md`", paquete)
+        self.assertIn("### Heredados de la revisión", paquete)
+        self.assertTrue((self.automatica["carpeta"] / "revision" / "fraude-core-asis.md").exists(), "el AS IS se copia")
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 0, salida)
+        abiertos = [h for h in hallazgos.cargar(self.raiz, "motor-fraudes")["hallazgos"].values()
+                    if h["origen"] == "revision" and h["estado"] == "abierto"]
+        self.assertEqual(len(abiertos), 2, "los hallazgos heredados siguen abiertos, no se dan por corregidos")
+        trabajo = revision.leer_trabajo(self.raiz, "motor-fraudes", self.automatica["id_revision"], "fraude-core")
+        self.assertIn("heredada de", trabajo["evaluaciones"]["decisiones:ADR-010"]["motivo"])
+
+        # Cambio en el archivo de la evidencia: esos elementos se vuelven a evaluar.
+        self.nueva_revision_automatica("src/main/java/EvaluacionController.java", CONTROLADOR.replace("evaluando", "evaluar"))
+        codigo, salida = self.ejecutar("paquete", "motor-fraudes", "fraude-core")
+        paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
+        evaluar = paquete.split("## Qué evaluar")[1].split("### Heredados")[0]
+        self.assertIn("`decisiones:ADR-010`", evaluar)
+        self.assertIn("EQ-003.1", evaluar)
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 1)
+        self.assertIn("decisiones:ADR-010", salida)
+
+        codigo, salida = self.ejecutar("paquete", "motor-fraudes", "fraude-core", "--completa")
+        paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
+        self.assertNotIn("## Revisión incremental", paquete, "--completa fuerza la revisión completa")
 
 
 if __name__ == "__main__":
