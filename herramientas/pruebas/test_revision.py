@@ -137,7 +137,7 @@ class PruebaRevision(unittest.TestCase):
             (("--fuente", "decisiones:ADR-010", "--evidencia", "src/main/java/EvaluacionController.java:4", "--fragmento", "new RestTemplate()",
               "--cita-documento", "Ninguna llamada externa sin timeout explícito"), "El fragmento no aparece"),
             (("--fuente", "decisiones:ADR-010", "--evidencia", "src/main/java/EvaluacionController.java:4",
-              "--fragmento", 'System.out.println("evaluando");'), "requiere --cita-documento"),
+              "--fragmento", 'System.out.println("evaluando");'), "requiere la cita del documento incumplido"),
             (("--fuente", "decisiones:ADR-010", "--evidencia", "src/main/java/EvaluacionController.java:4",
               "--fragmento", 'System.out.println("evaluando");', "--cita-documento", "Los timeouts son opcionales en todos los casos"),
              "no aparece textualmente"),
@@ -199,6 +199,44 @@ class PruebaRevision(unittest.TestCase):
         self.assertIn("| 1 | decisiones:ADR-010 | ❌ |", producto)
         self.assertIn("Nivel 1 · decisiones:ADR-010: 1 hallazgo(s)", producto)
         self.assertIn("Texto del producto.", producto)
+
+    def test_registro_en_lote(self) -> None:
+        carpeta = self.automatica["carpeta"] / "revision"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        lote = carpeta / "fraude-core-lote.yaml"
+        evaluaciones = [{"fuente": e["fuente"], "criterio": e["criterio"], "resultado": "NO APLICA", "motivo": "prueba"}
+                        for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")
+                        if e["clave"] != "decisiones:ADR-010"]
+        evaluaciones.append({"fuente": "decisiones:ADR-010", "resultado": "NO CUMPLE", "motivo": "sin timeout"})
+        hallazgo_valido = {"fuente": "decisiones:ADR-010", "categoria": "incumplimiento", "severidad": "alta",
+                           "titulo": "Llamada sin timeout", "detalle": "El cliente no define timeout.",
+                           "evidencia": ["src/main/java/EvaluacionController.java:4"],
+                           "fragmento": 'System.out.println("evaluando");',
+                           "cita_documento": "Ninguna llamada externa sin timeout explícito"}
+        invalidos = [{**hallazgo_valido, "fragmento": "new RestTemplate()"},
+                     {**hallazgo_valido, "evidencia": ["no-existe.java:1"]}]
+        import yaml
+        lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones, "hallazgos": [hallazgo_valido, *invalidos]},
+                                       allow_unicode=True), encoding="utf-8")
+        codigo, salida = self.ejecutar("registrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 1)
+        self.assertIn("El lote tiene 2 error(es); no se registró nada", salida)
+        self.assertIn("hallazgos[2]", salida)
+        self.assertIn("hallazgos[3]", salida, "se informan todos los errores juntos")
+        self.assertFalse((carpeta / "fraude-core.json").exists(), "nada registrado si hay errores")
+
+        lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones[:3], "hallazgos": [hallazgo_valido]},
+                                       allow_unicode=True), encoding="utf-8")
+        codigo, salida = self.ejecutar("registrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 0, salida)
+        self.assertIn("Faltan", salida, "informa lo que queda por evaluar")
+        lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones, "hallazgos": [hallazgo_valido]},
+                                       allow_unicode=True), encoding="utf-8")
+        codigo, salida = self.ejecutar("registrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 0, salida)
+        self.assertNotIn("Faltan", salida)
+        trabajo = json.loads((carpeta / "fraude-core.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(trabajo["hallazgos"]), 1, "registrar el mismo lote dos veces no duplica hallazgos")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ Uso:
                                            --titulo TEXTO --detalle TEXTO --evidencia ruta:línea [--evidencia ...]
                                            --fragmento TEXTO [--cita-documento TEXTO]
                                            [--documento-proveedor RUTA --cita-proveedor TEXTO]
+  python herramientas/revision.py registrar <producto> <repo> [--archivo LOTE.yaml]
   python herramientas/revision.py cerrar <producto> <repo> [--archivos-leidos N]
   python herramientas/revision.py producto <producto> [--narrativa ARCHIVO]
 
@@ -26,6 +27,8 @@ import argparse
 import json
 import re
 import sys
+
+import yaml
 from collections import Counter
 from datetime import date
 from pathlib import Path
@@ -285,7 +288,8 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
         + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia.",
         f"2. C4 inferido: `productos/{producto}/revisiones/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
         "según las plantillas de `equipo/plantillas/`. Lo que no se pueda deducir, como NO DETERMINADO.",
-        "3. Una evaluación por cada elemento de \"Qué evaluar\" y los hallazgos correspondientes.",
+        f"3. Un único lote con todas las evaluaciones y hallazgos: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`, "
+        f"registrado con `.venv/bin/python herramientas/revision.py registrar {producto} {repo}`.",
         f"4. Cerrar: `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
     ]
     archivo = carpeta / "paquetes" / f"{repo}.md"
@@ -318,8 +322,9 @@ def validar_evidencia(destino: Path, evidencia: dict, fragmento: str | None = No
                                    "Copiarlo tal como está en el código.")
 
 
-def elemento_de_control(raiz: Path, ctx: dict, fuente: str, criterio: str | None) -> dict:
-    control = {e["clave"]: e for e in lista_de_control(raiz, ctx["tipo"], ctx["producto"], ctx["repo"])}
+def elemento_de_control(raiz: Path, ctx: dict, fuente: str, criterio: str | None, control: dict | None = None) -> dict:
+    if control is None:
+        control = {e["clave"]: e for e in lista_de_control(raiz, ctx["tipo"], ctx["producto"], ctx["repo"])}
     clave = clave_de(fuente, criterio)
     if clave not in control:
         if re.match(r"^ADR-[A-Z]{2,5}-\d{3}$", fuente) and not criterio:
@@ -349,27 +354,75 @@ def validar_cita_proveedor(raiz: Path, producto: str, documento: str | None, cit
 
 # --- Registro de evaluaciones y hallazgos ------------------------------------------------------
 
-def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, resultado: str, motivo: str,
-            evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
-            cita_proveedor: str | None = None) -> None:
-    ctx = contexto(raiz, producto, repo)
+def construir_evaluacion(raiz: Path, ctx: dict, fuente: str, criterio: str | None, resultado: str, motivo: str,
+                         evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
+                         cita_proveedor: str | None = None, control: dict | None = None) -> tuple[str, dict]:
+    """Valida una evaluación y la devuelve como (clave, datos). Lanza ErrorRadiografia si algo no es válido."""
     if resultado not in RESULTADOS:
         raise ErrorRadiografia(f"Resultado '{resultado}' inválido; valores válidos: {', '.join(RESULTADOS)}.")
-    if not motivo or not motivo.strip():
-        raise ErrorRadiografia("--motivo es obligatorio.")
-    elemento = elemento_de_control(raiz, ctx, fuente, criterio)
+    if not motivo or not str(motivo).strip():
+        raise ErrorRadiografia("el motivo es obligatorio.")
+    elemento = elemento_de_control(raiz, ctx, fuente, criterio, control)
     lista = [leer_evidencia(e) for e in evidencias]
     for evidencia in lista:
         validar_evidencia(ctx["destino"], evidencia)
     if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
-        raise ErrorRadiografia("La --cita-documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
-    cita_del_proveedor = validar_cita_proveedor(raiz, producto, documento_proveedor, cita_proveedor)
-    trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
-    trabajo["evaluaciones"][elemento["clave"]] = {
+        raise ErrorRadiografia("la cita del documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
+    cita_del_proveedor = validar_cita_proveedor(raiz, ctx["producto"], documento_proveedor, cita_proveedor)
+    return elemento["clave"], {
         "fuente": fuente, "criterio": criterio, "nivel": elemento["nivel"], "titulo": elemento["titulo"],
-        "resultado": resultado, "motivo": motivo.strip(), "evidencia": lista, "cita_documento": cita_documento,
+        "resultado": resultado, "motivo": str(motivo).strip(), "evidencia": lista, "cita_documento": cita_documento,
         "cita_proveedor": cita_del_proveedor, "modo": elemento["modo"],
     }
+
+
+def construir_hallazgo(raiz: Path, ctx: dict, fuente: str, criterio: str | None, categoria: str, severidad: str,
+                       titulo: str, detalle: str, evidencias: list[str], fragmento: str, cita_documento: str | None,
+                       documento_proveedor: str | None = None, cita_proveedor: str | None = None,
+                       control: dict | None = None) -> dict:
+    """Valida un hallazgo y lo devuelve listo para registrar. Lanza ErrorRadiografia si algo no es válido."""
+    if categoria not in CATEGORIAS:
+        raise ErrorRadiografia(f"Categoría '{categoria}' inválida; valores válidos: {', '.join(CATEGORIAS)}.")
+    if severidad not in SEVERIDADES:
+        raise ErrorRadiografia(f"Severidad '{severidad}' inválida; valores válidos: {', '.join(SEVERIDADES)}.")
+    if not evidencias:
+        raise ErrorRadiografia("un hallazgo requiere al menos una evidencia ruta:línea.")
+    if not fragmento or len(str(fragmento).strip()) < 5:
+        raise ErrorRadiografia("el fragmento es obligatorio: el código citado tal como aparece en la primera evidencia.")
+    if not titulo or not detalle:
+        raise ErrorRadiografia("un hallazgo requiere título y detalle.")
+    elemento = elemento_de_control(raiz, ctx, fuente, criterio, control)
+    lista = [leer_evidencia(e) for e in evidencias]
+    validar_evidencia(ctx["destino"], lista[0], str(fragmento))
+    for evidencia in lista[1:]:
+        validar_evidencia(ctx["destino"], evidencia)
+    if categoria == "incumplimiento" and not cita_documento:
+        raise ErrorRadiografia("un hallazgo de categoría 'incumplimiento' requiere la cita del documento incumplido.")
+    if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
+        raise ErrorRadiografia("la cita del documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
+    cita_del_proveedor = validar_cita_proveedor(raiz, ctx["producto"], documento_proveedor, cita_proveedor)
+    return {
+        "huella": registro_hallazgos.huella(ctx["repo"], ctx["rama"], fuente, criterio, lista[0]["archivo"],
+                                            texto_comparable(str(fragmento))),
+        "nivel": elemento["nivel"], "fuente": fuente, "criterio": criterio, "categoria": categoria, "severidad": severidad,
+        "titulo": str(titulo).strip(), "detalle": str(detalle).strip(), "evidencia": lista, "fragmento": str(fragmento).strip(),
+        "cita_documento": cita_documento, "cita_proveedor": cita_del_proveedor, "origen": "revision", "modo": elemento["modo"],
+    }
+
+
+def agregar_hallazgo(trabajo: dict, hallazgo: dict) -> None:
+    """Agrega un hallazgo al trabajo; si ya hay uno con la misma huella, lo reemplaza."""
+    trabajo["hallazgos"] = [h for h in trabajo["hallazgos"] if h["huella"] != hallazgo["huella"]] + [hallazgo]
+
+
+def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, resultado: str, motivo: str,
+            evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
+            cita_proveedor: str | None = None) -> None:
+    ctx = contexto(raiz, producto, repo)
+    clave, datos = construir_evaluacion(raiz, ctx, fuente, criterio, resultado, motivo, evidencias, cita_documento,
+                                        documento_proveedor, cita_proveedor)
+    trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
+    trabajo["evaluaciones"][clave] = datos
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
 
 
@@ -378,32 +431,68 @@ def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criter
                        cita_documento: str | None, documento_proveedor: str | None = None,
                        cita_proveedor: str | None = None) -> None:
     ctx = contexto(raiz, producto, repo)
-    if categoria not in CATEGORIAS:
-        raise ErrorRadiografia(f"Categoría '{categoria}' inválida; valores válidos: {', '.join(CATEGORIAS)}.")
-    if severidad not in SEVERIDADES:
-        raise ErrorRadiografia(f"Severidad '{severidad}' inválida; valores válidos: {', '.join(SEVERIDADES)}.")
-    if not evidencias:
-        raise ErrorRadiografia("Un hallazgo requiere al menos una --evidencia ruta:línea.")
-    if not fragmento or len(fragmento.strip()) < 5:
-        raise ErrorRadiografia("--fragmento es obligatorio: el código citado tal como aparece en la primera evidencia.")
-    elemento = elemento_de_control(raiz, ctx, fuente, criterio)
-    lista = [leer_evidencia(e) for e in evidencias]
-    validar_evidencia(ctx["destino"], lista[0], fragmento)
-    for evidencia in lista[1:]:
-        validar_evidencia(ctx["destino"], evidencia)
-    if categoria == "incumplimiento" and not cita_documento:
-        raise ErrorRadiografia("Un hallazgo de categoría 'incumplimiento' requiere --cita-documento con el texto incumplido.")
-    if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
-        raise ErrorRadiografia("La --cita-documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
-    cita_del_proveedor = validar_cita_proveedor(raiz, producto, documento_proveedor, cita_proveedor)
+    hallazgo = construir_hallazgo(raiz, ctx, fuente, criterio, categoria, severidad, titulo, detalle, evidencias,
+                                  fragmento, cita_documento, documento_proveedor, cita_proveedor)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
-    trabajo["hallazgos"].append({
-        "huella": registro_hallazgos.huella(repo, ctx["rama"], fuente, criterio, lista[0]["archivo"], texto_comparable(fragmento)),
-        "nivel": elemento["nivel"], "fuente": fuente, "criterio": criterio, "categoria": categoria, "severidad": severidad,
-        "titulo": titulo.strip(), "detalle": detalle.strip(), "evidencia": lista, "fragmento": fragmento.strip(),
-        "cita_documento": cita_documento, "cita_proveedor": cita_del_proveedor, "origen": "revision", "modo": elemento["modo"],
-    })
+    agregar_hallazgo(trabajo, hallazgo)
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
+
+
+def archivo_lote(raiz: Path, producto: str, id_revision: str, repo: str) -> Path:
+    return carpeta_revision(raiz, producto, id_revision) / "revision" / f"{repo}-lote.yaml"
+
+
+def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = None) -> dict:
+    """Valida y registra de una vez todas las evaluaciones y hallazgos de un archivo YAML o JSON.
+
+    Si algún elemento no es válido, no se registra nada y se informan todos los errores juntos.
+    """
+    ctx = contexto(raiz, producto, repo)
+    archivo = archivo or archivo_lote(raiz, producto, ctx["id_revision"], repo)
+    if not archivo.exists():
+        raise ErrorRadiografia(f"No existe el archivo de lote {archivo}.")
+    try:
+        texto = archivo.read_text(encoding="utf-8")
+        datos = json.loads(texto) if archivo.suffix == ".json" else yaml.safe_load(texto)
+    except (json.JSONDecodeError, yaml.YAMLError) as error:
+        raise ErrorRadiografia(f"El lote no es un YAML o JSON válido: {error}") from error
+    datos = datos or {}
+    control = {e["clave"]: e for e in lista_de_control(raiz, ctx["tipo"], producto, repo)}
+    errores, evaluaciones, hallazgos = [], {}, []
+
+    def como_lista(valor) -> list[str]:
+        return [str(v) for v in (valor if isinstance(valor, list) else [valor] if valor else [])]
+
+    for indice, e in enumerate(datos.get("evaluaciones") or [], start=1):
+        referencia = f"evaluaciones[{indice}] ({clave_de(str(e.get('fuente')), e.get('criterio'))})"
+        try:
+            clave, evaluacion = construir_evaluacion(
+                raiz, ctx, str(e.get("fuente", "")), e.get("criterio"), str(e.get("resultado", "")), e.get("motivo"),
+                como_lista(e.get("evidencia")), e.get("cita_documento"), e.get("documento_proveedor"),
+                e.get("cita_proveedor"), control)
+            evaluaciones[clave] = evaluacion
+        except ErrorRadiografia as error:
+            errores.append(f"{referencia}: {error}")
+    for indice, h in enumerate(datos.get("hallazgos") or [], start=1):
+        referencia = f"hallazgos[{indice}] ({h.get('titulo', 'sin título')})"
+        try:
+            hallazgos.append(construir_hallazgo(
+                raiz, ctx, str(h.get("fuente", "")), h.get("criterio"), str(h.get("categoria", "")),
+                str(h.get("severidad", "")), h.get("titulo"), h.get("detalle"), como_lista(h.get("evidencia")),
+                h.get("fragmento"), h.get("cita_documento"), h.get("documento_proveedor"), h.get("cita_proveedor"),
+                control))
+        except ErrorRadiografia as error:
+            errores.append(f"{referencia}: {error}")
+    if errores:
+        raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
+
+    trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
+    trabajo["evaluaciones"].update(evaluaciones)
+    for hallazgo in hallazgos:
+        agregar_hallazgo(trabajo, hallazgo)
+    guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
+    pendientes_lote = [c for c, e in control.items() if not e.get("exceptuado") and c not in trabajo["evaluaciones"]]
+    return {"evaluaciones": len(evaluaciones), "hallazgos": len(hallazgos), "pendientes": pendientes_lote}
 
 
 # --- Cierre ------------------------------------------------------------------------------------
@@ -580,6 +669,10 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--cita-documento")
     p.add_argument("--documento-proveedor")
     p.add_argument("--cita-proveedor")
+    p = sub.add_parser("registrar")
+    p.add_argument("producto")
+    p.add_argument("repo")
+    p.add_argument("--archivo", type=Path, help="por defecto: revisiones/<revisión>/revision/<repo>-lote.yaml")
     p = sub.add_parser("cerrar")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -604,6 +697,11 @@ def main(argumentos: list[str] | None = None) -> int:
             registrar_hallazgo(raiz, o.producto, o.repo, o.fuente, o.criterio, o.categoria, o.severidad, o.titulo,
                                o.detalle, o.evidencia, o.fragmento, o.cita_documento, o.documento_proveedor, o.cita_proveedor)
             print(f"Hallazgo registrado: {clave_de(o.fuente, o.criterio)} · {o.severidad} · {o.titulo}")
+        elif o.accion == "registrar":
+            r = registrar_lote(raiz, o.producto, o.repo, o.archivo)
+            print(f"Lote registrado: {r['evaluaciones']} evaluación(es) y {r['hallazgos']} hallazgo(s).")
+            if r["pendientes"]:
+                print(f"Faltan {len(r['pendientes'])} elemento(s) por evaluar: {', '.join(r['pendientes'])}")
         elif o.accion == "cerrar":
             r = cerrar(raiz, o.producto, o.repo, o.archivos_leidos)
             s = r["resumen"]

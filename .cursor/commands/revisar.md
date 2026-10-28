@@ -70,43 +70,64 @@ Escribir los borradores en `productos/<producto>/revisiones/<revisión>/borrador
 y relación sale del código; lo que no se pueda deducir se marca como NO DETERMINADO. Es un borrador
 para el equipo, no se escribe en el repositorio.
 
-## 6. Evaluar y registrar
+## 6. Evaluar y registrar (en un solo lote)
 
-Para **cada** elemento de la sección "Qué evaluar" del paquete, en orden de nivel:
+Para **cada** elemento de la sección "Qué evaluar" del paquete, en orden de nivel, decidir
+`CUMPLE`, `NO CUMPLE`, `NO APLICA` (no corresponde a este repositorio) o `NO DETERMINADO` (no se
+pudo verificar con el código disponible). Si la regla rápida no alcanza para decidir, leer el
+documento (`arquitectura/decisiones/<fuente>/…` o `arquitectura/estandares/<fuente>/…`).
 
-1. Si la fuente es un documento de arquitectura y la regla rápida no alcanza para decidir, leer el
-   documento (`arquitectura/decisiones/<fuente>/…` o `arquitectura/estandares/<fuente>/…`).
-2. Decidir: `CUMPLE`, `NO CUMPLE`, `NO APLICA` (no corresponde a este repositorio) o
-   `NO DETERMINADO` (no se pudo verificar con el código disponible).
-3. Si es `NO CUMPLE`, registrar primero cada hallazgo:
+Escribir **todo** en un único archivo,
+`productos/<producto>/revisiones/<revisión>/revision/<repo>-lote.yaml`, y registrarlo con **un solo
+comando**. No usar un comando por evaluación: cada comando reenvía la conversación y multiplica el
+costo.
 
-   ```sh
-   .venv/bin/python herramientas/revision.py hallazgo <producto> <repo> \
-     --fuente <fuente:ID o ADR-EQ-NNN> [--criterio EQ-NNN.N] \
-     --categoria <incumplimiento|diseño|error|seguridad|deuda|documentacion> --severidad <bloqueante|alta|media|baja> \
-     --titulo "<qué pasa, en una línea>" --detalle "<por qué importa y qué se sugiere>" \
-     --evidencia <ruta:línea> [--evidencia <ruta:línea> ...] \
-     --fragmento "<código copiado tal cual de la primera evidencia>" \
-     [--cita-documento "<texto copiado tal cual del documento incumplido>"]
-   ```
+```yaml
+evaluaciones:
+  - fuente: decision-records:ADR-010          # o ADR-EQ-003 / ADR-MF-001 con su criterio
+    criterio: null                             # EQ-003.1, MF-001.1…; null para documentos de arquitectura
+    resultado: NO CUMPLE
+    motivo: El cliente del buró no define timeout.
+    evidencia: [src/main/java/BuroClient.java:41]
+  - fuente: ADR-EQ-007
+    criterio: EQ-007.3
+    resultado: NO APLICA
+    motivo: El repositorio no hace llamadas salientes ni consume mensajes.
+hallazgos:
+  - fuente: decision-records:ADR-010
+    criterio: null
+    categoria: incumplimiento                  # incumplimiento|diseño|error|seguridad|deuda|documentacion
+    severidad: alta                            # bloqueante|alta|media|baja
+    titulo: Llamada al buró sin timeout
+    detalle: Una demora del buró bloquea los hilos del servicio. Configurar timeout de conexión y de respuesta.
+    evidencia: [src/main/java/BuroClient.java:41]
+    fragmento: |
+      return restTemplate.getForObject(url, Respuesta.class);
+    cita_documento: Ninguna llamada externa sin timeout explícito
+    # opcional, si la evidencia viene de la documentación del proveedor:
+    # documento_proveedor: manual.pdf
+    # cita_proveedor: Timeout recomendado de 800 ms
+```
 
-4. Registrar la evaluación:
+```sh
+.venv/bin/python herramientas/revision.py registrar <producto> <repo>
+```
 
-   ```sh
-   .venv/bin/python herramientas/revision.py evaluar <producto> <repo> \
-     --fuente <fuente> [--criterio <criterio>] --resultado "<resultado>" --motivo "<una o dos frases>" \
-     [--evidencia <ruta:línea> ...] [--cita-documento "<texto>"]
-   ```
+- Si el lote tiene errores, **no se registra nada** y se listan todos juntos: corregir esas entradas
+  en el mismo archivo y volver a registrar. Registrar de nuevo no duplica hallazgos.
+- Si quedan elementos sin evaluar, el comando los lista: agregarlos al lote y registrar otra vez.
+- Para corregir una sola entrada sin rehacer el lote también existen `revision.py evaluar` y
+  `revision.py hallazgo`.
 
 Reglas del registro:
 
 - El script rechaza archivos o líneas que no existen, fragmentos que no están en el código y citas
   que no están en el documento. Si rechaza algo, volver a copiar el texto desde la fuente: nunca
   reformular para que pase.
-- `incumplimiento` exige `--cita-documento`. Sin cita, el hallazgo es `diseño`, `error` o `deuda`.
+- `incumplimiento` exige `cita_documento`. Sin cita, el hallazgo es `diseño`, `error` o `deuda`.
 - Si la evidencia viene de la documentación del proveedor (un contrato, un código de error, un tiempo
-  o un límite que el código no respeta), agregar `--documento-proveedor <ruta dentro de proveedor/>`
-  y `--cita-proveedor "<texto copiado tal cual>"`. Para encontrar el texto:
+  o un límite que el código no respeta), agregar `documento_proveedor` (ruta dentro de `proveedor/`)
+  y `cita_proveedor` (texto copiado tal cual). Para encontrar el texto:
   `.venv/bin/python herramientas/proveedor.py buscar <producto> "<palabras>"`.
 - Severidad de un criterio de un ADR-EQ: la de su tabla, salvo motivo explícito en el detalle.
 - No repetir los hallazgos automáticos ni los de Sonar del paquete. Si un problema ya está como
