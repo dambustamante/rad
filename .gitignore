@@ -7,7 +7,7 @@ __pycache__/
 # Copias de trabajo descargadas (no se versionan)
 .cache/
 productos/*/repos/
-productos/*/reportes/*/crudo/
+productos/*/revisiones/*/crudo/
 
 # Sistema
 .DS_Store

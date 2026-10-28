@@ -121,7 +121,7 @@ class PruebaRevisar(unittest.TestCase):
         base = Path(self.temporal.name)
         self.raiz = base / "raiz"
         (self.raiz / "productos").mkdir(parents=True)
-        shutil.copytree(RAIZ / "equipo", self.raiz / "equipo", ignore=shutil.ignore_patterns("coherencia.json", "COHERENCIA.md"))
+        shutil.copytree(RAIZ / "equipo", self.raiz / "equipo", ignore=shutil.ignore_patterns("estado", "COHERENCIA.md", "INDICE.md"))
 
         self.core = base / "fraude-core"
         crear_repo(self.core, "main", {
@@ -227,7 +227,8 @@ class PruebaRevisar(unittest.TestCase):
         self.assertIn("sonar:quality-gate", self.abiertos("fraude-core"), "si Sonar no corre, sus hallazgos siguen abiertos")
 
     def test_criterio_suspendido_por_coherencia(self) -> None:
-        (self.raiz / "equipo" / "coherencia.json").write_text(json.dumps({"suspendidos": {"ADR-EQ-001": ["EQ-001.1"]}}), encoding="utf-8")
+        (self.raiz / "equipo" / "estado").mkdir(parents=True, exist_ok=True)
+        (self.raiz / "equipo" / "estado" / "coherencia.json").write_text(json.dumps({"suspendidos": {"ADR-EQ-001": ["EQ-001.1"]}}), encoding="utf-8")
         resultado = self.revisar()
         self.assertNotIn("EQ-001.1", self.abiertos("fraude-core"))
         revision = next(r for r in resultado["resultados"] if r["repo"] == "fraude-core")

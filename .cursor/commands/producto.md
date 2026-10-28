@@ -17,7 +17,10 @@ este comando: siempre mediante el script.
 
    - Si el producto existe, mostrar sus repositorios en una tabla (`id`, `tipo`, `rama`, `sonar`,
      `estado`) y preguntar: agregar repositorios, retirar uno o nada.
-   - Si no existe, informar que se creará y pedir una descripción de una frase.
+   - Si no existe, informar que se creará y pedir una descripción de una frase. Al crearse, el
+     script le asigna una sigla (por ejemplo `MF` para motor-fraudes) para numerar sus ADR. Mostrarla
+     y ofrecer cambiarla mientras el producto no tenga ADR:
+     `.venv/bin/python herramientas/productos.py sigla <producto> --asignar <SIGLA>`.
 
 2. **Para agregar**, pedir los repositorios, uno por línea. Se aceptan URL SSH o HTTPS de GitLab
    o GitHub y rutas de carpetas locales con un repositorio git.

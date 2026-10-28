@@ -202,6 +202,8 @@ def aplicar(raiz: Path, archivo: Path) -> dict:
         archivo.write_text(re.sub(r"\n", f"\n\n> Aplicado el {fecha}: {len(decisiones)} decisión(es).\n", texto, count=1),
                            encoding="utf-8")
     agenda = escribir_agenda(raiz, producto, registro)
+    import indices
+    indices.indice_producto(raiz, producto)
     return {"producto": producto, "aplicadas": len(decisiones),
             "por_decision": dict(sorted(_contar(d["decision"] for _, d in decisiones).items())), "agenda": agenda}
 
@@ -252,6 +254,8 @@ def grupo(raiz: Path, producto: str, decision: str, motivo: str, vence: str | No
             registrar(h, nueva_decision(decision, motivo, vence_final, fecha))
         registro_hallazgos.guardar(raiz, producto, registro)
         escribir_agenda(raiz, producto, registro)
+        import indices
+        indices.indice_producto(raiz, producto)
     return [h["id"] for h in seleccion]
 
 

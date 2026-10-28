@@ -16,27 +16,36 @@ más alto en que aparece; los niveles inferiores solo lo referencian.
 |---|---|---|
 | 1 | ADR de arquitectura vigentes | `arquitectura/` (espejo, solo lectura) |
 | 2 | Estándares de arquitectura vigentes | `arquitectura/` (espejo, solo lectura) |
-| 3 | Decisiones del equipo (ADR-EQ) vigentes | `equipo/` |
+| 3 | Decisiones del equipo (ADR-EQ) y del producto (ADR-<SIGLA>) | `equipo/` y `productos/<p>/decisiones/` |
 | 4 | Sonar (SonarQube o SonarCloud) | API de Sonar; solo lectura |
 
 - Arquitectura prevalece siempre. Si una decisión del equipo choca con arquitectura, la
   decisión del equipo queda suspendida hasta resolver el choque (`equipo/COHERENCIA.md`).
 - Un documento de arquitectura con estado distinto de vigente no se usa para evaluar; solo sirve
   para explicar por qué algo cambió.
-- Una decisión del equipo en estado `Propuesto` se evalúa en **modo informativo**: sus
-  hallazgos se marcan como `propuesta` y no afectan el veredicto. Así se calibra antes de
-  aprobarla (ver `equipo/README.md`).
+- Una decisión del equipo o del producto en estado `Propuesto` se evalúa en **modo
+  informativo**: sus hallazgos se marcan como `propuesta` y no afectan el veredicto. Así se calibra
+  antes de aprobarla (ver `equipo/README.md`).
+- Las decisiones del producto se subordinan a arquitectura y a las del equipo
+  (`productos/<p>/decisiones/COHERENCIA.md`). La única forma de apartarse de una regla es un ADR de
+  producto de tipo `excepcion`, aprobado y con vencimiento; si exceptúa arquitectura, además
+  necesita la referencia de aprobación de arquitectura.
 
 ## Estructura
 
+Cada nivel tiene la misma forma: `decisiones/` con sus ADR, `INDICE.md` y, si corresponde,
+`COHERENCIA.md`. Los archivos en MAYÚSCULAS los genera el harness y no se editan. Los datos de las
+herramientas (`.json`, `.lock`) viven siempre en una carpeta `estado/` y no se editan a mano.
+
 ```
+arquitectura/        niveles 1 y 2: INDICE.md, decisiones/<fuente>/, estandares/<fuente>/, estado/
+equipo/              nivel 3: INDICE.md, COHERENCIA.md, decisiones/ (ADR-EQ), plantillas/, estado/
+productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), as-is/, revisiones/,
+                     triaje/, agendas/, estado/ (hallazgos.json, coherencia.json), repos/
+herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
-.cursor/commands/    comandos de Cursor (/arquitectura, /actualizar, /producto, /revisar, /triar)
-arquitectura/        espejo de los repositorios de arquitectura; lo escribe /actualizar
-equipo/              decisiones del equipo (ADR-EQ), COHERENCIA.md y plantillas
-herramientas/        scripts deterministas que usan los comandos
-productos/<p>/       producto.yaml, as-is/, reportes/, hallazgos.json, triaje/, agendas/, repos/
-harness.yaml         configuración global (fuentes de arquitectura, estados, publicables)
+.cursor/commands/    comandos de Cursor (/arquitectura, /actualizar, /producto, /adr, /revisar, /triar)
+harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
 
@@ -90,7 +99,8 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 |---|---|
 | `/arquitectura` | agrega o retira los repositorios de donde se descargan los documentos de arquitectura |
 | `/actualizar` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR-EQ y actualiza los repositorios |
-| `/producto <nombre>` | crea un producto o le agrega repositorios |
+| `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
+| `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos y excepciones con vencimiento |
 | `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, confirmar, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 

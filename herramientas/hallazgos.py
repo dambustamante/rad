@@ -1,4 +1,4 @@
-"""Registro de hallazgos de un producto: productos/<producto>/hallazgos.json.
+"""Registro de hallazgos de un producto: productos/<producto>/estado/hallazgos.json.
 
 Cada hallazgo se identifica por una huella estable (fuente, criterio, archivo y un fragmento
 normalizado; nunca el número de línea), de modo que se reconoce entre revisiones aunque el código
@@ -25,7 +25,7 @@ def huella(*partes: object) -> str:
 
 
 def archivo_registro(raiz: Path, producto: str) -> Path:
-    return raiz / "productos" / producto / "hallazgos.json"
+    return raiz / "productos" / producto / "estado" / "hallazgos.json"
 
 
 def cargar(raiz: Path, producto: str) -> dict:

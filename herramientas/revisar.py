@@ -7,9 +7,9 @@ Para cada repositorio activo:
 2. detecta su stack y ejecuta gitleaks;
 3. verifica los criterios automáticos de las decisiones del equipo;
 4. consulta Sonar (quality gate, issues, hotspots, métricas y antigüedad del análisis);
-5. actualiza productos/<producto>/hallazgos.json y la sección automática de as-is/<repo>.md.
+5. actualiza productos/<producto>/estado/hallazgos.json y la sección automática de as-is/<repo>.md.
 
-Deja el reporte en productos/<producto>/reportes/<fecha>-linea-base[-<repo>]/. La revisión de código
+Deja el reporte en productos/<producto>/revisiones/<fecha>-linea-base[-<repo>]/. La revisión de código
 (criterios de "revisión de código" y comparación con arquitectura) la completa el comando /revisar.
 """
 
@@ -26,7 +26,8 @@ import hallazgos as registro_hallazgos
 import productos
 import sonar
 import verificaciones
-from coherencia import leer_decisiones_equipo
+from adr import excepciones_activas
+from coherencia import leer_decisiones_equipo, suspendidos as criterios_suspendidos
 from comun import RAIZ, ErrorRadiografia, cargar_env, git, normalizar
 
 MARCA_AUTOMATICO = ("<!-- automatico:inicio -->", "<!-- automatico:fin -->")
@@ -49,7 +50,7 @@ def leer_json(archivo: Path) -> dict:
 
 def carpeta_reporte(raiz: Path, producto: str, repo: str | None) -> tuple[str, Path]:
     base = f"{date.today().isoformat()}-linea-base" + (f"-{repo}" if repo else "")
-    carpeta_reportes = raiz / "productos" / producto / "reportes"
+    carpeta_reportes = raiz / "productos" / producto / "revisiones"
     id_revision, numero = base, 2
     while (carpeta_reportes / id_revision).exists():
         id_revision, numero = f"{base}-{numero}", numero + 1
@@ -217,8 +218,7 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
         cliente_sonar = None
 
     decisiones = decisiones_con_criterios(raiz)
-    coherencia = leer_json(raiz / "equipo" / "coherencia.json")
-    suspendidos = coherencia.get("suspendidos", {})
+    suspendidos = criterios_suspendidos(raiz, producto)
     id_revision, carpeta = carpeta_reporte(raiz, producto, solo_repo)
     carpeta.mkdir(parents=True)
     hoy = date.today().isoformat()
@@ -237,7 +237,8 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
         archivos = set(git("ls-tree", "-r", "--name-only", commit, cwd=destino).splitlines())
         gitleaks = verificaciones.ejecutar_gitleaks(destino)
         resultados_criterios, encontrados = verificaciones.verificar_repo(
-            destino, repo["id"], repo["rama"], repo["tipo"], decisiones, suspendidos, gitleaks)
+            destino, repo["id"], repo["rama"], repo["tipo"], decisiones, suspendidos, gitleaks,
+            excepciones_activas(raiz, producto, repo["id"]))
         info_sonar = consultar_sonar(cliente_sonar, motivo_sin_sonar, repo.get("sonar"), commit)
         origenes = {"verificacion"} | ({"gitleaks"} if gitleaks is not None else set())
         if info_sonar["estado"] == "ok":
@@ -267,13 +268,15 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
     registro_hallazgos.guardar(raiz, producto, registro)
     contexto = {
         "id_revision": id_revision, "producto": producto, "fecha": hoy, "tipo": "linea-base",
-        "arquitectura": leer_json(raiz / "arquitectura" / "fuentes.lock"),
+        "arquitectura": leer_json(raiz / "arquitectura" / "estado" / "fuentes.lock"),
         "decisiones_equipo": {k: {"estado": v["estado"], "huella": v["huella"]} for k, v in decisiones.items()},
         "criterios_suspendidos": suspendidos,
         "repos": {r["repo"]: {"estado": r["estado"], "commit": r.get("commit")} for r in resultados},
     }
     (carpeta / "contexto.json").write_text(json.dumps(contexto, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     escribir_resumen(carpeta, producto, id_revision, resultados, registro)
+    import indices
+    indices.indice_producto(raiz, producto)
     return {"id_revision": id_revision, "carpeta": carpeta, "resultados": resultados}
 
 

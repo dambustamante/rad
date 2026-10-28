@@ -4,10 +4,11 @@ Uso: python herramientas/sync_arquitectura.py [--raiz RUTA]
 
 Para cada fuente de `harness.yaml` (arquitectura.fuentes):
 1. clona o actualiza el repositorio en `.cache/arquitectura/<id>/` (solo git);
-2. copia la carpeta indicada a `arquitectura/<id>/`;
+2. copia la carpeta indicada a `arquitectura/decisiones/<id>/` (fuentes de tipo adr) o a
+   `arquitectura/estandares/<id>/` (estándares y referencias);
 3. lee cada documento (título, estado, fechas, regla rápida, relaciones).
 
-Luego escribe `arquitectura/fuentes.lock`, `arquitectura/indice.json` y
+Luego escribe `arquitectura/estado/fuentes.lock`, `arquitectura/estado/indice.json` y
 `arquitectura/INDICE.md`, e informa los cambios respecto de la sincronización anterior.
 """
 
@@ -28,7 +29,16 @@ TIPOS = ("adr", "estandar", "referencia")
 VIGENCIAS = ("vigente", "pendiente", "no_vigente")
 NO_DETERMINADO = "NO DETERMINADO"
 ARCHIVOS_OMITIDOS = {"readme.md", "index.md", "_index.md"}
-ARCHIVOS_GENERADOS = {"README.md", "INDICE.md", "indice.json", "fuentes.lock"}
+SUBCARPETAS = ("decisiones", "estandares")
+
+
+def carpeta_fuente(raiz: Path, fuente: dict) -> Path:
+    """arquitectura/decisiones/<id> para ADR; arquitectura/estandares/<id> para estándares y referencias."""
+    return raiz / "arquitectura" / ("decisiones" if fuente["tipo"] == "adr" else "estandares") / fuente["id"]
+
+
+def carpeta_estado(raiz: Path) -> Path:
+    return raiz / "arquitectura" / "estado"
 
 PATRON_ID_ADR = re.compile(r"\bADR[-_ ]?(\d+)\b", re.IGNORECASE)
 PATRON_ENCABEZADO = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
@@ -94,7 +104,7 @@ def sincronizar_fuente(fuente: dict, raiz: Path) -> str:
     origen = (cache / fuente["ruta"]).resolve()
     if not origen.is_dir() or cache.resolve() not in (origen, *origen.parents):
         raise ErrorRadiografia(f"La ruta '{fuente['ruta']}' no existe en la fuente '{fuente['id']}'.")
-    destino = raiz / "arquitectura" / fuente["id"]
+    destino = carpeta_fuente(raiz, fuente)
     if destino.exists():
         shutil.rmtree(destino)
     shutil.copytree(origen, destino, ignore=shutil.ignore_patterns(".git"))
@@ -240,7 +250,7 @@ def analizar_documento(archivo: Path, carpeta_fuente: Path, fuente: dict, estado
 
 
 def analizar_fuente(fuente: dict, estados: dict[str, list[str]], raiz: Path) -> list[dict]:
-    carpeta = raiz / "arquitectura" / fuente["id"]
+    carpeta = carpeta_fuente(raiz, fuente)
     documentos = []
     for archivo in sorted(carpeta.rglob("*.md")):
         documento = analizar_documento(archivo, carpeta, fuente, estados, raiz)
@@ -392,9 +402,10 @@ def main(argumentos: list[str] | None = None) -> int:
         return 0
 
     carpeta = raiz / "arquitectura"
-    carpeta.mkdir(exist_ok=True)
-    lock_anterior = leer_json(carpeta / "fuentes.lock")
-    indice_anterior = leer_json(carpeta / "indice.json")
+    estado = carpeta_estado(raiz)
+    estado.mkdir(parents=True, exist_ok=True)
+    lock_anterior = leer_json(estado / "fuentes.lock")
+    indice_anterior = leer_json(estado / "indice.json")
     documentos_previos = indice_anterior.get("documentos", [])
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -414,14 +425,16 @@ def main(argumentos: list[str] | None = None) -> int:
                 lock[fuente["id"]] = lock_anterior[fuente["id"]]
                 documentos += [d for d in documentos_previos if d["fuente"] == fuente["id"]]
 
-    ids_configurados = {f["id"] for f in fuentes}
-    for subcarpeta in carpeta.iterdir():
-        if subcarpeta.is_dir() and subcarpeta.name not in ids_configurados:
-            shutil.rmtree(subcarpeta)
+    configuradas = {carpeta_fuente(raiz, f) for f in fuentes}
+    for nombre in SUBCARPETAS:
+        if (carpeta / nombre).exists():
+            for subcarpeta in (carpeta / nombre).iterdir():
+                if subcarpeta.is_dir() and subcarpeta not in configuradas:
+                    shutil.rmtree(subcarpeta)
 
     cambios = calcular_cambios(indice_anterior, documentos, lock_anterior, lock)
-    (carpeta / "fuentes.lock").write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    (carpeta / "indice.json").write_text(
+    (estado / "fuentes.lock").write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (estado / "indice.json").write_text(
         json.dumps({"generado": ahora, "documentos": documentos}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     escribir_indice_md(carpeta / "INDICE.md", documentos, lock, ahora)

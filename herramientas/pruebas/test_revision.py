@@ -49,7 +49,7 @@ class PruebaRevision(unittest.TestCase):
         base = Path(self.temporal.name)
         self.raiz = base / "raiz"
         (self.raiz / "productos").mkdir(parents=True)
-        shutil.copytree(RAIZ / "equipo", self.raiz / "equipo", ignore=shutil.ignore_patterns("coherencia.json", "COHERENCIA.md"))
+        shutil.copytree(RAIZ / "equipo", self.raiz / "equipo", ignore=shutil.ignore_patterns("estado", "COHERENCIA.md", "INDICE.md"))
 
         arquitectura = base / "arquitectura"
         crear_repo(arquitectura, "main", {"adrs/0010-timeouts.md": ADR_TIMEOUTS})

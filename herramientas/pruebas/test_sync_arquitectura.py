@@ -133,7 +133,7 @@ class PruebaSyncArquitectura(unittest.TestCase):
         return codigo, salida.getvalue()
 
     def documentos(self) -> dict[str, dict]:
-        indice = json.loads((self.raiz / "arquitectura" / "indice.json").read_text(encoding="utf-8"))
+        indice = json.loads((self.raiz / "arquitectura" / "estado" / "indice.json").read_text(encoding="utf-8"))
         return {d["id"]: d for d in indice["documentos"]}
 
     def test_indice_lock_y_lectura_de_adr(self) -> None:
@@ -160,13 +160,13 @@ class PruebaSyncArquitectura(unittest.TestCase):
         self.assertEqual(desconocido["vigencia"], "NO DETERMINADO")
         self.assertIn("En borrador", desconocido["motivo"])
 
-        lock = json.loads((self.raiz / "arquitectura" / "fuentes.lock").read_text(encoding="utf-8"))
+        lock = json.loads((self.raiz / "arquitectura" / "estado" / "fuentes.lock").read_text(encoding="utf-8"))
         self.assertEqual(lock["decision-records"]["commit"], self.commit_inicial)
 
         indice_md = (self.raiz / "arquitectura" / "INDICE.md").read_text(encoding="utf-8")
         self.assertIn("ADR-003", indice_md)
         self.assertIn("Documentos con vigencia NO DETERMINADO", indice_md)
-        self.assertTrue((self.raiz / "arquitectura" / "decision-records" / "0003-adopcion-cursor.md").exists())
+        self.assertTrue((self.raiz / "arquitectura" / "decisiones" / "decision-records" / "0003-adopcion-cursor.md").exists())
 
     def test_detecta_cambios_entre_sincronizaciones(self) -> None:
         self.sincronizar()
@@ -176,10 +176,10 @@ class PruebaSyncArquitectura(unittest.TestCase):
 
         codigo, salida = self.sincronizar()
         self.assertEqual(codigo, 0, salida)
-        self.assertIn("Documentos modificados: arquitectura/decision-records/0002-baseline-java.md", salida)
-        self.assertIn("Cambio de vigencia: arquitectura/decision-records/0002-baseline-java.md: NO DETERMINADO -> vigente", salida)
+        self.assertIn("Documentos modificados: arquitectura/decisiones/decision-records/0002-baseline-java.md", salida)
+        self.assertIn("Cambio de vigencia: arquitectura/decisiones/decision-records/0002-baseline-java.md: NO DETERMINADO -> vigente", salida)
         self.assertIn("Fuentes con commits nuevos: decision-records", salida)
-        lock = json.loads((self.raiz / "arquitectura" / "fuentes.lock").read_text(encoding="utf-8"))
+        lock = json.loads((self.raiz / "arquitectura" / "estado" / "fuentes.lock").read_text(encoding="utf-8"))
         self.assertEqual(lock["decision-records"]["commit"], nuevo_commit)
 
     def test_ruta_inexistente_es_un_error_y_conserva_lo_anterior(self) -> None:

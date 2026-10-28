@@ -93,7 +93,7 @@ class PruebaCoherencia(unittest.TestCase):
             "PostgreSQL como base relacional."), encoding="utf-8")
         commit(self.origen, "ADR de arquitectura")
 
-        equipo = self.raiz / "equipo"
+        equipo = self.raiz / "equipo" / "decisiones"
         equipo.mkdir(parents=True)
         (equipo / "ADR-EQ-003-resiliencia.md").write_text(adr_equipo(
             "003", "Integraciones resilientes",
@@ -205,12 +205,12 @@ class PruebaCoherencia(unittest.TestCase):
         self.assertIn("⚠️ 1 duplicación(es)", texto)
         self.assertIn("### ADR-EQ-003 × decisiones:ADR-010", texto)
         self.assertIn("decisiones@", texto)
-        estado = json.loads((self.raiz / "equipo" / "coherencia.json").read_text(encoding="utf-8"))
+        estado = json.loads((self.raiz / "equipo" / "estado" / "coherencia.json").read_text(encoding="utf-8"))
         self.assertEqual(estado["suspendidos"], {"ADR-EQ-003": ["EQ-003.2"]})
 
     def test_solo_reevalua_lo_que_cambia(self) -> None:
         self.registrar_todo()
-        archivo_eq = self.raiz / "equipo" / "ADR-EQ-003-resiliencia.md"
+        archivo_eq = self.raiz / "equipo" / "decisiones" / "ADR-EQ-003-resiliencia.md"
 
         # Cambiar el estado o la fecha no exige volver a evaluar.
         archivo_eq.write_text(archivo_eq.read_text(encoding="utf-8").replace("Propuesto", "Aprobado"), encoding="utf-8")
@@ -235,7 +235,7 @@ class PruebaCoherencia(unittest.TestCase):
         commit(self.origen, "Reemplaza ADR-010")
         self.sincronizar()
         self.ejecutar("generar")
-        estado = json.loads((self.raiz / "equipo" / "coherencia.json").read_text(encoding="utf-8"))
+        estado = json.loads((self.raiz / "equipo" / "estado" / "coherencia.json").read_text(encoding="utf-8"))
         self.assertEqual(estado["suspendidos"], {}, "el choque con un ADR que dejó de estar vigente se descarta")
 
 

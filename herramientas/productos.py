@@ -7,6 +7,7 @@ Uso:
                                            [--sonar CLAVE] [--descripcion TEXTO]
   python herramientas/productos.py retirar --producto P --id ID --motivo TEXTO
   python herramientas/productos.py sincronizar [--producto P]
+  python herramientas/productos.py sigla <producto> [--asignar SIGLA]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
@@ -30,6 +31,8 @@ from comun import (RAIZ, ErrorRadiografia, actualizar_clon, clon_de_inspeccion, 
                    leer_yaml_conservador, rama_por_defecto, resolver_commit, yaml_conservador)
 
 TIPOS_REPO = ("propio", "proveedor", "config")
+PATRON_SIGLA = re.compile(r"[A-Z]{2,5}")
+SIGLAS_RESERVADAS = {"EQ"}
 PATRON_NOMBRE = re.compile(r"[a-z0-9][a-z0-9-]*")
 PATRON_CONTRATO = re.compile(r"(^|/)[^/]*(openapi|swagger|asyncapi)[^/]*\.(ya?ml|json)$", re.IGNORECASE)
 
@@ -38,6 +41,8 @@ PLANTILLA_PRODUCTO = """\
 
 nombre: {nombre}
 descripcion: ""
+# Sigla para numerar los ADR del producto (ADR-{sigla}-001). Se cambia con `productos.py sigla` mientras no haya ADR.
+sigla: {sigla}
 
 # Ubicación del C4 del producto (ADR-EQ-001), en formato <id-repo>:<ruta>. null si aún no existe.
 c4: null
@@ -64,6 +69,47 @@ def normalizar_url_git(url: str) -> str:
     texto = re.sub(r"^[a-z+]+://", "", texto)
     texto = re.sub(r"^[^@/]+@", "", texto)
     return texto.replace(":", "/", 1) if ":" in texto.split("/", 1)[0] else texto
+
+
+def siglas_en_uso(raiz: Path, excepto: str | None = None) -> set[str]:
+    return {str(d.get("sigla")) for p, d in leer_productos(raiz).items() if p != excepto and d.get("sigla")} | SIGLAS_RESERVADAS
+
+
+def proponer_sigla(raiz: Path, producto: str) -> str:
+    """Iniciales de las palabras del nombre (motor-fraudes -> MF; pagos -> PAG), única entre productos."""
+    palabras = [re.sub(r"[^a-z]", "", p) for p in producto.split("-")]
+    palabras = [p for p in palabras if p] or ["producto"]
+    letras = "".join(palabras).upper()
+    base = "".join(p[0] for p in palabras).upper() if len(palabras) > 1 else palabras[0][:3].upper()
+    base = (base + letras[len(base):] + "XX")[:max(2, len(base))][:5]
+    usadas = siglas_en_uso(raiz, producto)
+    candidata, extra = base, iter(letras[len(base):])
+    while candidata in usadas:
+        siguiente = next(extra, None)
+        if siguiente and len(candidata) < 5:
+            candidata += siguiente
+        else:
+            break
+    numero = 0
+    while candidata in usadas:
+        candidata = base[:4] + chr(ord("A") + numero)
+        numero += 1
+    return candidata
+
+
+def asignar_sigla(raiz: Path, producto: str, sigla: str) -> None:
+    archivo = archivo_producto(raiz, producto)
+    if not archivo.exists():
+        raise ErrorRadiografia(f"No existe el producto '{producto}'.")
+    if not PATRON_SIGLA.fullmatch(sigla):
+        raise ErrorRadiografia(f"La sigla '{sigla}' debe tener de 2 a 5 letras mayúsculas.")
+    if sigla in siglas_en_uso(raiz, producto):
+        raise ErrorRadiografia(f"La sigla '{sigla}' ya está en uso o reservada.")
+    if any((raiz / "productos" / producto / "decisiones").glob("ADR-*.md")):
+        raise ErrorRadiografia("El producto ya tiene ADR: su sigla no se puede cambiar.")
+    datos = leer_yaml_conservador(archivo)
+    datos["sigla"] = sigla
+    escribir_yaml_conservador(archivo, datos)
 
 
 def nombre_repositorio(url: str) -> str:
@@ -212,7 +258,7 @@ def agregar(raiz: Path, producto: str, id_repo: str, url: str, rama: str, tipo: 
     creado = not archivo.exists()
     if creado:
         archivo.parent.mkdir(parents=True, exist_ok=True)
-        datos = yaml_conservador().load(PLANTILLA_PRODUCTO.format(nombre=producto))
+        datos = yaml_conservador().load(PLANTILLA_PRODUCTO.format(nombre=producto, sigla=proponer_sigla(raiz, producto)))
         datos["descripcion"] = descripcion or ""
     else:
         datos = leer_yaml_conservador(archivo)
@@ -316,6 +362,9 @@ def main(argumentos: list[str] | None = None) -> int:
     p_retirar.add_argument("--motivo", required=True)
     p_sincronizar = sub.add_parser("sincronizar", help="clona o actualiza los repositorios activos")
     p_sincronizar.add_argument("--producto")
+    p_sigla = sub.add_parser("sigla", help="muestra o cambia la sigla de un producto")
+    p_sigla.add_argument("producto")
+    p_sigla.add_argument("--asignar")
     opciones = parser.parse_args(argumentos)
     raiz = opciones.raiz.resolve()
 
@@ -328,7 +377,8 @@ def main(argumentos: list[str] | None = None) -> int:
             creado = agregar(raiz, opciones.producto, opciones.id, opciones.url, opciones.rama, opciones.tipo,
                              opciones.sonar, opciones.descripcion)
             if creado:
-                print(f"Producto '{opciones.producto}' creado.")
+                sigla = leer_productos(raiz)[opciones.producto].get("sigla")
+                print(f"Producto '{opciones.producto}' creado con la sigla {sigla} (se puede cambiar mientras no tenga ADR).")
             print(f"Repositorio '{opciones.id}' agregado al producto '{opciones.producto}'.")
         elif opciones.accion == "retirar":
             retirar(raiz, opciones.producto, opciones.id, opciones.motivo)
@@ -341,6 +391,16 @@ def main(argumentos: list[str] | None = None) -> int:
                 detalle = f"{r['commit'][:12]} ({r['fecha']})" if "commit" in r else r["detalle"]
                 print(f"  [{r['resultado']}] {r['producto']}/{r['repo']} ({r['rama']}): {detalle}")
             return 1 if any(r["resultado"] == "error" for r in resultados) else 0
+        elif opciones.accion == "sigla":
+            if opciones.asignar:
+                asignar_sigla(raiz, opciones.producto, opciones.asignar)
+            datos = leer_productos(raiz).get(opciones.producto)
+            if datos is None:
+                raise ErrorRadiografia(f"No existe el producto '{opciones.producto}'.")
+            print(f"Sigla de '{opciones.producto}': {datos.get('sigla') or 'sin asignar'}")
+        if opciones.accion in ("agregar", "retirar", "sigla"):
+            import indices
+            indices.indice_producto(raiz, opciones.producto)
     except ErrorRadiografia as error:
         print(f"ERROR: {error}")
         return 1

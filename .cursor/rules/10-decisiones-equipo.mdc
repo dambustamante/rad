@@ -6,14 +6,14 @@ alwaysApply: false
 
 Al crear o modificar archivos en `equipo/`:
 
-- Un ADR-EQ nuevo se crea desde `equipo/plantillas/adr.md`, con el siguiente número libre (`ADR-EQ-NNN`), nombre de archivo `ADR-EQ-NNN-<titulo-en-kebab-case>.md` y estado `Propuesto`.
+- Un ADR-EQ nuevo se crea en `equipo/decisiones/` desde `equipo/plantillas/adr.md`, con el siguiente número libre (`ADR-EQ-NNN`), nombre de archivo `ADR-EQ-NNN-<titulo-en-kebab-case>.md` y estado `Propuesto`.
 - Se conservan las secciones y la numeración de la plantilla (2 a 13), que replica el formato de los ADR de arquitectura.
 - La sección 11 (Regla rápida) es obligatoria: una o dos frases verificables.
 - La sección 12 (Relación con arquitectura) no se completa a mano: remite a `equipo/COHERENCIA.md`, que se genera con `/actualizar`.
 - La sección 13 (Criterios de verificación) usa identificadores `EQ-NNN.N` estables: nunca se renumeran ni se reutilizan. Un criterio que deja de aplicar se marca como retirado en la misma tabla.
 - Un ADR-EQ `Aprobado` no se edita: se crea uno nuevo que lo reemplaza, y el anterior pasa a `Reemplazado` con la referencia al nuevo.
 - Un ADR-EQ solo pasa a `Aprobado` si `equipo/COHERENCIA.md` lo muestra sin choques ni pares pendientes.
-- Al agregar o cambiar el estado de un ADR-EQ, se actualiza la tabla de `equipo/README.md`.
+- Al agregar o cambiar el estado de un ADR-EQ, se ejecuta `make indices` para regenerar `equipo/INDICE.md`.
 - Después de crear o cambiar la decisión, las acciones, la regla rápida o los criterios de un ADR-EQ, se ejecuta `/actualizar` para verificar su coherencia con arquitectura.
-- `COHERENCIA.md` y `coherencia.json` no se editan a mano: los escribe `herramientas/coherencia.py`.
+- `INDICE.md`, `COHERENCIA.md` y `equipo/estado/` no se editan a mano: los escriben las herramientas.
 - Las decisiones del equipo están subordinadas a arquitectura: nunca relajan ni contradicen un ADR o estándar de arquitectura vigente.

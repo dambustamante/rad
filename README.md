@@ -5,7 +5,7 @@ contra:
 
 1. los ADR de arquitectura,
 2. los estándares de arquitectura,
-3. las decisiones del equipo (ADR-EQ),
+3. las decisiones del equipo (ADR-EQ) y del producto (ADR-<SIGLA>),
 4. Sonar (SonarQube, incluida la Community Edition, o SonarCloud).
 
 El resultado es una ficha por repositorio y por producto, con hallazgos respaldados por evidencia
@@ -39,6 +39,7 @@ make doctor               # verifica herramientas y configuración (no muestra v
 | 1 | `/arquitectura` | pide los repositorios de arquitectura, los inspecciona y propone las fuentes |
 | 2 | `/actualizar` | descarga los documentos, genera `arquitectura/INDICE.md` y verifica que las decisiones del equipo no choquen con arquitectura (`equipo/COHERENCIA.md`) |
 | 3 | `/producto <nombre>` | pide los repositorios del producto, los inspecciona y los registra |
+| 3b | `/adr <producto>` | opcional: reglas propias del producto, mejoras a partir de hallazgos y excepciones con vencimiento |
 | 4 | `/revisar <producto>` | revisa **un repositorio por conversación**: parte automática, AS IS, comparación con lo decidido y C4 inferido. Abrir un chat nuevo para cada repositorio |
 | 5 | `/triar <producto>` | genera un archivo para marcar la decisión sobre cada hallazgo y muestra la calibración |
 
@@ -62,27 +63,47 @@ representativos, triar sus hallazgos y medir el consumo de Cursor antes de revis
 |---|---|
 | `productos/<p>/as-is/<repo>.md` | ficha del repositorio: datos, Sonar, AS IS, comparación por nivel y veredicto |
 | `productos/<p>/as-is/PRODUCTO.md` | matriz de cumplimiento repositorio × documento, brechas y visión del producto |
-| `productos/<p>/reportes/<revisión>/` | reporte de cada revisión, paquetes de revisión y borradores C4 |
-| `productos/<p>/hallazgos.json` | registro de hallazgos y decisiones (no se edita a mano) |
+| `productos/<p>/INDICE.md` | punto de entrada del producto: repositorios, ADR, revisiones y triaje pendiente |
+| `productos/<p>/revisiones/<revisión>/` | reporte de cada revisión, paquetes de revisión y borradores C4 |
 | `productos/<p>/agendas/` | hallazgos para conversar con el equipo |
 | `equipo/COHERENCIA.md` | coherencia de las decisiones del equipo con arquitectura |
+| `productos/<p>/decisiones/` | ADR del producto, su índice y su coherencia con arquitectura y con el equipo |
 | `arquitectura/INDICE.md` | documentos de arquitectura con su estado y su regla rápida |
 
 ## Estructura
 
-| Carpeta | Contenido |
-|---|---|
-| `arquitectura/` | copia de los documentos publicados por arquitectura; no se edita |
-| `equipo/` | decisiones del equipo (ADR-EQ), coherencia con arquitectura y plantillas |
-| `productos/<p>/` | configuración, fichas AS IS, reportes, hallazgos, triaje y agendas de cada producto |
-| `herramientas/` | scripts deterministas que usan los comandos, con sus pruebas (`make test`) |
-| `.cursor/` | reglas y comandos de Cursor |
+Cada nivel de autoridad tiene la misma forma: una carpeta `decisiones/`, un `INDICE.md` y, si
+corresponde, un `COHERENCIA.md`. Lo que está en mayúsculas lo genera el harness y no se edita; los
+datos de las herramientas están siempre en `estado/`.
+
+```
+arquitectura/                 niveles 1 y 2: copia de arquitectura, no se edita
+├── INDICE.md
+├── decisiones/<fuente>/      ADR de arquitectura
+├── estandares/<fuente>/      estándares y arquitecturas de referencia
+└── estado/
+equipo/                       nivel 3: decisiones del equipo
+├── INDICE.md · COHERENCIA.md · README.md
+├── decisiones/               ADR-EQ-NNN
+├── plantillas/
+└── estado/
+productos/<producto>/
+├── INDICE.md · producto.yaml
+├── decisiones/               nivel 3: ADR-<SIGLA>-NNN, su INDICE.md y su COHERENCIA.md
+├── as-is/                    fichas por repositorio y PRODUCTO.md
+├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión
+├── triaje/ · agendas/
+├── estado/                   hallazgos.json, coherencia.json
+└── repos/                    copias de los repositorios (fuera de git)
+herramientas/                 scripts deterministas y sus pruebas (make test)
+.cursor/                      reglas y comandos de Cursor
+```
 
 El contrato de trabajo completo está en [AGENTS.md](AGENTS.md).
 
 ## Estado
 
-**MVP:** `/arquitectura`, `/actualizar`, `/producto`, `/revisar` y `/triar`.
+**MVP:** `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar` y `/triar`.
 
 **Fase 2:** revisión de ramas (`--rama`, `--desde`) con publicación en el MR o PR (GitLab o GitHub),
 reporte semanal, historias de deuda en Jira y pruebas de integración y de carga.

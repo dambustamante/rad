@@ -78,11 +78,11 @@ PATRON_RELACION = re.compile(r"^\s*(Rel|BiRel|Rel_[A-Za-z]+)\((.*)\)\s*$")
 # --- Utilidades --------------------------------------------------------------------------------
 
 def leer_criterios(texto_adr: str) -> dict[str, dict]:
-    """Tabla de criterios de un ADR-EQ: {criterio: {texto, como, severidad}}."""
+    """Tabla de criterios de un ADR del equipo o del producto: {criterio: {texto, como, severidad}}."""
     criterios = {}
     for linea in texto_adr.splitlines():
         celdas = [c.strip() for c in linea.strip().strip("|").split("|")]
-        if len(celdas) >= 4 and re.fullmatch(r"`EQ-\d{3}\.\d+`", celdas[0]):
+        if len(celdas) >= 4 and re.fullmatch(r"`[A-Z]{2,5}-\d{3}\.\d+`", celdas[0]):
             criterios[celdas[0].strip("`")] = {"texto": celdas[1], "como": celdas[2], "severidad": celdas[3]}
     return criterios
 
@@ -143,9 +143,10 @@ def bloques_mermaid(texto: str) -> list[tuple[int, list[str]]]:
 class Verificador:
 
     def __init__(self, repo: Path, id_repo: str, rama: str, decisiones: dict[str, dict],
-                 suspendidos: dict[str, list[str]]) -> None:
+                 suspendidos: dict[str, list[str]], exceptuados: dict[str, str] | None = None) -> None:
         self.repo, self.id_repo, self.rama = repo, id_repo, rama
         self.decisiones, self.suspendidos = decisiones, suspendidos
+        self.exceptuados = exceptuados or {}
         self.resultados: list[dict] = []
         self.hallazgos: list[dict] = []
 
@@ -154,6 +155,9 @@ class Verificador:
         id_eq = "ADR-EQ-" + id_criterio[3:6]
         decision = self.decisiones.get(id_eq)
         if decision is None or id_criterio not in decision["tabla"]:
+            return None
+        if id_criterio in self.exceptuados:
+            self.registrar(id_criterio, NO_APLICA, self.exceptuados[id_criterio])
             return None
         if id_criterio in self.suspendidos.get(id_eq, []):
             self.registrar(id_criterio, NO_APLICA, "suspendido por un choque con arquitectura (equipo/COHERENCIA.md)")
@@ -440,9 +444,10 @@ def verificar_logs(v: Verificador) -> None:
 # --- Punto de entrada --------------------------------------------------------------------------
 
 def verificar_repo(repo: Path, id_repo: str, rama: str, tipo: str, decisiones: dict[str, dict],
-                   suspendidos: dict[str, list[str]], gitleaks: list[dict] | None) -> tuple[list[dict], list[dict]]:
+                   suspendidos: dict[str, list[str]], gitleaks: list[dict] | None,
+                   exceptuados: dict[str, str] | None = None) -> tuple[list[dict], list[dict]]:
     """Devuelve (resultados por criterio, hallazgos)."""
-    v = Verificador(repo, id_repo, rama, decisiones, suspendidos)
+    v = Verificador(repo, id_repo, rama, decisiones, suspendidos, exceptuados)
     if tipo != "propio":
         # En repositorios de configuración solo se buscan secretos (ADR-EQ-004); el resto aplica a repositorios propios.
         if tipo == "config":

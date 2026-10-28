@@ -14,15 +14,18 @@ de las decisiones del equipo (ADR-EQ) con arquitectura.
    Si falla en el paso de herramientas (`doctor`), informar qué falta y cómo instalarlo, y
    detenerse. Si la sincronización informa errores, informarlos y continuar con lo disponible.
 
-2. **Coherencia.** Si la salida dice "Coherencia al día" o que no hay documentos vigentes, pasar
-   al paso 3. Si lista pares por evaluar, hacer la evaluación en dos etapas.
+2. **Coherencia.** La salida tiene una sección por ámbito: `[equipo]` (ADR-EQ frente a arquitectura)
+   y `[<producto>]` (ADR de producto frente a arquitectura y a los ADR-EQ, que aparecen como
+   `equipo:ADR-EQ-NNN`). Para cada ámbito que liste pares por evaluar, hacer la evaluación en dos
+   etapas, siempre con `--ambito <ámbito>` en los comandos. Si todos dicen "Coherencia al día", pasar
+   al paso 3.
 
    **Etapa A: filtro por tema.** Con los títulos y reglas rápidas que muestra la salida, decidir
    para cada par si ambos documentos tratan el mismo tema. Los pares sin relación temática se
    registran sin leer más:
 
    ```sh
-   .venv/bin/python herramientas/coherencia.py registrar --eq <ADR-EQ-NNN> --doc <fuente:ID> --relacion sin_relacion
+   .venv/bin/python herramientas/coherencia.py registrar --ambito <ámbito> --decision <ADR-XX-NNN> --doc <clave> --relacion sin_relacion
    ```
 
    Ante la duda, no marcar `sin_relacion`: pasar el par a la etapa B.
@@ -30,8 +33,8 @@ de las decisiones del equipo (ADR-EQ) con arquitectura.
    **Etapa B: comparación.** Para cada par relacionado, leer los extractos:
 
    ```sh
-   .venv/bin/python herramientas/coherencia.py extracto <ADR-EQ-NNN>
-   .venv/bin/python herramientas/coherencia.py extracto <fuente:ID>
+   .venv/bin/python herramientas/coherencia.py extracto <ADR-XX-NNN> --ambito <ámbito>
+   .venv/bin/python herramientas/coherencia.py extracto <clave del documento> --ambito <ámbito>
    ```
 
    Leer el documento completo solo si el extracto no alcanza para decidir. Clasificar:
@@ -43,9 +46,10 @@ de las decisiones del equipo (ADR-EQ) con arquitectura.
    Registrar el resultado:
 
    ```sh
-   .venv/bin/python herramientas/coherencia.py registrar --eq <ADR-EQ-NNN> --doc <fuente:ID> --relacion <relacion> \
-     --cita-arquitectura "<texto copiado tal cual>" --cita-equipo "<texto copiado tal cual>" \
-     --explicacion "<por qué>" [--criterios EQ-NNN.N,...]
+   .venv/bin/python herramientas/coherencia.py registrar --ambito <ámbito> --decision <ADR-XX-NNN> --doc <clave> --relacion <relacion> \
+     --cita-documento "<texto copiado tal cual del documento de referencia>" \
+     --cita-decision "<texto copiado tal cual de la decisión evaluada>" \
+     --explicacion "<por qué>" [--criterios XX-NNN.N,...]
    ```
 
    - `duplica` y `choca` exigen las dos citas, copiadas textualmente; el script rechaza citas que
@@ -55,7 +59,8 @@ de las decisiones del equipo (ADR-EQ) con arquitectura.
      afectados, no todos.
    - Para `compatible`, agregar `--explicacion` en una frase.
 
-   Al terminar, ejecutar `make coherencia` para regenerar `equipo/COHERENCIA.md` y confirmar que no
+   Al terminar, ejecutar `make coherencia` para regenerar `equipo/COHERENCIA.md` y
+   `productos/<producto>/decisiones/COHERENCIA.md`, y confirmar que no
    quedan pares pendientes.
 
 3. **Responder** con este formato:
@@ -90,7 +95,7 @@ o con una corrección manual justificada.
 
 ## Reglas
 
-- No editar nada en `arquitectura/`, ni `equipo/COHERENCIA.md` ni `equipo/coherencia.json`.
+- No editar nada en `arquitectura/`, ni los `COHERENCIA.md`, `INDICE.md` o carpetas `estado/`.
 - No proponer cambios a los documentos de arquitectura: arquitectura prevalece. Las
   recomendaciones son siempre sobre los ADR-EQ.
 - Si `harness.yaml` no tiene fuentes, sugerir ejecutar `/arquitectura`.

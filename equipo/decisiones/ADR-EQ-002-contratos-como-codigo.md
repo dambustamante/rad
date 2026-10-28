@@ -93,7 +93,7 @@ evento; agrega un campo obligatorio a una solicitud; o cambia un tipo o un códi
 
 ## 12. Relación con arquitectura
 
-Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](COHERENCIA.md), junto con los criterios que quedan suspendidos si hay un choque.
+Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](../COHERENCIA.md), junto con los criterios que quedan suspendidos si hay un choque.
 
 ## 13. Criterios de verificación
 

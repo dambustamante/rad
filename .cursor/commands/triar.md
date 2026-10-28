@@ -3,7 +3,7 @@
 Registra la decisión del usuario sobre cada hallazgo y muestra la calibración de las fuentes.
 Uso: `/triar <producto> [repo]`.
 
-La parte determinista la hace `herramientas/triaje.py`. Nunca editar `hallazgos.json` ni
+La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/<producto>/estado/hallazgos.json` ni
 `harness.yaml` a mano en este comando.
 
 ## Decisiones

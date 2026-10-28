@@ -99,11 +99,14 @@ class PruebaFuentesArquitectura(unittest.TestCase):
         with contextlib.redirect_stdout(salida_sync):
             codigo = sync_arquitectura.main(["--raiz", str(self.raiz)])
         self.assertEqual(codigo, 0, salida_sync.getvalue())
-        indice = json.loads((self.raiz / "arquitectura" / "indice.json").read_text(encoding="utf-8"))
+        indice = json.loads((self.raiz / "arquitectura" / "estado" / "indice.json").read_text(encoding="utf-8"))
         documentos = {d["id"]: d for d in indice["documentos"]}
         self.assertEqual(set(documentos), {"ADR-002", "ADR-003", "api-rest"}, "la portada index.md no se indexa")
         self.assertEqual(documentos["ADR-003"]["vigencia"], "vigente", "ADR en formato carpeta con index.md")
         self.assertEqual(documentos["api-rest"]["vigencia"], "vigente", "estándar sin Estado con estado_por_defecto")
+        self.assertEqual(documentos["ADR-003"]["archivo"], "arquitectura/decisiones/decisiones/0003-adopcion-cursor/index.md")
+        self.assertEqual(documentos["api-rest"]["archivo"], "arquitectura/estandares/estandares/api-rest.md",
+                         "los estándares van a arquitectura/estandares/ y los ADR a arquitectura/decisiones/")
 
     def test_agregar_rechaza_ruta_inexistente_y_duplicados(self) -> None:
         codigo, salida = self.ejecutar("agregar", "--id", "x", "--url", str(self.origen),

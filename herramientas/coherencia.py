@@ -1,18 +1,24 @@
-"""Coherencia entre las decisiones del equipo (ADR-EQ) y los documentos vigentes de arquitectura.
+"""Coherencia de las decisiones del equipo y de los productos con lo que tiene más autoridad.
+
+Hay dos tipos de ámbito:
+- `equipo`: cada ADR-EQ frente a los documentos vigentes de arquitectura;
+- `<producto>`: cada ADR de producto de tipo decisión frente a arquitectura y a los ADR-EQ.
 
 Uso:
-  python herramientas/coherencia.py preparar [--json]
-  python herramientas/coherencia.py extracto <ID>            (ADR-EQ-003 o fuente:ID, por ejemplo decision-records:ADR-007)
-  python herramientas/coherencia.py registrar --eq ADR-EQ-NNN --doc fuente:ID --relacion RELACION
-                                              [--cita-arquitectura TEXTO --cita-equipo TEXTO]
-                                              [--criterios EQ-NNN.N,...] [--explicacion TEXTO] [--manual MOTIVO]
-  python herramientas/coherencia.py generar
+  python herramientas/coherencia.py preparar [--ambito equipo|<producto>] [--json]
+  python herramientas/coherencia.py extracto <ID> [--ambito <producto>]
+        ID: ADR-EQ-003, equipo:ADR-EQ-003, ADR-MF-001 o fuente:ID (por ejemplo decision-records:ADR-007)
+  python herramientas/coherencia.py registrar [--ambito equipo|<producto>] --decision ADR-XX-NNN --doc CLAVE
+        --relacion RELACION [--cita-documento TEXTO --cita-decision TEXTO] [--criterios XX-NNN.N,...]
+        [--explicacion TEXTO] [--manual MOTIVO]
+  python herramientas/coherencia.py generar [--ambito equipo|<producto>]
 
-Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
+Sin --ambito, `preparar` y `generar` recorren el equipo y todos los productos. Opción común: --raiz RUTA.
 
-La comparación la hace el agente; este script decide qué pares hay que evaluar, valida cada
-resultado (incluido que las citas existan textualmente en los documentos) y genera
-`equipo/COHERENCIA.md`. El estado vive en `equipo/coherencia.json`.
+La comparación la hace el agente; este script decide qué pares hay que evaluar, valida cada resultado
+(incluido que las citas existan textualmente en los documentos) y genera `equipo/COHERENCIA.md` y
+`productos/<producto>/decisiones/COHERENCIA.md`. El estado vive en `equipo/estado/coherencia.json` y en
+`productos/<producto>/estado/coherencia.json`.
 """
 
 from __future__ import annotations
@@ -20,8 +26,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,13 +39,15 @@ from sync_arquitectura import primer_parrafo, secciones
 RELACIONES = ("sin_relacion", "compatible", "duplica", "choca")
 SECCIONES_HUELLA = ("decision", "acciones requeridas", "regla rapida", "criterios de verificacion")
 SECCIONES_EXTRACTO = ("decision", "regla rapida", "criterios de verificacion")
-ESTADOS_EQ_EVALUADOS = ("propuesto", "aprobado")
+ESTADOS_EVALUADOS = ("propuesto", "aprobado")
 LARGO_MINIMO_CITA = 15
-PATRON_ARCHIVO_EQ = re.compile(r"^(ADR-EQ-\d{3})-.*\.md$")
-PATRON_CRITERIO = re.compile(r"`(EQ-\d{3}\.\d+)`")
+PATRON_ARCHIVO_ADR = re.compile(r"^(ADR-([A-Z]{2,5})-\d{3})-.*\.md$")
+PATRON_CRITERIO = re.compile(r"`([A-Z]{2,5}-\d{3}\.\d+)`")
+PATRON_CAMPO = re.compile(r"^\s*[-*]\s*\**([^:*]+?)\**\s*:\s*\**\s*(.*?)\s*$")
+EQUIPO = "equipo"
 
 
-# --- Lectura de documentos ---------------------------------------------------------------------
+# --- Lectura de decisiones ---------------------------------------------------------------------
 
 def huella(contenido: dict[str, list[str]], claves: tuple[str, ...] | None = None) -> str:
     partes = []
@@ -46,20 +56,36 @@ def huella(contenido: dict[str, list[str]], claves: tuple[str, ...] | None = Non
     return hashlib.sha256("\n\n".join(partes).encode("utf-8")).hexdigest()
 
 
-def leer_decisiones_equipo(raiz: Path) -> dict[str, dict]:
+def leer_campos(lineas: list[str]) -> dict[str, str]:
+    """Campos `- **Nombre:** valor` de una sección, con el nombre normalizado. Vale la primera aparición."""
+    campos = {}
+    for linea in lineas:
+        if coincidencia := PATRON_CAMPO.match(linea):
+            campos.setdefault(normalizar(coincidencia.group(1)), coincidencia.group(2).strip().strip("`").strip())
+    return campos
+
+
+def leer_decisiones(raiz: Path, carpeta: Path, prefijo: str | None = None) -> dict[str, dict]:
+    """ADR de una carpeta (`ADR-XX-NNN-titulo.md`). Con `prefijo`, solo los de esa sigla."""
     decisiones = {}
-    for archivo in sorted((raiz / "equipo").glob("ADR-EQ-*.md")):
-        coincidencia = PATRON_ARCHIVO_EQ.match(archivo.name)
-        if not coincidencia:
+    if not carpeta.exists():
+        return decisiones
+    for archivo in sorted(carpeta.glob("ADR-*.md")):
+        coincidencia = PATRON_ARCHIVO_ADR.match(archivo.name)
+        if not coincidencia or (prefijo and coincidencia.group(2) != prefijo):
             continue
+        id_adr = coincidencia.group(1)
         texto = archivo.read_text(encoding="utf-8")
         titulo, contenido = secciones(texto.splitlines())
         estado = primer_parrafo(contenido.get("estado", [])) or "NO DETERMINADO"
-        decisiones[coincidencia.group(1)] = {
-            "id": coincidencia.group(1),
-            "titulo": re.sub(r"^ADR-EQ-\d{3}:\s*", "", titulo or archivo.stem),
+        campos = leer_campos(contenido.get("tipo y alcance", []))
+        decisiones[id_adr] = {
+            "id": id_adr,
+            "titulo": re.sub(r"^ADR-[A-Z]{2,5}-\d{3}:\s*", "", titulo or archivo.stem),
             "estado": estado,
-            "evaluado": normalizar(estado) in ESTADOS_EQ_EVALUADOS,
+            "evaluado": normalizar(estado) in ESTADOS_EVALUADOS,
+            "tipo": normalizar(campos.get("tipo", "decision")) or "decision",
+            "campos": campos,
             "regla_rapida": " ".join(l.strip(" >") for l in contenido.get("regla rapida", []) if l.strip()),
             "criterios": PATRON_CRITERIO.findall("\n".join(contenido.get("criterios de verificacion", []))),
             "huella": huella(contenido, SECCIONES_HUELLA),
@@ -70,114 +96,182 @@ def leer_decisiones_equipo(raiz: Path) -> dict[str, dict]:
     return decisiones
 
 
+def leer_decisiones_equipo(raiz: Path) -> dict[str, dict]:
+    return leer_decisiones(raiz, raiz / "equipo" / "decisiones", "EQ")
+
+
+def sigla_de(raiz: Path, producto: str) -> str | None:
+    archivo = raiz / "productos" / producto / "producto.yaml"
+    if not archivo.exists():
+        return None
+    from ruamel.yaml import YAML  # import local: evita la dependencia circular con productos.py
+    datos = YAML(typ="safe").load(archivo.read_text(encoding="utf-8")) or {}
+    return datos.get("sigla")
+
+
+def leer_decisiones_producto(raiz: Path, producto: str) -> dict[str, dict]:
+    sigla = sigla_de(raiz, producto)
+    if not sigla:
+        return {}
+    return leer_decisiones(raiz, raiz / "productos" / producto / "decisiones", sigla)
+
+
 def leer_arquitectura_vigente(raiz: Path) -> dict[str, dict]:
-    indice = raiz / "arquitectura" / "indice.json"
+    indice = raiz / "arquitectura" / "estado" / "indice.json"
     if not indice.exists():
         return {}
-    documentos = json.loads(indice.read_text(encoding="utf-8")).get("documentos", [])
     vigentes = {}
-    for documento in documentos:
+    for documento in json.loads(indice.read_text(encoding="utf-8")).get("documentos", []):
         if documento["vigencia"] != "vigente":
             continue
         archivo = raiz / documento["archivo"]
         texto = archivo.read_text(encoding="utf-8") if archivo.exists() else ""
-        vigentes[f"{documento['fuente']}:{documento['id']}"] = {**documento, "texto": texto}
+        vigentes[f"{documento['fuente']}:{documento['id']}"] = {**documento, "texto": texto, "huella": documento["sha256"]}
     return vigentes
 
 
-def leer_estado(raiz: Path) -> dict:
-    archivo = raiz / "equipo" / "coherencia.json"
+# --- Ámbitos -----------------------------------------------------------------------------------
+
+@dataclass
+class Ambito:
+    nombre: str
+    titulo: str
+    sujetos: dict[str, dict]        # decisiones que se evalúan
+    referencias: dict[str, dict]    # documentos con más autoridad: clave -> {titulo, regla_rapida, texto, huella, archivo}
+    carpeta: Path                   # donde vive COHERENCIA.md
+    archivo_estado: Path            # coherencia.json
+
+
+def ambito_equipo(raiz: Path) -> Ambito:
+    return Ambito(EQUIPO, "Coherencia de las decisiones del equipo con arquitectura",
+                  leer_decisiones_equipo(raiz), leer_arquitectura_vigente(raiz), raiz / "equipo",
+                  raiz / "equipo" / "estado" / "coherencia.json")
+
+
+def ambito_producto(raiz: Path, producto: str) -> Ambito:
+    if not (raiz / "productos" / producto / "producto.yaml").exists():
+        raise ErrorRadiografia(f"No existe el producto '{producto}'.")
+    referencias = leer_arquitectura_vigente(raiz)
+    for id_eq, eq in leer_decisiones_equipo(raiz).items():
+        if eq["evaluado"]:
+            referencias[f"{EQUIPO}:{id_eq}"] = {**eq, "tipo": "decision-equipo"}
+    sujetos = {k: v for k, v in leer_decisiones_producto(raiz, producto).items() if v["tipo"] == "decision"}
+    return Ambito(producto, f"Coherencia de las decisiones de {producto} con arquitectura y con el equipo",
+                  sujetos, referencias, raiz / "productos" / producto / "decisiones",
+                  raiz / "productos" / producto / "estado" / "coherencia.json")
+
+
+def obtener_ambito(raiz: Path, nombre: str) -> Ambito:
+    return ambito_equipo(raiz) if nombre == EQUIPO else ambito_producto(raiz, nombre)
+
+
+def todos_los_ambitos(raiz: Path) -> list[Ambito]:
+    ambitos = [ambito_equipo(raiz)]
+    for archivo in sorted((raiz / "productos").glob("*/producto.yaml")):
+        ambito = ambito_producto(raiz, archivo.parent.name)
+        if ambito.sujetos:
+            ambitos.append(ambito)
+    return ambitos
+
+
+def leer_estado(ambito: Ambito) -> dict:
+    archivo = ambito.archivo_estado
     if not archivo.exists():
-        return {"evaluaciones": {}}
+        return {"evaluaciones": {}, "suspendidos": {}}
     return json.loads(archivo.read_text(encoding="utf-8"))
 
 
-def escribir_estado(raiz: Path, estado: dict) -> None:
-    archivo = raiz / "equipo" / "coherencia.json"
-    archivo.write_text(json.dumps(estado, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+def escribir_estado(ambito: Ambito, estado: dict) -> None:
+    ambito.archivo_estado.parent.mkdir(parents=True, exist_ok=True)
+    ambito.archivo_estado.write_text(
+        json.dumps(estado, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def clave_par(id_eq: str, clave_doc: str) -> str:
-    return f"{id_eq}|{clave_doc}"
+def suspendidos(raiz: Path, producto: str | None = None) -> dict[str, list[str]]:
+    """Criterios suspendidos por choques: los del equipo y, si se indica, los del producto."""
+    resultado = dict(leer_estado(ambito_equipo(raiz)).get("suspendidos", {}))
+    if producto:
+        archivo = raiz / "productos" / producto / "estado" / "coherencia.json"
+        if archivo.exists():
+            resultado.update(json.loads(archivo.read_text(encoding="utf-8")).get("suspendidos", {}))
+    return resultado
+
+
+def clave_par(id_decision: str, clave_doc: str) -> str:
+    return f"{id_decision}|{clave_doc}"
 
 
 # --- Preparar ----------------------------------------------------------------------------------
 
-def preparar(raiz: Path) -> dict:
-    """Pares (ADR-EQ, documento vigente) que hay que evaluar porque son nuevos o cambiaron."""
-    decisiones = leer_decisiones_equipo(raiz)
-    arquitectura = leer_arquitectura_vigente(raiz)
-    evaluaciones = leer_estado(raiz)["evaluaciones"]
-
+def preparar(ambito: Ambito) -> dict:
+    """Pares (decisión, documento) que hay que evaluar porque son nuevos o cambiaron."""
+    evaluaciones = leer_estado(ambito)["evaluaciones"]
     pendientes: dict[str, list[str]] = {}
-    for id_eq, eq in decisiones.items():
-        if not eq["evaluado"]:
+    for id_decision, decision in ambito.sujetos.items():
+        if not decision["evaluado"]:
             continue
-        for clave_doc, doc in arquitectura.items():
-            previa = evaluaciones.get(clave_par(id_eq, clave_doc))
-            if previa and previa["huella_equipo"] == eq["huella"] and previa["huella_arquitectura"] == doc["sha256"]:
+        for clave_doc, doc in ambito.referencias.items():
+            previa = evaluaciones.get(clave_par(id_decision, clave_doc))
+            if previa and previa["huella_decision"] == decision["huella"] and previa["huella_documento"] == doc["huella"]:
                 continue
-            pendientes.setdefault(id_eq, []).append(clave_doc)
-
+            pendientes.setdefault(id_decision, []).append(clave_doc)
     return {
-        "arquitectura_disponible": bool(arquitectura),
+        "ambito": ambito.nombre,
+        "referencias_disponibles": bool(ambito.referencias),
         "total_pares": sum(len(v) for v in pendientes.values()),
-        "decisiones": {
-            id_eq: {"titulo": decisiones[id_eq]["titulo"], "regla_rapida": decisiones[id_eq]["regla_rapida"]}
-            for id_eq in pendientes
-        },
-        "documentos": {
-            clave: {"titulo": arquitectura[clave]["titulo"], "regla_rapida": arquitectura[clave]["regla_rapida"]}
-            for clave in sorted({c for lista in pendientes.values() for c in lista})
-        },
+        "decisiones": {i: {"titulo": ambito.sujetos[i]["titulo"], "regla_rapida": ambito.sujetos[i]["regla_rapida"]}
+                       for i in pendientes},
+        "documentos": {c: {"titulo": ambito.referencias[c]["titulo"], "regla_rapida": ambito.referencias[c]["regla_rapida"]}
+                       for c in sorted({c for lista in pendientes.values() for c in lista})},
         "pendientes": pendientes,
     }
 
 
 def imprimir_preparacion(plan: dict) -> None:
-    if not plan["arquitectura_disponible"]:
-        print("No hay documentos de arquitectura vigentes (ejecutar /arquitectura y /actualizar). Nada que evaluar.")
+    encabezado = f"[{plan['ambito']}]"
+    if not plan["referencias_disponibles"]:
+        print(f"{encabezado} No hay documentos vigentes contra los cuales comparar (ejecutar /arquitectura y /actualizar).")
         return
     if not plan["total_pares"]:
-        print("Coherencia al día: no hay pares nuevos ni modificados que evaluar.")
+        print(f"{encabezado} Coherencia al día: no hay pares nuevos ni modificados que evaluar.")
         return
-    print(f"Coherencia: {plan['total_pares']} par(es) por evaluar.\n")
-    print("Documentos de arquitectura involucrados (título y regla rápida):")
+    print(f"{encabezado} Coherencia: {plan['total_pares']} par(es) por evaluar.\n")
+    print("Documentos de referencia involucrados (título y regla rápida):")
     for clave, doc in plan["documentos"].items():
         print(f"  - {clave}: {doc['titulo']} | {doc['regla_rapida'] or 'sin regla rápida'}")
-    print("\nPares pendientes por decisión del equipo:")
-    for id_eq, documentos in plan["pendientes"].items():
-        eq = plan["decisiones"][id_eq]
-        print(f"  - {id_eq} ({eq['titulo']}) | {eq['regla_rapida']}")
+    print("\nPares pendientes por decisión:")
+    for id_decision, documentos in plan["pendientes"].items():
+        decision = plan["decisiones"][id_decision]
+        print(f"  - {id_decision} ({decision['titulo']}) | {decision['regla_rapida']}")
         print(f"      contra: {', '.join(documentos)}")
+    print()
 
 
 # --- Extracto ----------------------------------------------------------------------------------
 
-def extracto(raiz: Path, identificador: str) -> str:
+def extracto(raiz: Path, identificador: str, producto: str | None = None) -> str:
     """Decisión, regla rápida y criterios de un documento; si no tiene esas secciones, el texto completo."""
-    if identificador.startswith("ADR-EQ-"):
-        decisiones = leer_decisiones_equipo(raiz)
-        if identificador not in decisiones:
-            raise ErrorRadiografia(f"No existe {identificador} en equipo/.")
-        documento = decisiones[identificador]
-        contenido, texto, encabezado = documento["contenido"], documento["texto"], f"{identificador}: {documento['titulo']}"
+    identificador_eq = identificador.removeprefix(f"{EQUIPO}:")
+    if identificador_eq.startswith("ADR-EQ-"):
+        documentos = leer_decisiones_equipo(raiz)
+        identificador = identificador_eq
+    elif re.match(r"^ADR-[A-Z]{2,5}-\d{3}$", identificador):
+        if not producto:
+            raise ErrorRadiografia("Para un ADR de producto, indicar --ambito <producto>.")
+        documentos = leer_decisiones_producto(raiz, producto)
     else:
-        arquitectura = leer_arquitectura_vigente(raiz)
-        if identificador not in arquitectura:
-            raise ErrorRadiografia(f"No existe el documento vigente '{identificador}' (formato fuente:ID).")
-        documento = arquitectura[identificador]
-        texto = documento["texto"]
-        _, contenido = secciones(texto.splitlines())
-        encabezado = f"{identificador}: {documento['titulo']} ({documento['archivo']})"
-
-    partes = [f"# {encabezado}"]
+        documentos = leer_arquitectura_vigente(raiz)
+    if identificador not in documentos:
+        raise ErrorRadiografia(f"No existe el documento '{identificador}'.")
+    documento = documentos[identificador]
+    contenido = documento.get("contenido") or secciones(documento["texto"].splitlines())[1]
+    partes = [f"# {identificador}: {documento['titulo']} ({documento['archivo']})"]
     for clave in SECCIONES_EXTRACTO:
         lineas = [l for l in contenido.get(clave, []) if l.strip()]
         if lineas:
             partes.append(f"## {clave}\n" + "\n".join(lineas))
     if len(partes) == 1:
-        partes.append("(sin secciones Decisión, Regla rápida ni Criterios: texto completo)\n" + texto)
+        partes.append("(sin secciones Decisión, Regla rápida ni Criterios: texto completo)\n" + documento["texto"])
     return "\n\n".join(partes)
 
 
@@ -193,21 +287,19 @@ def cita_existe(cita: str, texto: str) -> bool:
     return texto_comparable(cita) in texto_comparable(texto)
 
 
-def registrar(raiz: Path, id_eq: str, clave_doc: str, relacion: str, cita_arquitectura: str | None,
-              cita_equipo: str | None, criterios: list[str], explicacion: str | None, manual: str | None) -> None:
-    decisiones = leer_decisiones_equipo(raiz)
-    arquitectura = leer_arquitectura_vigente(raiz)
-    if id_eq not in decisiones:
-        raise ErrorRadiografia(f"No existe {id_eq} en equipo/.")
-    if clave_doc not in arquitectura:
-        raise ErrorRadiografia(f"No existe el documento vigente '{clave_doc}' (formato fuente:ID).")
+def registrar(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, cita_documento: str | None,
+              cita_decision: str | None, criterios: list[str], explicacion: str | None, manual: str | None) -> None:
+    if id_decision not in ambito.sujetos:
+        raise ErrorRadiografia(f"No existe la decisión {id_decision} en el ámbito '{ambito.nombre}'.")
+    if clave_doc not in ambito.referencias:
+        raise ErrorRadiografia(f"No existe el documento vigente '{clave_doc}' en el ámbito '{ambito.nombre}'.")
     if relacion not in RELACIONES:
         raise ErrorRadiografia(f"Relación '{relacion}' inválida; valores válidos: {', '.join(RELACIONES)}.")
-    eq, doc = decisiones[id_eq], arquitectura[clave_doc]
+    decision, doc = ambito.sujetos[id_decision], ambito.referencias[clave_doc]
 
     if relacion in ("duplica", "choca"):
-        for nombre, cita, texto in (("cita-arquitectura", cita_arquitectura, doc["texto"]),
-                                    ("cita-equipo", cita_equipo, eq["texto"])):
+        for nombre, cita, texto in (("cita-documento", cita_documento, doc["texto"]),
+                                    ("cita-decision", cita_decision, decision["texto"])):
             if not cita or len(cita.strip()) < LARGO_MINIMO_CITA:
                 raise ErrorRadiografia(f"La relación '{relacion}' exige --{nombre} con al menos {LARGO_MINIMO_CITA} caracteres.")
             if not cita_existe(cita, texto):
@@ -217,156 +309,143 @@ def registrar(raiz: Path, id_eq: str, clave_doc: str, relacion: str, cita_arquit
     if relacion == "choca":
         if not criterios:
             raise ErrorRadiografia("La relación 'choca' exige --criterios con los criterios afectados (por ejemplo EQ-003.2).")
-        desconocidos = [c for c in criterios if c not in eq["criterios"]]
+        desconocidos = [c for c in criterios if c not in decision["criterios"]]
         if desconocidos:
-            raise ErrorRadiografia(f"Criterios que no existen en {id_eq}: {', '.join(desconocidos)}.")
+            raise ErrorRadiografia(f"Criterios que no existen en {id_decision}: {', '.join(desconocidos)}.")
     elif criterios:
         raise ErrorRadiografia("--criterios solo se usa con la relación 'choca'.")
 
-    estado = leer_estado(raiz)
-    estado["evaluaciones"][clave_par(id_eq, clave_doc)] = {
-        "equipo": id_eq,
-        "documento": clave_doc,
-        "relacion": relacion,
-        "cita_arquitectura": cita_arquitectura,
-        "cita_equipo": cita_equipo,
-        "criterios_suspendidos": criterios,
-        "explicacion": explicacion,
-        "manual": manual,
-        "huella_equipo": eq["huella"],
-        "huella_arquitectura": doc["sha256"],
+    estado = leer_estado(ambito)
+    estado["evaluaciones"][clave_par(id_decision, clave_doc)] = {
+        "decision": id_decision, "documento": clave_doc, "relacion": relacion,
+        "cita_documento": cita_documento, "cita_decision": cita_decision, "criterios_suspendidos": criterios,
+        "explicacion": explicacion, "manual": manual,
+        "huella_decision": decision["huella"], "huella_documento": doc["huella"],
         "evaluado": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    escribir_estado(raiz, estado)
+    escribir_estado(ambito, estado)
 
 
 # --- Generar -----------------------------------------------------------------------------------
 
-def generar(raiz: Path) -> dict:
-    """Depura evaluaciones obsoletas, calcula suspensiones y escribe COHERENCIA.md."""
-    decisiones = leer_decisiones_equipo(raiz)
-    arquitectura = leer_arquitectura_vigente(raiz)
-    estado = leer_estado(raiz)
-    vigentes = {
-        clave: e for clave, e in estado["evaluaciones"].items()
-        if e["equipo"] in decisiones and e["documento"] in arquitectura
-    }
-    plan = preparar(raiz)
+def generar(raiz: Path, ambito: Ambito) -> dict:
+    """Depura evaluaciones obsoletas, calcula suspensiones y escribe COHERENCIA.md del ámbito."""
+    estado = leer_estado(ambito)
+    vigentes = {clave: e for clave, e in estado["evaluaciones"].items()
+                if e["decision"] in ambito.sujetos and e["documento"] in ambito.referencias}
+    plan = preparar(ambito)
     pendientes = plan["pendientes"]
 
-    suspendidos: dict[str, list[str]] = {}
+    suspension: dict[str, list[str]] = {}
     for e in vigentes.values():
         if e["relacion"] == "choca":
-            suspendidos.setdefault(e["equipo"], [])
-            suspendidos[e["equipo"]] = sorted(set(suspendidos[e["equipo"]]) | set(e["criterios_suspendidos"]))
+            suspension[e["decision"]] = sorted(set(suspension.get(e["decision"], [])) | set(e["criterios_suspendidos"]))
+    escribir_estado(ambito, {"evaluaciones": vigentes, "suspendidos": suspension})
 
-    lock = {}
-    archivo_lock = raiz / "arquitectura" / "fuentes.lock"
-    if archivo_lock.exists():
-        lock = json.loads(archivo_lock.read_text(encoding="utf-8"))
-    estado = {"evaluaciones": vigentes, "suspendidos": suspendidos}
-    escribir_estado(raiz, estado)
-
+    lock_archivo = raiz / "arquitectura" / "estado" / "fuentes.lock"
+    lock = json.loads(lock_archivo.read_text(encoding="utf-8")) if lock_archivo.exists() else {}
     referencia = ", ".join(f"{f}@{d['commit'][:7]}" for f, d in sorted(lock.items())) or "sin fuentes sincronizadas"
     lineas = [
-        "# Coherencia de las decisiones del equipo con arquitectura",
+        f"# {ambito.titulo}",
         "",
         "> Archivo generado por `/actualizar` (`herramientas/coherencia.py generar`). No se edita a mano.",
         "",
-        f"Evaluado contra: {referencia}",
+        f"Evaluado contra: {referencia}" + (" y las decisiones del equipo" if ambito.nombre != EQUIPO else ""),
         "",
-        "| ADR-EQ | Estado | Resultado | Criterios suspendidos |",
+        "| Decisión | Estado | Resultado | Criterios suspendidos |",
         "|---|---|---|---|",
     ]
-    for id_eq, eq in decisiones.items():
-        de_eq = [e for e in vigentes.values() if e["equipo"] == id_eq]
-        choques = sum(1 for e in de_eq if e["relacion"] == "choca")
-        duplicados = sum(1 for e in de_eq if e["relacion"] == "duplica")
-        if not eq["evaluado"]:
+    for id_decision, decision in ambito.sujetos.items():
+        propias = [e for e in vigentes.values() if e["decision"] == id_decision]
+        choques = sum(1 for e in propias if e["relacion"] == "choca")
+        duplicados = sum(1 for e in propias if e["relacion"] == "duplica")
+        if not decision["evaluado"]:
             resultado = "no se evalúa (estado no vigente)"
-        elif not arquitectura:
-            resultado = "NO DETERMINADO - arquitectura no sincronizada"
-        elif id_eq in pendientes:
-            resultado = f"⏳ {len(pendientes[id_eq])} par(es) pendiente(s) de evaluar"
-        elif choques:
-            resultado = f"❌ {choques} choque(s)"
-        elif duplicados:
-            resultado = f"⚠️ {duplicados} duplicación(es)"
+        elif not ambito.referencias:
+            resultado = "NO DETERMINADO - no hay documentos de referencia sincronizados"
         else:
-            resultado = "✅ sin choques"
-        lineas.append(f"| [{id_eq}]({Path(eq['archivo']).name}) {eq['titulo']} | {eq['estado']} | {resultado} "
-                      f"| {', '.join(suspendidos.get(id_eq, [])) or '—'} |")
+            partes = []
+            if choques:
+                partes.append(f"❌ {choques} choque(s)")
+            if duplicados:
+                partes.append(f"⚠️ {duplicados} duplicación(es)")
+            if id_decision in pendientes:
+                partes.append(f"⏳ {len(pendientes[id_decision])} par(es) pendiente(s) de evaluar")
+            resultado = " · ".join(partes) or "✅ sin choques"
+        enlace = Path(os.path.relpath(raiz / decision["archivo"], ambito.carpeta)).as_posix()
+        lineas.append(f"| [{id_decision}]({enlace}) {decision['titulo']} | {decision['estado']} "
+                      f"| {resultado} | {', '.join(suspension.get(id_decision, [])) or '—'} |")
 
     for relacion, titulo in (("choca", "Choques"), ("duplica", "Duplicaciones")):
-        casos = [e for e in vigentes.values() if e["relacion"] == relacion]
+        casos = sorted((e for e in vigentes.values() if e["relacion"] == relacion), key=lambda x: (x["decision"], x["documento"]))
         if not casos:
             continue
         lineas += ["", f"## {titulo}"]
-        for e in sorted(casos, key=lambda x: (x["equipo"], x["documento"])):
-            lineas += [
-                "",
-                f"### {e['equipo']} × {e['documento']}",
-                "",
-                f"- **Arquitectura:** «{e['cita_arquitectura']}»",
-                f"- **{e['equipo']}:** «{e['cita_equipo']}»",
-                f"- **Explicación:** {e['explicacion']}",
-            ]
+        for e in casos:
+            lineas += ["", f"### {e['decision']} × {e['documento']}", "",
+                       f"- **{e['documento']}:** «{e['cita_documento']}»",
+                       f"- **{e['decision']}:** «{e['cita_decision']}»",
+                       f"- **Explicación:** {e['explicacion']}"]
             if e["criterios_suspendidos"]:
                 lineas.append(f"- **Criterios suspendidos:** {', '.join(e['criterios_suspendidos'])}")
             if e["manual"]:
                 lineas.append(f"- **Corrección manual:** {e['manual']}")
 
-    relacionados = [e for e in vigentes.values() if e["relacion"] == "compatible"]
-    if relacionados:
-        lineas += ["", "## Relaciones compatibles", "", "| ADR-EQ | Documento de arquitectura | Explicación |", "|---|---|---|"]
-        for e in sorted(relacionados, key=lambda x: (x["equipo"], x["documento"])):
-            lineas.append(f"| {e['equipo']} | {e['documento']} | {e['explicacion'] or '—'} |")
+    compatibles = sorted((e for e in vigentes.values() if e["relacion"] == "compatible"), key=lambda x: (x["decision"], x["documento"]))
+    if compatibles:
+        lineas += ["", "## Relaciones compatibles", "", "| Decisión | Documento | Explicación |", "|---|---|---|"]
+        lineas += [f"| {e['decision']} | {e['documento']} | {e['explicacion'] or '—'} |" for e in compatibles]
 
-    (raiz / "equipo" / "COHERENCIA.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
-    return {"pendientes": plan["total_pares"], "suspendidos": suspendidos}
+    ambito.carpeta.mkdir(parents=True, exist_ok=True)
+    (ambito.carpeta / "COHERENCIA.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    return {"ambito": ambito.nombre, "pendientes": plan["total_pares"], "suspendidos": suspension}
 
 
 # --- Programa principal ------------------------------------------------------------------------
 
 def main(argumentos: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Coherencia de los ADR-EQ con arquitectura.")
+    parser = argparse.ArgumentParser(description="Coherencia de las decisiones del equipo y de los productos.")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
     sub = parser.add_subparsers(dest="accion", required=True)
-    p_preparar = sub.add_parser("preparar", help="lista los pares que hay que evaluar")
-    p_preparar.add_argument("--json", action="store_true")
-    p_extracto = sub.add_parser("extracto", help="muestra el extracto de un documento")
-    p_extracto.add_argument("identificador")
-    p_registrar = sub.add_parser("registrar", help="registra el resultado de un par, con validación")
-    p_registrar.add_argument("--eq", required=True)
-    p_registrar.add_argument("--doc", required=True)
-    p_registrar.add_argument("--relacion", required=True, choices=RELACIONES)
-    p_registrar.add_argument("--cita-arquitectura")
-    p_registrar.add_argument("--cita-equipo")
-    p_registrar.add_argument("--criterios", default="")
-    p_registrar.add_argument("--explicacion")
-    p_registrar.add_argument("--manual", help="motivo de una corrección hecha por el usuario")
-    sub.add_parser("generar", help="escribe equipo/COHERENCIA.md")
-    opciones = parser.parse_args(argumentos)
-    raiz = opciones.raiz.resolve()
+    p = sub.add_parser("preparar", help="lista los pares que hay que evaluar")
+    p.add_argument("--ambito")
+    p.add_argument("--json", action="store_true")
+    p = sub.add_parser("extracto", help="muestra el extracto de un documento")
+    p.add_argument("identificador")
+    p.add_argument("--ambito")
+    p = sub.add_parser("registrar", help="registra el resultado de un par, con validación")
+    p.add_argument("--ambito", default=EQUIPO)
+    p.add_argument("--decision", "--eq", dest="decision", required=True)
+    p.add_argument("--doc", required=True)
+    p.add_argument("--relacion", required=True, choices=RELACIONES)
+    p.add_argument("--cita-documento", "--cita-arquitectura", dest="cita_documento")
+    p.add_argument("--cita-decision", "--cita-equipo", dest="cita_decision")
+    p.add_argument("--criterios", default="")
+    p.add_argument("--explicacion")
+    p.add_argument("--manual", help="motivo de una corrección hecha por el usuario")
+    p = sub.add_parser("generar", help="escribe COHERENCIA.md")
+    p.add_argument("--ambito")
+    o = parser.parse_args(argumentos)
+    raiz = o.raiz.resolve()
 
     try:
-        if opciones.accion == "preparar":
-            plan = preparar(raiz)
-            if opciones.json:
-                print(json.dumps(plan, indent=2, ensure_ascii=False))
-            else:
-                imprimir_preparacion(plan)
-        elif opciones.accion == "extracto":
-            print(extracto(raiz, opciones.identificador))
-        elif opciones.accion == "registrar":
-            criterios = [c.strip() for c in opciones.criterios.split(",") if c.strip()]
-            registrar(raiz, opciones.eq, opciones.doc, opciones.relacion, opciones.cita_arquitectura,
-                      opciones.cita_equipo, criterios, opciones.explicacion, opciones.manual)
-            print(f"Registrado: {opciones.eq} × {opciones.doc} = {opciones.relacion}")
-        elif opciones.accion == "generar":
-            resultado = generar(raiz)
-            print(f"equipo/COHERENCIA.md generado. Pares pendientes: {resultado['pendientes']}. "
-                  f"Criterios suspendidos: {sum(len(v) for v in resultado['suspendidos'].values())}.")
+        if o.accion in ("preparar", "generar"):
+            ambitos = [obtener_ambito(raiz, o.ambito)] if o.ambito else todos_los_ambitos(raiz)
+            for ambito in ambitos:
+                if o.accion == "preparar":
+                    plan = preparar(ambito)
+                    print(json.dumps(plan, indent=2, ensure_ascii=False)) if o.json else imprimir_preparacion(plan)
+                else:
+                    r = generar(raiz, ambito)
+                    print(f"[{r['ambito']}] COHERENCIA.md generado. Pares pendientes: {r['pendientes']}. "
+                          f"Criterios suspendidos: {sum(len(v) for v in r['suspendidos'].values())}.")
+        elif o.accion == "extracto":
+            print(extracto(raiz, o.identificador, o.ambito if o.ambito != EQUIPO else None))
+        elif o.accion == "registrar":
+            criterios = [c.strip() for c in o.criterios.split(",") if c.strip()]
+            registrar(obtener_ambito(raiz, o.ambito), o.decision, o.doc, o.relacion, o.cita_documento,
+                      o.cita_decision, criterios, o.explicacion, o.manual)
+            print(f"Registrado: {o.decision} × {o.doc} = {o.relacion}")
     except ErrorRadiografia as error:
         print(f"ERROR: {error}")
         return 1

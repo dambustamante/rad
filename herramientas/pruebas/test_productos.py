@@ -95,7 +95,7 @@ class PruebaProductos(unittest.TestCase):
         codigo, salida = self.agregar("motor-fraudes", "fraude-core", self.java, "main",
                                       "--sonar", "banco_fraude-core", "--descripcion", "Motor de fraudes")
         self.assertEqual(codigo, 0, salida)
-        self.assertIn("Producto 'motor-fraudes' creado.", salida)
+        self.assertIn("Producto 'motor-fraudes' creado con la sigla MF", salida)
         codigo, salida = self.agregar("motor-fraudes", "fraude-backoffice", self.node, "rama-inexistente")
         self.assertEqual(codigo, 1)
         self.assertIn("La ref 'rama-inexistente' no existe", salida)
@@ -160,6 +160,27 @@ class PruebaProductos(unittest.TestCase):
         self.assertEqual(repo["motivo_retiro"], "Reemplazado por otro servicio")
         codigo, salida = self.ejecutar("sincronizar")
         self.assertIn("No hay repositorios activos", salida)
+
+    def test_sigla(self) -> None:
+        self.assertEqual(productos.proponer_sigla(self.raiz, "motor-fraudes"), "MF")
+        self.assertEqual(productos.proponer_sigla(self.raiz, "pagos"), "PAG")
+        self.assertEqual(productos.proponer_sigla(self.raiz, "a"), "AX", "siempre al menos dos letras")
+        self.agregar("motor-fraudes", "fraude-core", self.java, "main")
+        self.assertNotEqual(productos.proponer_sigla(self.raiz, "monitor-fiscal"), "MF", "no repite una sigla en uso")
+
+        codigo, salida = self.ejecutar("sigla", "motor-fraudes", "--asignar", "eq")
+        self.assertIn("2 a 5 letras mayúsculas", salida)
+        codigo, salida = self.ejecutar("sigla", "motor-fraudes", "--asignar", "EQ")
+        self.assertIn("ya está en uso o reservada", salida)
+        codigo, salida = self.ejecutar("sigla", "motor-fraudes", "--asignar", "FRA")
+        self.assertEqual(codigo, 0, salida)
+        self.assertIn("Sigla de 'motor-fraudes': FRA", salida)
+
+        decisiones = self.raiz / "productos" / "motor-fraudes" / "decisiones"
+        decisiones.mkdir()
+        (decisiones / "ADR-FRA-001-algo.md").write_text("# ADR-FRA-001: Algo\n", encoding="utf-8")
+        codigo, salida = self.ejecutar("sigla", "motor-fraudes", "--asignar", "MF")
+        self.assertIn("su sigla no se puede cambiar", salida)
 
 
 if __name__ == "__main__":

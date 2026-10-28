@@ -33,7 +33,9 @@ make revisar P=<producto> R=<repo>
 
 Leer el paquete completo antes de abrir cualquier archivo del repositorio. Contiene el mapa del
 repositorio, los archivos señalados por patrón, los hallazgos automáticos ya registrados (no
-repetirlos) y la lista exacta de lo que hay que evaluar.
+repetirlos) y la lista exacta de lo que hay que evaluar, incluidos los criterios de las decisiones
+del producto (`ADR-<SIGLA>-NNN`). Los elementos exceptuados por un ADR del producto vigente aparecen
+aparte y no se evalúan: el cierre los registra como NO APLICA.
 
 Leer el código de `productos/<producto>/repos/<repo>/` empezando por los manifiestos, los puntos de
 entrada y los archivos señalados. Llevar la cuenta de los archivos leídos: se informa al cerrar.
@@ -41,7 +43,7 @@ Nunca modificar nada en esa carpeta. Si se encuentra un secreto, no copiar su va
 
 ## 4. AS IS
 
-Escribir `productos/<producto>/reportes/<revisión>/revision/<repo>-asis.md` con estas secciones `##`,
+Escribir `productos/<producto>/revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`,
 en este orden, cada afirmación con su etiqueta de evidencia (`[hecho] ruta:línea`, `[doc] ruta`,
 `[inferencia]`, `NO DETERMINADO - motivo`):
 
@@ -63,7 +65,7 @@ configuración y despliegue; el diseño interno se describe solo si es visible y
 
 ## 5. C4 inferido
 
-Escribir los borradores en `productos/<producto>/reportes/<revisión>/borradores/<repo>/`
+Escribir los borradores en `productos/<producto>/revisiones/<revisión>/borradores/<repo>/`
 (`c4-contexto.md` y `c4-contenedores.md`), con las plantillas de `equipo/plantillas/`. Todo elemento
 y relación sale del código; lo que no se pueda deducir se marca como NO DETERMINADO. Es un borrador
 para el equipo, no se escribe en el repositorio.
@@ -73,7 +75,7 @@ para el equipo, no se escribe en el repositorio.
 Para **cada** elemento de la sección "Qué evaluar" del paquete, en orden de nivel:
 
 1. Si la fuente es un documento de arquitectura y la regla rápida no alcanza para decidir, leer el
-   documento (`arquitectura/<fuente>/…`).
+   documento (`arquitectura/decisiones/<fuente>/…` o `arquitectura/estandares/<fuente>/…`).
 2. Decidir: `CUMPLE`, `NO CUMPLE`, `NO APLICA` (no corresponde a este repositorio) o
    `NO DETERMINADO` (no se pudo verificar con el código disponible).
 3. Si es `NO CUMPLE`, registrar primero cada hallazgo:
@@ -155,7 +157,7 @@ Cuando todos los repositorios están al día:
 
 ## Reglas generales
 
-- Nunca modificar `productos/*/repos/`, `hallazgos.json` ni las secciones generadas de las fichas.
+- Nunca modificar `productos/*/repos/`, `productos/*/estado/` ni las secciones generadas de las fichas.
 - Los hallazgos en modo `propuesta` (decisiones del equipo no aprobadas) se informan, pero no
   afectan el veredicto.
 - Todo en español neutro y técnico.

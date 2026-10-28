@@ -31,7 +31,9 @@ from pathlib import Path
 import hallazgos as registro_hallazgos
 import productos
 import verificaciones
-from coherencia import cita_existe, leer_arquitectura_vigente, texto_comparable
+from adr import excepciones_activas, excepciones_pendientes
+from coherencia import (cita_existe, leer_arquitectura_vigente, leer_decisiones_producto, suspendidos as criterios_suspendidos,
+                        texto_comparable)
 from comun import RAIZ, ErrorRadiografia, normalizar
 from revisar import MARCA_REVISION, decisiones_con_criterios, leer_json, reemplazar_bloque, veredicto
 
@@ -82,7 +84,7 @@ def estado_repo(registro: dict, repo: str) -> dict:
 
 
 def carpeta_revision(raiz: Path, producto: str, id_revision: str) -> Path:
-    return raiz / "productos" / producto / "reportes" / id_revision
+    return raiz / "productos" / producto / "revisiones" / id_revision
 
 
 def archivo_trabajo(raiz: Path, producto: str, id_revision: str, repo: str) -> Path:
@@ -108,18 +110,23 @@ def contexto(raiz: Path, producto: str, repo: str) -> dict:
     if not destino.exists():
         raise ErrorRadiografia(f"No existe la copia de '{repo}'. Ejecutar: make revisar P={producto} R={repo}")
     return {"registro": registro, "estado": estado, "id_revision": estado["automatica"]["id"],
-            "commit": estado["automatica"]["commit"], "rama": estado["rama"], "tipo": estado["tipo"], "destino": destino}
+            "commit": estado["automatica"]["commit"], "rama": estado["rama"], "tipo": estado["tipo"], "destino": destino,
+            "producto": producto, "repo": repo}
 
 
-def lista_de_control(raiz: Path, tipo: str) -> list[dict]:
-    """Fuentes y criterios que la revisión de código debe evaluar para un repositorio."""
+def lista_de_control(raiz: Path, tipo: str, producto: str | None = None, repo: str | None = None) -> list[dict]:
+    """Fuentes y criterios que la revisión de código debe evaluar para un repositorio.
+
+    Los elementos exceptuados por un ADR de producto vigente llevan `exceptuado` con el motivo: no se
+    evalúan y el cierre los registra como NO APLICA.
+    """
     elementos = []
     for clave, doc in sorted(leer_arquitectura_vigente(raiz).items()):
         elementos.append({"clave": clave, "fuente": clave, "criterio": None, "nivel": 1 if doc["tipo"] == "adr" else 2,
                           "titulo": doc["titulo"], "texto": doc["regla_rapida"] or "sin regla rápida: leer el documento",
                           "archivo": doc["archivo"], "modo": "vigente", "severidad": None})
+    suspendidos = criterios_suspendidos(raiz, producto)
     if tipo == "propio":
-        suspendidos = leer_json(raiz / "equipo" / "coherencia.json").get("suspendidos", {})
         for id_eq, decision in decisiones_con_criterios(raiz).items():
             modo = "propuesta" if normalizar(decision["estado"]) == "propuesto" else "vigente"
             for id_criterio, criterio in decision["tabla"].items():
@@ -128,6 +135,24 @@ def lista_de_control(raiz: Path, tipo: str) -> list[dict]:
                 elementos.append({"clave": f"{id_eq}|{id_criterio}", "fuente": id_eq, "criterio": id_criterio, "nivel": 3,
                                   "titulo": decision["titulo"], "texto": criterio["texto"], "archivo": decision["archivo"],
                                   "modo": modo, "severidad": criterio["severidad"]})
+        if producto:
+            for id_adr, decision in leer_decisiones_producto(raiz, producto).items():
+                repos_alcance = [r.strip() for r in decision["campos"].get("repositorios", "todos").split(",")]
+                if (decision["tipo"] != "decision" or not decision["evaluado"]
+                        or (normalizar(repos_alcance[0]) != "todos" and repo not in repos_alcance)):
+                    continue
+                modo = "propuesta" if normalizar(decision["estado"]) == "propuesto" else "vigente"
+                for id_criterio, criterio in verificaciones.leer_criterios(decision["texto"]).items():
+                    if id_criterio in suspendidos.get(id_adr, []):
+                        continue
+                    elementos.append({"clave": f"{id_adr}|{id_criterio}", "fuente": id_adr, "criterio": id_criterio, "nivel": 3,
+                                      "titulo": decision["titulo"], "texto": criterio["texto"], "archivo": decision["archivo"],
+                                      "modo": modo, "severidad": criterio["severidad"]})
+    exceptuados = excepciones_activas(raiz, producto, repo) if producto and repo else {}
+    for elemento in elementos:
+        motivo = exceptuados.get(elemento["criterio"] or elemento["fuente"])
+        if motivo:
+            elemento["exceptuado"] = motivo
     return elementos
 
 
@@ -205,12 +230,14 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
         lineas += [f"- `{c['archivo']}:{c['linea']}` {c['fragmento'][:100]}" for c in coincidencias] or ["Ninguna."]
         lineas.append("")
 
-    control = lista_de_control(raiz, ctx["tipo"])
+    control = lista_de_control(raiz, ctx["tipo"], producto, repo)
+    exceptuados = [e for e in control if e.get("exceptuado")]
+    control = [e for e in control if not e.get("exceptuado")]
     lineas += ["## Qué evaluar", "",
                "Cada elemento se evalúa con `evaluar` (CUMPLE, NO CUMPLE, NO APLICA o NO DETERMINADO). "
                "Todo NO CUMPLE requiere al menos un `hallazgo` con la misma fuente y criterio.", ""]
     for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura vigentes"), (2, "Nivel 2: estándares de arquitectura vigentes"),
-                          (3, "Nivel 3: criterios de revisión de código de las decisiones del equipo")):
+                          (3, "Nivel 3: criterios de revisión de código de las decisiones del equipo y del producto")):
         del_nivel = [e for e in control if e["nivel"] == nivel]
         lineas += [f"### {titulo}", ""]
         if not del_nivel:
@@ -219,6 +246,14 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
         lineas += ["| Fuente | Criterio | Título | Regla o criterio | Modo |", "|---|---|---|---|---|"]
         lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {e['titulo']} | {e['texto'].replace('|', '/')} | {e['modo']} |"
                    for e in del_nivel] + [""]
+    if exceptuados:
+        lineas += ["### No evaluar: exceptuados por un ADR del producto", "",
+                   "Se registran solos como NO APLICA al cerrar.", ""]
+        lineas += [f"- `{e['criterio'] or e['fuente']}`: {e['exceptuado']}" for e in exceptuados] + [""]
+    pendientes_excepcion = excepciones_pendientes(raiz, producto, repo)
+    if pendientes_excepcion:
+        lineas += ["### Excepciones que no surten efecto (evaluar normalmente)", ""]
+        lineas += [f"- `{clave}`: {motivo}" for clave, motivo in sorted(pendientes_excepcion.items())] + [""]
     if ctx["tipo"] != "propio":
         lineas += [f"> Repositorio de tipo `{ctx['tipo']}`: las decisiones del equipo no aplican. "
                    "Describir el AS IS con foco en integraciones, contratos y configuración.", ""]
@@ -226,9 +261,9 @@ def generar_paquete(raiz: Path, producto: str, repo: str) -> Path:
     lineas += [
         "## Entregables",
         "",
-        f"1. AS IS: escribir `reportes/{ctx['id_revision']}/revision/{repo}-asis.md` con estas secciones (`##`): "
+        f"1. AS IS: escribir `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-asis.md` con estas secciones (`##`): "
         + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia.",
-        f"2. C4 inferido: `reportes/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
+        f"2. C4 inferido: `productos/{producto}/revisiones/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
         "según las plantillas de `equipo/plantillas/`. Lo que no se pueda deducir, como NO DETERMINADO.",
         "3. Una evaluación por cada elemento de \"Qué evaluar\" y los hallazgos correspondientes.",
         f"4. Cerrar: `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
@@ -263,14 +298,16 @@ def validar_evidencia(destino: Path, evidencia: dict, fragmento: str | None = No
                                    "Copiarlo tal como está en el código.")
 
 
-def elemento_de_control(raiz: Path, tipo: str, fuente: str, criterio: str | None) -> dict:
-    control = {e["clave"]: e for e in lista_de_control(raiz, tipo)}
+def elemento_de_control(raiz: Path, ctx: dict, fuente: str, criterio: str | None) -> dict:
+    control = {e["clave"]: e for e in lista_de_control(raiz, ctx["tipo"], ctx["producto"], ctx["repo"])}
     clave = clave_de(fuente, criterio)
     if clave not in control:
-        if fuente.startswith("ADR-EQ-") and not criterio:
-            raise ErrorRadiografia("Para una decisión del equipo, indicar --criterio EQ-NNN.N.")
+        if re.match(r"^ADR-[A-Z]{2,5}-\d{3}$", fuente) and not criterio:
+            raise ErrorRadiografia("Para una decisión del equipo o del producto, indicar --criterio (por ejemplo EQ-003.1).")
         raise ErrorRadiografia(f"'{clave}' no es una fuente vigente ni un criterio de revisión de código aplicable a este "
                                "repositorio (ver la sección \"Qué evaluar\" del paquete).")
+    if control[clave].get("exceptuado"):
+        raise ErrorRadiografia(f"'{clave}' no se evalúa: {control[clave]['exceptuado']}.")
     return control[clave]
 
 
@@ -287,7 +324,7 @@ def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | N
         raise ErrorRadiografia(f"Resultado '{resultado}' inválido; valores válidos: {', '.join(RESULTADOS)}.")
     if not motivo or not motivo.strip():
         raise ErrorRadiografia("--motivo es obligatorio.")
-    elemento = elemento_de_control(raiz, ctx["tipo"], fuente, criterio)
+    elemento = elemento_de_control(raiz, ctx, fuente, criterio)
     lista = [leer_evidencia(e) for e in evidencias]
     for evidencia in lista:
         validar_evidencia(ctx["destino"], evidencia)
@@ -314,7 +351,7 @@ def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criter
         raise ErrorRadiografia("Un hallazgo requiere al menos una --evidencia ruta:línea.")
     if not fragmento or len(fragmento.strip()) < 5:
         raise ErrorRadiografia("--fragmento es obligatorio: el código citado tal como aparece en la primera evidencia.")
-    elemento = elemento_de_control(raiz, ctx["tipo"], fuente, criterio)
+    elemento = elemento_de_control(raiz, ctx, fuente, criterio)
     lista = [leer_evidencia(e) for e in evidencias]
     validar_evidencia(ctx["destino"], lista[0], fragmento)
     for evidencia in lista[1:]:
@@ -338,7 +375,13 @@ def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criter
 def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) -> dict:
     ctx = contexto(raiz, producto, repo)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
-    control = lista_de_control(raiz, ctx["tipo"])
+    control = lista_de_control(raiz, ctx["tipo"], producto, repo)
+    for e in control:
+        if e.get("exceptuado"):
+            trabajo["evaluaciones"][e["clave"]] = {
+                "fuente": e["fuente"], "criterio": e["criterio"], "nivel": e["nivel"], "titulo": e["titulo"],
+                "resultado": "NO APLICA", "motivo": e["exceptuado"], "evidencia": [], "cita_documento": None, "modo": e["modo"]}
+    guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
     faltantes = [e["clave"] for e in control if e["clave"] not in trabajo["evaluaciones"]]
     if faltantes:
         raise ErrorRadiografia(f"Faltan {len(faltantes)} evaluación(es): {', '.join(faltantes)}.")
@@ -371,6 +414,8 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
                                "archivos_leidos": archivos_leidos}
     registro_hallazgos.guardar(raiz, producto, registro)
     escribir_ficha_revision(raiz, producto, repo, ctx, trabajo, texto_asis, registro)
+    import indices
+    indices.indice_producto(raiz, producto)
     return {"resumen": resumen, "avisos": avisos, "evaluaciones": Counter(e["resultado"] for e in trabajo["evaluaciones"].values())}
 
 
@@ -397,7 +442,7 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             hallazgos_por_clave.setdefault(clave_de(h["fuente"], h["criterio"]), []).append(h["id"])
     lineas = ["## Comparación con lo decidido", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura"), (2, "Nivel 2: estándares de arquitectura"),
-                          (3, "Nivel 3: decisiones del equipo (revisión de código)")):
+                          (3, "Nivel 3: decisiones del equipo y del producto (revisión de código)")):
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
         lineas += [f"### {titulo}", ""]
         if not evaluaciones:
