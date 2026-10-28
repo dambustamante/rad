@@ -246,6 +246,9 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
         es_linea_base = not registro_hallazgos.tiene_revisiones(registro, repo["id"], repo["rama"])
         resumen = registro_hallazgos.aplicar(registro, repo["id"], repo["rama"], origenes, encontrados,
                                              id_revision, hoy, es_linea_base)
+        estado_repo = registro.setdefault("repos", {}).setdefault(repo["id"], {})
+        estado_repo.update({"rama": repo["rama"], "tipo": repo["tipo"],
+                            "automatica": {"id": id_revision, "commit": commit, "fecha": hoy}})
         revision = {
             "repo": repo["id"], "rama": repo["rama"], "estado": "ok", "id_revision": id_revision, "commit": commit,
             "fecha_commit": sincronizacion["fecha"], "stack": productos.detectar_stack(destino, commit, archivos),
@@ -277,7 +280,8 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
 def veredicto(registro: dict, repo: str, rama: str) -> str:
     bloqueantes = [h for h in registro["hallazgos"].values()
                    if h["repo"] == repo and h["rama"] == rama and h["estado"] == "abierto" and h["modo"] == "vigente"
-                   and h["severidad"] in SEVERIDADES_INDIVIDUALES and not (h.get("triaje") or {}).get("decision") == "falso-positivo"]
+                   and h["severidad"] in SEVERIDADES_INDIVIDUALES and not h.get("absorbido_por")
+                   and not (h.get("triaje") or {}).get("decision") == "falso-positivo"]
     return f"NO PASA ({len(bloqueantes)} bloqueante(s) o alto(s) vigente(s))" if bloqueantes else "PASA"
 
 
