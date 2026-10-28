@@ -35,7 +35,7 @@ más alto en que aparece; los niveles inferiores solo lo referencian.
 arquitectura/        espejo de los repositorios de arquitectura; lo escribe /actualizar
 equipo/              decisiones del equipo (ADR-EQ), COHERENCIA.md y plantillas
 herramientas/        scripts deterministas que usan los comandos
-productos/<p>/       producto.yaml, as-is/, reportes/, hallazgos.json, repos/
+productos/<p>/       producto.yaml, as-is/, reportes/, hallazgos.json, triaje/, agendas/, repos/
 harness.yaml         configuración global (fuentes de arquitectura, estados, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
@@ -91,8 +91,8 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | `/arquitectura` | agrega o retira los repositorios de donde se descargan los documentos de arquitectura |
 | `/actualizar` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR-EQ y actualiza los repositorios |
 | `/producto <nombre>` | crea un producto o le agrega repositorios |
-| `/revisar <producto> [repo] [--rama <rama> --desde <ref>]` | sin `--rama`: línea base AS IS completa; con `--rama`: solo los cambios |
-| `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo |
+| `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
+| `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, confirmar, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 
 Cada comando ejecuta primero su parte determinista (`make` o los scripts de `herramientas/`) y
 después hace la parte que requiere criterio. `harness.yaml` se modifica solo mediante esos

@@ -25,6 +25,12 @@ arquitectura:
     pendiente: [Propuesto, En revisión]
     no_vigente: [Reemplazado, Deprecado, Rechazado, Obsoleto]
 
+calibracion:
+  # Una fuente (ADR, criterio o regla de Sonar) está lista para publicarse cuando tiene al menos
+  # `minimo_triados` hallazgos con decisión y su tasa de falsos positivos es menor que el máximo.
+  minimo_triados: 5
+  maximo_falsos_positivos: 0.20
+
 publicacion:
   # Fuentes (ADR o reglas) cuyos hallazgos pueden publicarse en un MR o PR (fase 2).
   # Vacía: no se publica nada. Se agrega una fuente solo cuando su tasa de falsos positivos es baja.

@@ -277,11 +277,19 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
     return {"id_revision": id_revision, "carpeta": carpeta, "resultados": resultados}
 
 
+def descontado_por_triaje(hallazgo: dict) -> bool:
+    """Falsos positivos y deudas aceptadas no vencidas no cuentan para el veredicto."""
+    triaje = hallazgo.get("triaje") or {}
+    if triaje.get("decision") == "falso-positivo":
+        return True
+    return triaje.get("decision") == "deuda" and bool(triaje.get("vence")) and triaje["vence"] >= date.today().isoformat()
+
+
 def veredicto(registro: dict, repo: str, rama: str) -> str:
     bloqueantes = [h for h in registro["hallazgos"].values()
                    if h["repo"] == repo and h["rama"] == rama and h["estado"] == "abierto" and h["modo"] == "vigente"
                    and h["severidad"] in SEVERIDADES_INDIVIDUALES and not h.get("absorbido_por")
-                   and not (h.get("triaje") or {}).get("decision") == "falso-positivo"]
+                   and not descontado_por_triaje(h)]
     return f"NO PASA ({len(bloqueantes)} bloqueante(s) o alto(s) vigente(s))" if bloqueantes else "PASA"
 
 
