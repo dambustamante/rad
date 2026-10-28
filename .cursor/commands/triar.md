@@ -11,7 +11,6 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
 | Decisión | Significado | Exige | Veredicto |
 |---|---|---|---|
 | Resolver | se corrige; en la fase 2 va al comentario del MR o PR | — | cuenta |
-| Confirmar | es real, pero no se resuelve ahora | — | cuenta |
 | Conversar | se decide con el equipo; va a la agenda | — | cuenta |
 | Deuda | se acepta como deuda técnica | motivo; sin fecha, vence a los 90 días | no cuenta hasta que vence |
 | Falso positivo | la herramienta o la revisión se equivocó | motivo | no cuenta |
@@ -22,7 +21,7 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
    medio y bajo a deuda"), simular primero y mostrar cuántos y cuáles hallazgos se afectan:
 
    ```sh
-   .venv/bin/python herramientas/triaje.py grupo <producto> --decision <resolver|confirmar|a-conversar|deuda|falso-positivo> \
+   .venv/bin/python herramientas/triaje.py grupo <producto> --decision <resolver|a-conversar|deuda|falso-positivo> \
      [--motivo "<motivo>"] [--vence AAAA-MM-DD] [--repo <repo>] [--nivel 1,2,3,4] [--severidad alta,media] \
      [--fuente <prefijo, por ejemplo sonar: o EQ-006>] --simular
    ```

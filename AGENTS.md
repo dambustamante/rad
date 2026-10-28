@@ -103,7 +103,7 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
 | `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos y excepciones con vencimiento |
 | `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
-| `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, confirmar, conversar, deuda o falso positivo) y muestra la calibración por fuente |
+| `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 
 Cada comando ejecuta primero su parte determinista (`make` o los scripts de `herramientas/`) y
 después hace la parte que requiere criterio. `harness.yaml` se modifica solo mediante esos

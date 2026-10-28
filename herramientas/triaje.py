@@ -30,7 +30,8 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from comun import RAIZ, ErrorRadiografia, cargar_config, escribir_yaml_conservador, leer_yaml_conservador
 
-DECISIONES = {"Resolver": "resolver", "Confirmar": "confirmar", "Conversar": "a-conversar",
+# "confirmar" existió en versiones anteriores: si aparece en un registro, cuenta igual que "resolver".
+DECISIONES = {"Resolver": "resolver", "Conversar": "a-conversar",
               "Deuda": "deuda", "Falso positivo": "falso-positivo"}
 MARCAS = {"x", "✓", "✔", "[x]"}
 DIAS_DEUDA = 90

@@ -43,7 +43,7 @@ class PruebaTriaje(unittest.TestCase):
             "h2": hallazgo(2, severidad="media", origen="sonar", nivel=4, fuente="sonar:java:S1128", criterio=None),
             "h3": hallazgo(3, severidad="baja", origen="sonar", nivel=4, fuente="sonar:java:S1128", criterio=None),
             "h4": hallazgo(4, triaje={"decision": "deuda", "motivo": "x", "vence": vencida, "fecha": "2026-01-01"}),
-            "h5": hallazgo(5, triaje={"decision": "confirmar", "motivo": None, "vence": None, "fecha": "2026-01-01"}),
+            "h5": hallazgo(5, triaje={"decision": "confirmar", "motivo": None, "vence": None, "fecha": "2026-01-01"}),  # decisión antigua
             "h6": hallazgo(6, estado="corregido"),
             "h7": hallazgo(7, reaparecido=True, ultima_vez="2026-10-20",
                            triaje={"decision": "resolver", "motivo": None, "vence": None, "fecha": "2026-09-01"}),
@@ -87,7 +87,7 @@ class PruebaTriaje(unittest.TestCase):
                          "primero lo que requiere atención; sin los ya decididos ni los corregidos")
         self.assertIn("deuda: deuda vencida el", texto)
         self.assertIn("resolver: reapareció después de corregirse", texto)
-        self.assertIn("| Resolver | Confirmar | Conversar | Deuda | Falso positivo |", texto)
+        self.assertIn("| Resolver | Conversar | Deuda | Falso positivo |", texto)
 
     def test_aplicar_registra_y_genera_agenda(self) -> None:
         archivo = self.generar()
@@ -116,7 +116,7 @@ class PruebaTriaje(unittest.TestCase):
         ]
         for (id_hallazgo, columna, vence, motivo), mensaje in casos:
             archivo = self.generar()
-            self.marcar(archivo, "H-0002", "Confirmar")
+            self.marcar(archivo, "H-0002", "Resolver")
             self.marcar(archivo, id_hallazgo, columna, vence, motivo)
             codigo, salida = self.ejecutar("aplicar", str(archivo))
             self.assertEqual(codigo, 1, mensaje)
@@ -125,7 +125,7 @@ class PruebaTriaje(unittest.TestCase):
 
         archivo = self.generar()
         self.marcar(archivo, "H-0001", "Resolver")
-        self.marcar(archivo, "H-0001", "Confirmar")
+        self.marcar(archivo, "H-0001", "Conversar")
         codigo, salida = self.ejecutar("aplicar", str(archivo))
         self.assertIn("más de una decisión marcada", salida)
 
