@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv doctor sync-arquitectura coherencia repos actualizar test
+.PHONY: help venv doctor sync-arquitectura coherencia repos actualizar revisar test
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -30,6 +30,10 @@ repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los 
 	@$(PYTHON) herramientas/productos.py sincronizar
 
 actualizar: doctor sync-arquitectura coherencia repos ## Ejecuta la parte automática de /actualizar
+
+revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]
+	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)
+	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar)
 
 test: $(ENTORNO) ## Ejecuta las pruebas de las herramientas
 	@$(PYTHON) -m unittest discover -s herramientas/pruebas -t herramientas/pruebas -v

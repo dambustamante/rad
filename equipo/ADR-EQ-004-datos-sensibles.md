@@ -14,7 +14,8 @@ Propuesto
 - **Problema o necesidad:** los productos procesan datos de tarjetas, de identificación y de
   clientes. Un dato sensible en un log, en un repositorio o en un archivo de prueba es una
   exposición que no se puede deshacer y un incumplimiento regulatorio.
-- **Alcance:** todos los repositorios de tipo `propio`.
+- **Alcance:** todos los repositorios de tipo `propio`. El criterio `EQ-004.1` (secretos) aplica
+  también a los repositorios de tipo `config`, donde suelen vivir las credenciales.
 - **Restricciones:** normativa de protección de datos personales y requisitos PCI DSS para
   datos de tarjetas.
 
