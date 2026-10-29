@@ -102,7 +102,7 @@ hook de `.cursor/hooks.json` (`herramientas/guardia.py`):
 |---|---|
 | commit, push, merge, rebase, reset, tag o cambio de rama en `productos/*/repos/` o `.cache/ramas/` | se bloquea |
 | acciones sobre MR o PR con `glab` o `gh` (merge, approve, comment…) | se bloquea |
-| escrituras HTTP directas (`curl` o `wget` con POST, PUT, PATCH, DELETE o datos) | se bloquea |
+| escrituras HTTP directas (`curl` o `wget` con `POST`, `PUT`, `PATCH`, `DELETE` o datos) | se bloquea |
 | cualquier comando con `--confirmar` (publicar en un MR o crear en Jira) | Cursor pide la aprobación del usuario |
 
 Los comandos de lectura (`git log`, `git diff`, consultas a Sonar) y los de `make` funcionan normalmente.
