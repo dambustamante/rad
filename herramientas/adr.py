@@ -167,9 +167,12 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str
     numero = f"{max(numeros, default=0) + 1:03d}"
     id_adr = f"ADR-{sigla}-{numero}"
 
-    texto = (raiz / "equipo" / "plantillas" / "adr-producto.md").read_text(encoding="utf-8")
-    texto = texto.replace("ADR-<SIGLA>-NNN: <Título de la decisión>", f"{id_adr}: {titulo}")
-    texto = texto.replace("<SIGLA>-NNN.1", f"{sigla}-{numero}.1")
+    texto = (raiz / "equipo" / "plantillas" / "adr.md").read_text(encoding="utf-8")
+    texto = texto.replace("ADR-<ÁMBITO>-NNN: <Título de la decisión>", f"{id_adr}: {titulo}")
+    texto = re.sub(r"\n> `<ÁMBITO>`:.*\n", "", texto, count=1)
+    texto = texto.replace("| `<ÁMBITO>-NNN.1` | | `automática` \\| `revisión de código` |", f"| `{sigla}-{numero}.1` | | revisión de código |")
+    texto = texto.replace("(`<ÁMBITO>-NNN.N`)", f"(`{sigla}-NNN.N`)")
+    texto = texto.replace(" (solo ADR de producto; en un ADR-EQ se elimina)", "", 1)
     texto = texto.replace("Fecha de creación: `DD-MM-AAAA`", f"Fecha de creación: `{date.today().strftime('%d-%m-%Y')}`")
     texto = texto.replace("- **Tipo:** decision", f"- **Tipo:** {tipo}", 1)
 

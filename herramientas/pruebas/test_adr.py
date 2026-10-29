@@ -94,7 +94,12 @@ class PruebaAdrProducto(unittest.TestCase):
 
     def test_sigla_y_numeracion(self) -> None:
         self.assertEqual(self.decision().name, "ADR-MF-001-latencia-de-evaluacion.md")
-        self.assertTrue(self.crear("decision", "Centralizar clientes", {}).name.startswith("ADR-MF-002-"))
+        archivo = self.crear("decision", "Centralizar clientes", {})
+        self.assertTrue(archivo.name.startswith("ADR-MF-002-"))
+        texto = archivo.read_text(encoding="utf-8")
+        self.assertNotIn("ÁMBITO", texto, "la plantilla común queda sin marcadores de ámbito")
+        self.assertIn("`MF-002.1`", texto)
+        self.assertIn("## 14. Tipo y alcance\n", texto)
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.ejecutar("nuevo", "motor-fraudes", "--tipo", "mejora", "--titulo", "x")
 
