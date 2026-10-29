@@ -79,6 +79,8 @@ Columna **Cómo**:
 - `automática + revisión de código`: una herramienta detecta candidatos y la revisión los confirma.
 - `revisión de la historia`, `revisión del MR` o `plataforma git`: para decisiones sobre la forma de
   trabajar (historias, MR); no se evalúan en la revisión del código de un repositorio.
+- `revisión del producto`: para la documentación del producto completo; se evalúa al consolidar el
+  producto.
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|

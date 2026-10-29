@@ -54,8 +54,8 @@ Propuesto
 
 ## 8. Impacto
 
-Los repositorios que exponen APIs o eventos sin contrato deben crearlo. `radiografia` entrega
-un borrador inferido del código como punto de partida, marcado para validación.
+Los repositorios que exponen APIs o eventos sin contrato deben crearlo. Si se parte de un contrato
+generado desde el código, se marca para validación antes de publicarlo.
 
 ## 9. Acciones requeridas
 

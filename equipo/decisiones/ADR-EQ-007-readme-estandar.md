@@ -55,8 +55,7 @@ Cada repositorio de tipo `propio` tiene en su raíz un `README.md` que:
 
 ## 8. Impacto
 
-Todos los repositorios de tipo `propio`. `radiografia` entrega un borrador inferido del código
-cuando falta el README o sus secciones.
+Todos los repositorios de tipo `propio`. Se parte de la plantilla `equipo/plantillas/README.md`.
 
 ## 9. Acciones requeridas
 
@@ -85,7 +84,7 @@ cuando falta el README o sus secciones.
 ## 10. Referencias
 
 - Plantilla: `equipo/plantillas/README.md`
-- ADR-EQ-002 (integraciones), ADR-EQ-004 (contratos), ADR-EQ-006 (C4)
+- ADR-EQ-002 (integraciones), ADR-EQ-004 (contratos), ADR-EQ-006 (documentación de macro a micro y C4)
 
 ## 11. Regla rápida
 

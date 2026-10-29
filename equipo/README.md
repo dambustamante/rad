@@ -22,7 +22,7 @@ Los ADR-EQ están numerados por importancia, según el riesgo que cubren:
 | 003 | Seguridad y operación | Logs |
 | 004 | Diseño | Contratos como código |
 | 005 | Diseño | SOLID y KISS |
-| 006 | Documentación | C4 |
+| 006 | Documentación | De macro a micro: Confluence, README, C4, docs y contratos |
 | 007 | Documentación | README |
 | 008 | Forma de trabajar | Definición de terminado |
 | 009 | Forma de trabajar | Estructura de Tareas, Spikes, Errores y Hotfix |
@@ -52,6 +52,8 @@ Cada ADR-EQ termina con sus criterios (`EQ-NNN.N`). La columna **Cómo** indica:
 - `automática + revisión de código`: una herramienta detecta candidatos y la revisión los confirma.
 - `revisión de la historia`, `revisión del MR` o `plataforma git`: criterios sobre la forma de
   trabajar (ADR-EQ-008 y ADR-EQ-009); no se evalúan en la revisión del código de un repositorio.
+- `revisión del producto`: criterios sobre la documentación del producto completo, por ejemplo su
+  página en Confluence (ADR-EQ-006); se evalúan al consolidar el producto, no en cada repositorio.
 
 Quién verifica la definición de terminado (ADR-EQ-008):
 

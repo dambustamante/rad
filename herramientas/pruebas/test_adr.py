@@ -213,7 +213,7 @@ class PruebaAdrProducto(unittest.TestCase):
         self.decision()
         indices.regenerar(self.raiz)
         equipo = (self.raiz / "equipo" / "INDICE.md").read_text(encoding="utf-8")
-        self.assertIn("| [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-c4.md) |", equipo)
+        self.assertIn("| [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-de-macro-a-micro.md) |", equipo)
         producto = (self.raiz / "productos" / "motor-fraudes" / "INDICE.md").read_text(encoding="utf-8")
         self.assertIn("- **Sigla de sus ADR:** MF", producto)
         self.assertIn("| fraude-core | propio | activo | — | pendiente | 0 | — |", producto)

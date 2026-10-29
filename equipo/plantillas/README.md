@@ -15,6 +15,8 @@
 
 ## 3. Arquitectura
 
+- Página del producto: <enlace a la página del producto en Confluence>
+- Contratos: [docs/contratos/](docs/contratos/) · Operación: [docs/](docs/)
 - Diagrama de contexto: [docs/arquitectura/c4-contexto.md](docs/arquitectura/c4-contexto.md)
 - Diagrama de contenedores: [docs/arquitectura/c4-contenedores.md](docs/arquitectura/c4-contenedores.md)
 - **Estilo y patrones usados:** <por ejemplo, arquitectura hexagonal, outbox, circuit breaker>

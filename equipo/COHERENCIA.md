@@ -11,7 +11,7 @@ Evaluado contra: sin fuentes sincronizadas
 | [ADR-EQ-003](decisiones/ADR-EQ-003-manejo-de-logs.md) Manejo de logs estructurados y correlacionados | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-004](decisiones/ADR-EQ-004-contratos-como-codigo.md) Contratos como código, versionados en el repositorio | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-005](decisiones/ADR-EQ-005-principios-solid-kiss.md) Principios de diseño SOLID y KISS | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
-| [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-c4.md) Documentación de arquitectura C4 en cada repositorio | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
+| [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-de-macro-a-micro.md) Documentación de macro a micro | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-007](decisiones/ADR-EQ-007-readme-estandar.md) README estándar en español neutro y técnico | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-008](decisiones/ADR-EQ-008-definicion-de-terminado.md) Definición de terminado | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-009](decisiones/ADR-EQ-009-estructura-de-tareas-spikes-errores-y-hotfix.md) Estructura de Tareas, Spikes, Errores y Hotfix | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |

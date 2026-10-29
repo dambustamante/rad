@@ -80,7 +80,7 @@ de degradación requiere una conversación con negocio por cada integración cr�
 
 ## 10. Referencias
 
-- ADR-EQ-001 (datos sensibles), ADR-EQ-003 (logs), ADR-EQ-006 (C4)
+- ADR-EQ-001 (datos sensibles), ADR-EQ-003 (logs), ADR-EQ-006 (documentación y C4)
 - Patrones *Timeout*, *Retry*, *Circuit Breaker* y *Bulkhead*
 
 ## 11. Regla rápida
