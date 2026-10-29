@@ -4,9 +4,10 @@ Obtiene la línea base AS IS de los repositorios de un producto y la compara con
 organización decidió, en orden de autoridad: ADR de arquitectura, estándares de arquitectura,
 decisiones del equipo (ADR-EQ) y Sonar.
 
-Uso: `/revisar <producto> [repo]`. Se trabaja **un repositorio por conversación**: al terminar uno,
-sugerir abrir un chat nuevo para el siguiente (reduce el costo, porque no se reenvía el contexto
-acumulado).
+Uso: `/revisar <producto> [repo]`, o `/revisar <producto> <repo> --rama <rama>` para revisar solo lo que
+cambia una rama o su MR (ver "Revisar una rama"). Se trabaja **un repositorio por conversación**: al
+terminar uno, sugerir abrir un chat nuevo para el siguiente (reduce el costo, porque no se reenvía el
+contexto acumulado).
 
 ## 1. Elegir el repositorio
 
@@ -186,8 +187,49 @@ Cuando todos los repositorios están al día:
    .venv/bin/python herramientas/revision.py producto <producto> --narrativa <archivo>
    ```
 
+## Revisar una rama (`--rama`)
+
+Solo se revisa lo que la rama cambia respecto de su destino: la rama del MR o PR abierto, o la rama
+principal si no hay MR. No hace falta AS IS, C4 ni evaluar cada elemento.
+
+1. **Preparar:**
+
+   ```sh
+   make revisar P=<producto> R=<repo> RAMA=<rama>
+   ```
+
+   Trae la rama a una copia de solo lectura (`.cache/ramas/`), busca su MR, ejecuta las verificaciones
+   automáticas y gitleaks, conserva solo los hallazgos en archivos cambiados y escribe el paquete.
+2. **Leer el paquete** (`revisiones/<fecha>-rama-<repo>-<rama>/paquete.md`): archivos cambiados, diff,
+   hallazgos automáticos, terceros, contra qué comparar y, si hay MR, su descripción y si ya lo aprobó
+   otra persona. Abrir archivos de la copia de la rama solo si el diff no alcanza.
+3. **Registrar** los hallazgos que introduce o empeora la rama en `lote.yaml` (solo `hallazgos:`, mismo
+   formato que arriba) y ejecutar:
+
+   ```sh
+   .venv/bin/python herramientas/rama.py registrar <producto> <repo> <rama>
+   ```
+
+   La evidencia debe estar en un archivo que la rama cambia. Con MR también se pueden registrar los
+   criterios del MR de ADR-EQ-008 (por ejemplo, EQ-008.1: criterios de aceptación sin pruebas).
+4. **Elegir qué publicar.** Mostrar los hallazgos de la rama y preguntar cuáles se piden resolver. Se
+   publican los marcados Resolver, los que el usuario elija ahora y los de fuentes publicables sin triar.
+5. **Vista previa:**
+
+   ```sh
+   .venv/bin/python herramientas/rama.py publicar <producto> <repo> <rama> --incluir H-0012,H-0015
+   ```
+
+   Mostrar el destino (MR o commit) y el comentario completo. Si hay avisos de lenguaje, corregir el
+   título o el detalle de esos hallazgos en el lote y registrar de nuevo.
+6. **Publicar**, solo si el usuario lo confirma explícitamente sobre la vista previa: repetir con
+   `--confirmar`. En el MR se crea un solo comentario y las publicaciones siguientes lo editan (los
+   corregidos aparecen como ✅). Sin MR se comenta el último commit, una vez por commit.
+
+Responder con el veredicto de la rama, los hallazgos principales y dónde se publicó.
+
 ## Reglas generales
 
-- No modificar las secciones generadas de las fichas.
+- No modificar las secciones generadas de las fichas ni la copia de la rama (`.cache/ramas/`).
 - Los hallazgos en modo `propuesta` (decisiones del equipo no aprobadas) se informan, pero no
   afectan el veredicto.

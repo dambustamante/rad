@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv estado doctor sync-arquitectura coherencia repos terceros historias indices actualizar revisar test
+.PHONY: help venv estado doctor sync-arquitectura coherencia repos terceros historias indices actualizar revisar semanal test
 
 help: ## Lista los comandos disponibles
 	@echo "Uso habitual:"
@@ -47,9 +47,17 @@ indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 
 actualizar: doctor sync-arquitectura coherencia repos terceros historias indices ## Ejecuta la parte automática de /actualizar
 
-revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]
-	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)
+revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]
+	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]"; exit 1)
+ifdef RAMA
+	@test -n "$(R)" || (echo "Para revisar una rama se indica el repositorio: make revisar P=<producto> R=<repo> RAMA=<rama>"; exit 1)
+	@$(PYTHON) herramientas/rama.py preparar $(P) $(R) $(RAMA)
+else
 	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar)
+endif
+
+semanal: repos ## Reporte semanal de cada producto (actualiza antes las copias de los repositorios)
+	@$(PYTHON) herramientas/estado.py semanal
 
 test: $(ENTORNO) ## Ejecuta las pruebas de las herramientas
 	@$(PYTHON) -m unittest discover -s herramientas/pruebas -t herramientas/pruebas -v

@@ -92,8 +92,10 @@ productos/<producto>/
 ├── as-is/                    <repo>.md y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes, lotes, AS IS y borradores C4
 ├── triaje/                   planillas de triaje y agendas
+├── semanal/                  reportes semanales (AAAA-Wnn.md)
 ├── estado/                   hallazgos.json, historias, índices de terceros
 └── repos/                    copias de los repositorios (fuera de git, solo lectura)
+.cache/ramas/                 copias de las ramas en revisión (fuera de git, solo lectura)
 ```
 
 ## Lenguaje

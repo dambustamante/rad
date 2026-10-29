@@ -11,7 +11,7 @@ recomendar, pero no marca filas por su cuenta.
 
 | Decisión | Significado | Exige | Efecto en el veredicto |
 |---|---|---|---|
-| Resolver | se corrige (en la fase 2 va al comentario del MR o PR) | — | cuenta |
+| Resolver | se corrige; en una rama, va al comentario del MR o PR | — | cuenta |
 | Conversar | se decide con el equipo; va a la agenda | — | cuenta |
 | Deuda | se acepta como deuda técnica | motivo; sin fecha, vence a los 90 días | no cuenta hasta que vence |
 | Falso positivo | la herramienta o la revisión se equivocó | motivo | no cuenta; no reaparece mientras el código no cambie |
@@ -67,8 +67,8 @@ qué porcentaje fue falso positivo. Los umbrales están en `harness.yaml`:
 | ruidosa: ajustar | 20% o más de falsos positivos | revisar los motivos y ajustar la fuente |
 | pocos datos | menos de 5 triados | seguir triando |
 
-- **Publicables:** la lista de fuentes confiables. En la fase 2, solo sus hallazgos se publicarán en
-  los MR. Se agregan con confirmación:
+- **Publicables:** la lista de fuentes confiables. Al revisar una rama, sus hallazgos se publican en el
+  MR sin necesidad de triarlos uno por uno. Se agregan con confirmación:
 
   ```sh
   .venv/bin/python herramientas/triaje.py publicables --agregar EQ-002.1

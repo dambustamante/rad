@@ -43,10 +43,11 @@ equipo/              nivel 3: INDICE.md, COHERENCIA.md, decisiones/ (ADR-EQ), pl
 productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), terceros/<id>/ (ficha y
                      documentación del producto comprado y de cada integración), historias/ (historias
                      de usuario y borradores para Jira), as-is/, revisiones/, triaje/ (planillas y
-                     agendas), estado/, repos/
+                     agendas), semanal/, estado/, repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
 .cursor/commands/    comandos de Cursor (/estado, /actualizar, /producto, /revisar, /triar, /crear)
+.cache/ramas/        copias de solo lectura de las ramas en revisión (fuera de git)
 harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
@@ -54,7 +55,8 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, ca
 ## Reglas no negociables
 
 1. **Solo lectura sobre lo ajeno.** `productos/*/repos/` y `arquitectura/` no se editan a mano.
-   Nunca se hace commit, push, merge, MR ni PR en los repositorios de los productos.
+   Nunca se hace commit, push, merge, MR ni PR en los repositorios de los productos. Lo único que se
+   escribe en la plataforma git es el comentario de una revisión de rama, en su MR o PR o en su commit.
 2. **Nada sale sin confirmación.** Ninguna escritura hacia la plataforma git, Sonar o Jira ocurre sin
    una vista previa y la confirmación explícita del usuario.
 3. **Nada se ejecuta solo.** Sin cron, tareas programadas ni procesos en segundo plano.
@@ -108,10 +110,10 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 
 | Comando | Qué hace |
 |---|---|
-| `/estado` | muestra el estado general y qué sigue; es el punto de entrada (sin red ni IA) |
+| `/estado [semanal]` | muestra el estado general y qué sigue; es el punto de entrada (sin red ni IA). Con `semanal`, el reporte de lo que cambió desde el anterior |
 | `/actualizar [fuentes]` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR y actualiza los repositorios; con `fuentes`, agrega o retira repositorios de arquitectura |
 | `/producto <nombre>` | crea un producto (con su sigla), le agrega o retira repositorios y registra sus terceros |
-| `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación; al final, consolidación del producto |
+| `/revisar <producto> [repo] [--rama <rama>]` | línea base AS IS de un repositorio por conversación; al final, consolidación del producto. Con `--rama`, revisa solo lo que cambia la rama y publica el resultado en su MR o PR (con confirmación) |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 | `/crear <producto> [tipo]` | crea un ADR del producto o una excepción, o una Tarea, un Spike o un Bug para Jira (solo con confirmación) |
 

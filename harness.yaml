@@ -42,6 +42,6 @@ jira:
     bug: Bug
 
 publicacion:
-  # Fuentes (ADR o reglas) cuyos hallazgos pueden publicarse en un MR o PR (fase 2).
+  # Fuentes (ADR o criterios) cuyos hallazgos se publican en el MR o PR sin triarlos (/revisar --rama).
   # Vacía: no se publica nada. Se agrega una fuente solo cuando su tasa de falsos positivos es baja.
   publicables: []

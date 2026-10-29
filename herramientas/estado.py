@@ -1,9 +1,16 @@
 """Estado general de radiografia y qué hacer a continuación.
 
-Uso: python herramientas/estado.py [--raiz RUTA]
+Uso:
+  python herramientas/estado.py [--raiz RUTA]
+  python herramientas/estado.py semanal [--raiz RUTA]
 
-Solo lee archivos locales: no descarga nada ni usa la red. Termina con una lista "Qué sigue",
-ordenada por prioridad, con el comando de Cursor que corresponde a cada paso.
+Sin argumentos solo lee archivos locales: no descarga nada ni usa la red. Termina con una lista "Qué
+sigue", ordenada por prioridad, con el comando de Cursor que corresponde a cada paso.
+
+`semanal` escribe productos/<producto>/semanal/<AAAA-Wnn>.md con lo que cambió desde la ejecución anterior
+(o desde hace 7 días la primera vez): commits y ramas activas, MR o PR (si la plataforma está configurada),
+ramas revisadas, hallazgos nuevos, corregidos y reaparecidos, y deuda vencida. Mide repositorios, ramas y
+MR, no personas. Usa las copias locales: `make semanal` las actualiza antes.
 """
 
 from __future__ import annotations
@@ -14,9 +21,12 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env
+from datetime import timedelta
+
+from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env, escribir_json, git, leer_json
 
 DIAS_ARQUITECTURA = 7
+DIAS_SEMANAL = 7
 
 
 def dias_desde(fecha_iso: str | None) -> int | None:
@@ -74,6 +84,7 @@ def revisar_estado(raiz: Path) -> dict:
             "excepciones": [f["id"] for f in filas_adr
                             if f["tipo"] == "excepcion" and (f["efecto"] == "vencida" or str(f["efecto"]).startswith("inactiva"))],
             "sin_indexar": sum(f["sin_indexar"] for f in fichas_terceros),
+            "dias_semanal": dias_desde(leer_json(archivo_semanal(raiz, nombre)).get("ultima")),
         })
     env = cargar_env(raiz)
     return {"fuentes": len(fuentes), "edad_arquitectura": edad_arquitectura, "sincronizada": bool(lock),
@@ -123,16 +134,139 @@ def que_sigue(estado: dict) -> list[str]:
         if p["historias_pendientes"]:
             pasos.append(f"{p['nombre']}: {p['historias_pendientes']} historia(s) candidata(s) a ADR por analizar: "
                          f"`/crear {p['nombre']} adr --desde-historias`.")
+        if p["repos"] and (p["dias_semanal"] is None or p["dias_semanal"] > DIAS_SEMANAL):
+            cuando = "sin reporte semanal" if p["dias_semanal"] is None else f"último reporte semanal hace {p['dias_semanal']} días"
+            pasos.append(f"{p['nombre']}: {cuando}: `/estado semanal`.")
         if p["sin_indexar"]:
             pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) de terceros sin indexar: ver "
                          f"`productos/{p['nombre']}/terceros/INDICE.md`.")
     return pasos or ["Todo al día."]
 
 
+# --- Reporte semanal ---------------------------------------------------------------------------
+
+def archivo_semanal(raiz: Path, producto: str) -> Path:
+    return raiz / "productos" / producto / "estado" / "semanal.json"
+
+
+def actividad_git(clon: Path, rama: str, desde: str) -> dict:
+    """Commits en la rama principal y ramas con commits desde `desde`, según la copia local."""
+    principal = f"origin/{rama}"
+    commits = int(git("rev-list", "--count", f"--since={desde}T00:00:00", principal, cwd=clon) or 0)
+    ramas = []
+    for linea in git("for-each-ref", "--format=%(refname:short)|%(committerdate:short)", "refs/remotes/origin", cwd=clon).splitlines():
+        nombre, fecha = linea.rsplit("|", 1)
+        if nombre in (principal, "origin/HEAD", "origin") or fecha < desde:
+            continue
+        adelante = int(git("rev-list", "--count", f"{principal}..{nombre}", cwd=clon) or 0)
+        ramas.append({"rama": nombre.removeprefix("origin/"), "fecha": fecha, "commits": adelante})
+    return {"commits": commits, "ramas": sorted(ramas, key=lambda r: r["fecha"], reverse=True)}
+
+
+def semanal(raiz: Path, producto: str, cliente=None, hoy: date | None = None) -> Path:
+    import hallazgos
+    import plataforma
+    import productos
+    from revisar import veredicto
+    from triaje import deuda_vencida
+
+    hoy = hoy or date.today()
+    datos = productos.leer_productos(raiz).get(producto)
+    if datos is None:
+        raise ErrorRadiografia(f"No existe el producto '{producto}'.")
+    desde = leer_json(archivo_semanal(raiz, producto)).get("ultima") or (hoy - timedelta(days=DIAS_SEMANAL)).isoformat()
+    aviso_mr = None
+    if cliente is None:
+        env = cargar_env(raiz)
+        config = plataforma.ConfigPlataforma.desde_env(env)
+        cliente = plataforma.ClientePlataforma(config) if config else None
+        aviso_mr = None if config else plataforma.ConfigPlataforma.motivo_sin_config(env)
+    registro = hallazgos.cargar(raiz, producto)
+    anio, semana, _ = hoy.isocalendar()
+    lineas = [f"# Reporte semanal de {producto}: {anio}-W{semana:02d}", "",
+              f"Cambios desde el {desde} hasta el {hoy.isoformat()}. Se miden repositorios, ramas y MR, no personas.", "",
+              "## Repositorios", "", "| Repositorio | Commits en la rama principal | Ramas activas | MR abiertos | MR mergeados |",
+              "|---|---|---|---|---|"]
+    detalle = []
+    for repo in productos.repos_de(datos):
+        if repo.get("estado") != "activo":
+            continue
+        id_repo = str(repo["id"])
+        clon = raiz / "productos" / producto / "repos" / id_repo
+        if not (clon / ".git").exists():
+            lineas.append(f"| {id_repo} | NO DETERMINADO - sin copia local | — | — | — |")
+            continue
+        try:
+            actividad = actividad_git(clon, str(repo["rama"]), desde)
+        except ErrorRadiografia as error:
+            lineas.append(f"| {id_repo} | NO DETERMINADO - {error} | — | — | — |")
+            continue
+        mrs, texto_mr = None, f"NO DETERMINADO - {aviso_mr}" if aviso_mr else "—"
+        if cliente:
+            try:
+                mrs = cliente.mrs_desde(plataforma.proyecto_de(str(repo["url"])), desde)
+            except ErrorRadiografia as error:
+                texto_mr = f"NO DETERMINADO - {error}"
+        abiertos = [m for m in mrs or [] if m["estado"] == "abierto"]
+        mergeados = [m for m in mrs or [] if m["mergeado"] and m["mergeado"] >= desde]
+        lineas.append(f"| {id_repo} | {actividad['commits']} | {len(actividad['ramas'])} "
+                      f"| {len(abiertos) if mrs is not None else texto_mr} | {len(mergeados) if mrs is not None else texto_mr} |")
+        revisadas = {e["rama"]: e for e in registro.get("ramas", {}).values() if e["repo"] == id_repo}
+        if actividad["ramas"] or abiertos:
+            detalle += [f"### {id_repo}", "", "| Rama | Último commit | Commits adelante | MR | Revisión de la rama |", "|---|---|---|---|---|"]
+            por_rama = {m["rama"]: m for m in abiertos}
+            for r in actividad["ramas"]:
+                mr = por_rama.get(r["rama"])
+                revisada = revisadas.get(r["rama"])
+                texto_revision = (f"{revisada['revisada']['fecha']}: {veredicto(registro, id_repo, r['rama'])}"
+                                  if revisada and revisada.get("revisada") else "sin revisar")
+                if revisada and revisada.get("revisada") and revisada["revisada"]["commit"] != revisada["commit"]:
+                    texto_revision += " (hay commits nuevos)"
+                enlace_mr = f"[{mr['titulo']}]({mr['url']})" if mr else "—"
+                detalle.append(f"| `{r['rama']}` | {r['fecha']} | {r['commits']} | {enlace_mr} | {texto_revision} |")
+            detalle.append("")
+
+    del_periodo = lambda campo: [h for h in registro["hallazgos"].values() if (h.get(campo) or "") >= desde]  # noqa: E731
+    nuevos = del_periodo("primera_vez")
+    corregidos = [h for h in del_periodo("corregido") if h["estado"] == "corregido"]
+    reaparecidos = [h for h in del_periodo("ultima_vez") if h.get("reaparecido") and h["estado"] == "abierto"]
+    vencidas = [h for h in registro["hallazgos"].values() if h["estado"] == "abierto" and deuda_vencida(h)]
+    lineas += ["", "## Ramas activas", ""] + (detalle or ["Ninguna rama con commits en el período.", ""])
+    lineas += ["## Hallazgos", "", "| | Cantidad | Bloqueantes o altos |", "|---|---|---|"]
+    for nombre, lista in (("Nuevos", nuevos), ("Corregidos", corregidos), ("Reaparecidos", reaparecidos), ("Deuda vencida", vencidas)):
+        lineas.append(f"| {nombre} | {len(lista)} | {sum(1 for h in lista if h['severidad'] in ('bloqueante', 'alta'))} |")
+    importantes = sorted((h for h in reaparecidos + vencidas + [h for h in nuevos if h["estado"] == "abierto"]
+                          if h["severidad"] in ("bloqueante", "alta")), key=lambda h: h["id"])
+    if importantes:
+        lineas += ["", "Bloqueantes o altos que requieren atención:", ""]
+        for h in {h["id"]: h for h in importantes}.values():
+            principal = registro.get("repos", {}).get(h["repo"], {}).get("rama", h["rama"])
+            donde = h["repo"] if h["rama"] == principal else f"{h['repo']} @{h['rama']}"
+            lineas.append(f"- {h['id']} · {donde} · {h['criterio'] or h['fuente']} · {h['titulo']}")
+    lineas += ["", "Qué hacer con esto: `/triar` para lo nuevo y lo reaparecido, `/revisar --rama` para las ramas sin revisar "
+               "y `/crear tarea --desde` para la deuda que se lleva a Jira."]
+
+    archivo = raiz / "productos" / producto / "semanal" / f"{anio}-W{semana:02d}.md"
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+    archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    escribir_json(archivo_semanal(raiz, producto), {"ultima": hoy.isoformat(), "reporte": archivo.relative_to(raiz).as_posix()})
+    return archivo
+
+
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Estado general y qué sigue.")
+    parser.add_argument("accion", nargs="?", choices=["semanal"])
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
     o = parser.parse_args(argumentos)
+    if o.accion == "semanal":
+        import productos
+        try:
+            for nombre in productos.leer_productos(o.raiz.resolve()):
+                print(f"Reporte semanal: {semanal(o.raiz.resolve(), nombre).relative_to(o.raiz.resolve())}")
+        except ErrorRadiografia as error:
+            print(f"ERROR: {error}")
+            return 1
+        return 0
     try:
         estado = revisar_estado(o.raiz.resolve())
     except ErrorRadiografia as error:

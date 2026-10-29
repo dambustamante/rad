@@ -110,7 +110,9 @@ def generar(raiz: Path, producto: str, repo: str | None = None) -> Path | None:
         evidencia = ", ".join(f"{e['archivo']}:{e['linea']}" if e.get("linea") else e["archivo"]
                               for e in hallazgo["evidencia"][:2]) or "—"
         antes = "—" if motivo == "sin decisión" else f"{hallazgo['triaje']['decision']}: {motivo}"
-        valores = [hallazgo["id"], hallazgo["repo"], hallazgo["nivel"], hallazgo["severidad"], hallazgo["modo"],
+        principal = registro.get("repos", {}).get(hallazgo["repo"], {}).get("rama", hallazgo["rama"])
+        nombre_repo = hallazgo["repo"] if hallazgo["rama"] == principal else f"{hallazgo['repo']} @{hallazgo['rama']}"
+        valores = [hallazgo["id"], nombre_repo, hallazgo["nivel"], hallazgo["severidad"], hallazgo["modo"],
                    hallazgo["criterio"] or hallazgo["fuente"], hallazgo["titulo"], evidencia, antes,
                    *([""] * len(DECISIONES)), "", ""]
         lineas.append("| " + " | ".join(celda(v) for v in valores) + " |")

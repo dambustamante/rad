@@ -9,13 +9,13 @@ decidió, en este orden:
 4. Sonar
 
 Cada hallazgo lleva su evidencia (`ruta:línea` y la cita del documento). `radiografia` no modifica
-los repositorios que revisa. Lo único que escribe fuera son Tareas, Spikes y Bugs en Jira, siempre
-con vista previa y confirmación.
+los repositorios que revisa. Lo único que escribe fuera son el comentario de la revisión de una rama
+en su MR o PR, y Tareas, Spikes y Bugs en Jira; siempre con vista previa y confirmación.
 
 ## Empezar
 
 ```sh
-cp .env.example .env      # completar Sonar y, si se usa, Jira
+cp .env.example .env      # completar Sonar y, si se usan, Jira y la plataforma git
 make venv
 make doctor
 ```
@@ -28,10 +28,10 @@ Detalle en [Instalación](docs/01-instalacion.md).
 
 | Comando | Para qué |
 |---|---|
-| `/estado` | ver qué hay pendiente y qué sigue |
+| `/estado [semanal]` | ver qué hay pendiente y qué sigue; con `semanal`, qué cambió desde el reporte anterior |
 | `/actualizar [fuentes]` | registrar y descargar arquitectura, y verificar la coherencia de las decisiones |
 | `/producto <nombre>` | registrar un producto, sus repositorios y sus terceros |
-| `/revisar <producto>` | revisar un repositorio (un chat por repositorio) |
+| `/revisar <producto> [repo] [--rama <rama>]` | revisar un repositorio (un chat por repositorio), o solo lo que cambia una rama y publicarlo en su MR |
 | `/triar <producto>` | decidir qué hacer con cada hallazgo |
 | `/crear <producto>` | crear un ADR, una excepción, o una Tarea, un Spike o un Bug para Jira |
 
@@ -46,7 +46,7 @@ La guía paso a paso está en [docs/](docs/README.md):
 2. [Conceptos](docs/02-conceptos.md): orden de autoridad, evidencia, hallazgos y veredicto
 3. [Arquitectura y coherencia](docs/03-arquitectura.md)
 4. [Productos y terceros](docs/04-productos.md)
-5. [Revisión de un repositorio](docs/05-revisar.md)
+5. [Revisión de repositorios y ramas](docs/05-revisar.md)
 6. [Triaje](docs/06-triar.md)
 7. [Crear ADR, Tareas, Spikes y Bugs](docs/07-crear.md)
 8. [Mantenimiento](docs/08-mantenimiento.md)
@@ -56,6 +56,6 @@ El contrato de trabajo para Cursor está en [AGENTS.md](AGENTS.md), y las decisi
 
 ## Estado
 
-- **Disponible:** los seis comandos.
-- **Fase 2:** revisión de ramas con comentario en el MR o PR, y reporte semanal.
-- **Fase 3:** pruebas de integración y de carga.
+- **Disponible:** los seis comandos, incluidas la revisión de ramas con comentario en el MR o PR y
+  el reporte semanal.
+- **Próximo:** pruebas de integración y de carga.

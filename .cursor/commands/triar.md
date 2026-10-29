@@ -10,7 +10,7 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
 
 | Decisión | Significado | Exige | Veredicto |
 |---|---|---|---|
-| Resolver | se corrige; en la fase 2 va al comentario del MR o PR | — | cuenta |
+| Resolver | se corrige; en una rama, va al comentario del MR o PR | — | cuenta |
 | Conversar | se decide con el equipo; va a la agenda | — | cuenta |
 | Deuda | se acepta como deuda técnica | motivo; sin fecha, vence a los 90 días | no cuenta hasta que vence |
 | Falso positivo | la herramienta o la revisión se equivocó | motivo | no cuenta |

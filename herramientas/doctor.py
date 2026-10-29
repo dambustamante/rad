@@ -46,17 +46,11 @@ def revisar() -> list[tuple[str, str, str]]:
 
     env = cargar_env()
     plataforma = env.get("GIT_PLATAFORMA", "").strip().lower()
-    clientes = {"gitlab": ("glab", "GITLAB_TOKEN"), "github": ("gh", "GITHUB_TOKEN")}
-    if plataforma in clientes:
-        cliente, variable_token = clientes[plataforma]
+    if plataforma in ("gitlab", "github"):
         resultados.append((OK, "GIT_PLATAFORMA", plataforma))
-        if shutil.which(cliente):
-            resultados.append((OK, cliente, "instalado"))
-        else:
-            resultados.append((AVISO, cliente, f"necesario en la fase 2 (comentarios en MR o PR); instalar con: brew install {cliente}"))
-        resultados.append(_variable(env, variable_token, "necesario en la fase 2 (comentarios en MR o PR)"))
+        resultados.append(_variable(env, f"{plataforma.upper()}_TOKEN", "necesario para revisar ramas con su MR o PR y publicar comentarios"))
     else:
-        resultados.append((AVISO, "GIT_PLATAFORMA", "definir gitlab o github en .env; necesario en la fase 2"))
+        resultados.append((AVISO, "GIT_PLATAFORMA", "definir gitlab o github en .env; necesario para revisar ramas con su MR o PR"))
 
     tipo_sonar = env.get("SONAR_TIPO", "").strip().lower()
     if tipo_sonar in ("sonarqube", "sonarcloud"):
