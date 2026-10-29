@@ -23,7 +23,7 @@ from pathlib import Path
 
 import productos
 from coherencia import leer_arquitectura_vigente, leer_decisiones_equipo, leer_decisiones_producto, sigla_de
-from comun import RAIZ, ErrorRadiografia, normalizar, slug
+from comun import RAIZ, ErrorRadiografia, carpeta_decisiones_producto, normalizar, slug
 
 TIPOS = ("decision", "excepcion")
 ESTADOS = ("propuesto", "aprobado", "reemplazado", "rechazado")
@@ -184,7 +184,7 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str
     sigla = sigla_de(raiz, producto)
     if not sigla:
         raise ErrorRadiografia(f"El producto '{producto}' no tiene sigla. Asignarla con: productos.py sigla {producto} --asignar XX")
-    carpeta = raiz / "productos" / producto / "decisiones"
+    carpeta = carpeta_decisiones_producto(raiz, producto)
     carpeta.mkdir(parents=True, exist_ok=True)
     numeros = [int(m.group(1)) for a in carpeta.glob(f"ADR-{sigla}-*.md") if (m := re.match(rf"ADR-{sigla}-(\d{{3}})", a.name))]
     numero = f"{max(numeros, default=0) + 1:03d}"
@@ -234,7 +234,7 @@ def listar(raiz: Path, producto: str) -> list[dict]:
             efecto = f"{efecto} · revisar: {'; '.join(avisos[adr['id']])}"
         filas.append({"id": adr["id"], "titulo": adr["titulo"], "tipo": adr["tipo"], "estado": adr["estado"],
                       "vence": valor(adr["campos"], "vence"), "efecto": efecto, "archivo": Path(adr["archivo"]).name})
-    carpeta = raiz / "productos" / producto / "decisiones"
+    carpeta = carpeta_decisiones_producto(raiz, producto)
     if filas:
         lineas = [f"# Decisiones de {producto}", "", "> Índice generado por `herramientas/adr.py listar`. No se edita a mano.", "",
                   "| ADR | Título | Tipo | Estado | Vence | Efecto |", "|---|---|---|---|---|---|"]

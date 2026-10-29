@@ -1,7 +1,8 @@
 # /producto
 
 Crea un producto o administra sus repositorios: agregar repositorios nuevos o retirar uno.
-Uso: `/producto <nombre>` (por ejemplo `/producto motor-fraudes`).
+Uso: `/producto <nombre>` (por ejemplo `/producto motor-fraudes`), o `/producto <nombre> harness` para crear el
+harness del producto (ver "Harness del producto").
 
 La parte determinista la hace `herramientas/productos.py`. Nunca editar `producto.yaml` a mano en
 este comando: siempre mediante el script.
@@ -82,6 +83,11 @@ este comando: siempre mediante el script.
 
 Para registrar o completar el producto comprado y las integraciones, leer y seguir
 `.cursor/partes/producto-terceros.md`.
+
+## Harness del producto (`/producto <nombre> harness`)
+
+Para crear el espacio de trabajo de los devs (`harness-<producto>`), leer y seguir
+`.cursor/partes/producto-harness.md`.
 
 ## Reglas
 

@@ -73,6 +73,8 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make repos` | actualiza los repositorios activos de todos los productos |
 | `make terceros` | indexa la documentación de terceros |
 | `make historias` | sincroniza las historias de usuario configuradas |
+| `make harness-traer` | trae la última versión de cada harness de producto |
+| `make harness-generar` | regenera lo generado en cada harness y hace commit local si cambió |
 | `make indices` | regenera los `INDICE.md` |
 
 ## Configuración (`harness.yaml`)

@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv estado doctor sync-arquitectura coherencia repos terceros historias indices actualizar revisar semanal test
+.PHONY: help venv estado doctor sync-arquitectura harness-traer coherencia repos terceros historias harness-generar indices actualizar revisar semanal test
 
 help: ## Lista los comandos disponibles
 	@echo "Uso habitual:"
@@ -42,10 +42,16 @@ terceros: $(ENTORNO) #- Indexa la documentación de los terceros de todos los pr
 historias: $(ENTORNO) #- Sincroniza las historias de usuario de los productos que las tienen configuradas
 	-@$(PYTHON) herramientas/jira.py sincronizar
 
+harness-traer: $(ENTORNO) #- Trae la última versión de cada harness de producto (git pull de la copia local)
+	-@$(PYTHON) herramientas/harness.py traer
+
+harness-generar: $(ENTORNO) #- Regenera lo generado en cada harness y hace commit local si cambió (el push lo hace el TL)
+	-@$(PYTHON) herramientas/harness.py generar
+
 indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py
 
-actualizar: doctor sync-arquitectura coherencia repos terceros historias indices ## Ejecuta la parte automática de /actualizar
+actualizar: doctor sync-arquitectura harness-traer coherencia repos terceros historias harness-generar indices ## Ejecuta la parte automática de /actualizar
 
 revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1] [COMPLETA=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]"; exit 1)

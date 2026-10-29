@@ -1,0 +1,6 @@
+---
+description: Reglas generales del harness
+alwaysApply: true
+---
+
+- Seguir `AGENTS.md`, el contrato del harness. Ante una contradicción, manda `AGENTS.md` y se reporta.

@@ -7,6 +7,7 @@ __pycache__/
 # Copias de trabajo descargadas (no se versionan)
 .cache/
 productos/*/repos/
+productos/*/harness/
 productos/*/revisiones/*/crudo/
 productos/*/estado/terceros/*/texto/
 productos/*/historias/borradores/*-jira.json

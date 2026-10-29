@@ -184,3 +184,9 @@ def escribir_json(archivo: Path, datos) -> None:
 def slug(texto: str, largo: int = 60) -> str:
     """Texto en minúsculas, sin tildes y con guiones, para nombres de archivo."""
     return re.sub(r"[^a-z0-9]+", "-", normalizar(texto)).strip("-")[:largo] or "documento"
+
+
+def carpeta_decisiones_producto(raiz: Path, producto: str) -> Path:
+    """ADR del producto: en su harness (productos/<p>/harness/decisiones/) si existe; si no, productos/<p>/decisiones/."""
+    harness = raiz / "productos" / producto / "harness"
+    return harness / "decisiones" if (harness / ".git").exists() else raiz / "productos" / producto / "decisiones"

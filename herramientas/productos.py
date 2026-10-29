@@ -29,7 +29,7 @@ from pathlib import Path
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from comun import (RAIZ, ErrorRadiografia, actualizar_clon, clon_de_inspeccion, escribir_yaml_conservador, git,
+from comun import (RAIZ, ErrorRadiografia, actualizar_clon, carpeta_decisiones_producto, clon_de_inspeccion, escribir_yaml_conservador, git,
                    leer_yaml_conservador, rama_por_defecto, resolver_commit, yaml_conservador)
 
 TIPOS_REPO = ("propio", "proveedor", "config")
@@ -112,7 +112,7 @@ def asignar_sigla(raiz: Path, producto: str, sigla: str) -> None:
         raise ErrorRadiografia(f"La sigla '{sigla}' debe tener de 2 a 5 letras mayúsculas.")
     if sigla in siglas_en_uso(raiz, producto):
         raise ErrorRadiografia(f"La sigla '{sigla}' ya está en uso o reservada.")
-    if any((raiz / "productos" / producto / "decisiones").glob("ADR-*.md")):
+    if any(carpeta_decisiones_producto(raiz, producto).glob("ADR-*.md")):
         raise ErrorRadiografia("El producto ya tiene ADR: su sigla no se puede cambiar.")
     datos = leer_yaml_conservador(archivo)
     datos["sigla"] = sigla

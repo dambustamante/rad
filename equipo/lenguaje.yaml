@@ -55,5 +55,5 @@ expresiones:
 # "p95 (percentil 95 del tiempo de respuesta)" o "SLA (acuerdo de nivel de servicio)".
 siglas_conocidas: [API, APIs, HTTP, HTTPS, JSON, YAML, XML, REST, SQL, URL, ID, IDs, ADR, MR, PR, CI, CD, UTC, ISO,
                    CPU, RAM, DNS, TLS, SSH, JWT, UI, PDF, CSV, AWS, GCP, OK, QA, C4, TODO, ADF,
-                   README, AGENTS, SOLID, KISS, MVP, AS, IS, EQ, IA, HTML, NNN,
+                   README, AGENTS, SOLID, KISS, MVP, AS, IS, EQ, IA, HTML, NNN, TL, HU, PO,
                    "NO", CUMPLE, APLICA, PASA]   # "NO" va entre comillas: sin ellas, YAML lo lee como falso

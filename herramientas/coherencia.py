@@ -47,7 +47,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from comun import RAIZ, ErrorRadiografia, normalizar
+from comun import RAIZ, ErrorRadiografia, carpeta_decisiones_producto, normalizar
 from sync_arquitectura import primer_parrafo, secciones
 
 RELACIONES = ("sin_relacion", "compatible", "duplica", "choca")
@@ -127,7 +127,7 @@ def leer_decisiones_producto(raiz: Path, producto: str) -> dict[str, dict]:
     sigla = sigla_de(raiz, producto)
     if not sigla:
         return {}
-    return leer_decisiones(raiz, raiz / "productos" / producto / "decisiones", sigla)
+    return leer_decisiones(raiz, carpeta_decisiones_producto(raiz, producto), sigla)
 
 
 def leer_arquitectura_vigente(raiz: Path) -> dict[str, dict]:
@@ -171,7 +171,7 @@ def ambito_producto(raiz: Path, producto: str) -> Ambito:
             referencias[f"{EQUIPO}:{id_eq}"] = {**eq, "tipo": "decision-equipo"}
     sujetos = {k: v for k, v in leer_decisiones_producto(raiz, producto).items() if v["tipo"] == "decision"}
     return Ambito(producto, f"Coherencia de las decisiones de {producto} con arquitectura y con el equipo",
-                  sujetos, referencias, raiz / "productos" / producto / "decisiones",
+                  sujetos, referencias, carpeta_decisiones_producto(raiz, producto),
                   raiz / "productos" / producto / "estado" / "coherencia.json")
 
 

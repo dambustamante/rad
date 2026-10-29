@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from comun import RAIZ, ErrorRadiografia
+from comun import RAIZ, ErrorRadiografia, carpeta_decisiones_producto
 
 AVISO_GENERADO = "> Archivo generado por radiografia. No se edita a mano."
 
@@ -76,12 +76,14 @@ def indice_producto(raiz: Path, producto: str) -> Path:
                       f"| {abiertos} | {revisar.veredicto(registro, id_repo, str(repo.get('rama'))) if automatica else '—'} |")
 
     lineas += ["", "## Decisiones del producto", ""]
-    filas = adr.listar(raiz, producto) if (carpeta / "decisiones").exists() else []
+    decisiones = carpeta_decisiones_producto(raiz, producto)
+    ruta = decisiones.relative_to(carpeta).as_posix()
+    filas = adr.listar(raiz, producto) if decisiones.exists() else []
     if filas:
         lineas += ["| ADR | Tipo | Estado | Efecto |", "|---|---|---|---|"]
-        lineas += [f"| [{f['id']}](decisiones/{f['archivo']}) | {f['tipo']} | {f['estado']} | {f['efecto']} |" for f in filas]
-        lineas += ["", "Índice completo: [decisiones/INDICE.md](decisiones/INDICE.md) · "
-                   "Coherencia: [decisiones/COHERENCIA.md](decisiones/COHERENCIA.md)"]
+        lineas += [f"| [{f['id']}]({ruta}/{f['archivo']}) | {f['tipo']} | {f['estado']} | {f['efecto']} |" for f in filas]
+        lineas += ["", f"Índice completo: [{ruta}/INDICE.md]({ruta}/INDICE.md) · "
+                   f"Coherencia: [{ruta}/COHERENCIA.md]({ruta}/COHERENCIA.md)"]
     else:
         lineas.append("Sin ADR. Se crean con `/crear`.")
 

@@ -4,6 +4,11 @@ Para una decisión del equipo (`/crear equipo adr`): crearla con
 `.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"` y seguir desde el
 paso 3; sus criterios pueden ser `automática` o `revisión de código`.
 
+Si el producto tiene harness, sus ADR viven en `productos/<producto>/harness/decisiones/` (la copia local
+de `harness-<producto>`): los comandos de abajo escriben ahí. Al terminar, guardar en el harness con
+`.venv/bin/python herramientas/harness.py guardar <producto> --mensaje "<ADR y qué cambió>"`; el push y el MR
+los hace el usuario. Un ADR de producto lo aprueban un par dev y el TL por MR al harness.
+
 1. **Mostrar lo que hay** con `.venv/bin/python herramientas/adr.py listar <producto>` (ADR, tipo,
    estado, vencimiento y efecto). Destacar las excepciones vencidas o inactivas y los ADR marcados
    "revisar: …". Preguntar si se crea uno nuevo o se completa o aprueba uno existente.

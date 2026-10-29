@@ -94,7 +94,8 @@ productos/<producto>/
 ├── triaje/                   planillas de triaje y agendas
 ├── semanal/                  reportes semanales (AAAA-Wnn.md)
 ├── estado/                   hallazgos.json, historias, índices de terceros
-└── repos/                    copias de los repositorios (fuera de git, solo lectura)
+├── repos/                    copias de los repositorios (fuera de git, solo lectura)
+└── harness/                  copia del harness del producto, con sus ADR (fuera de git; ver la guía 9)
 .cache/ramas/                 copias de las ramas en revisión (fuera de git, solo lectura)
 .cursor/                      commands/ (comandos), partes/ (pasos que un comando lee solo cuando los
                               necesita), rules/ y hooks.json (guardia de comandos)

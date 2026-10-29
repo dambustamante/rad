@@ -30,7 +30,7 @@ Detalle en [Instalación](docs/01-instalacion.md).
 |---|---|
 | `/estado [semanal]` | ver qué hay pendiente y qué sigue; con `semanal`, qué cambió desde el reporte anterior |
 | `/actualizar [fuentes]` | registrar y descargar arquitectura, y verificar la coherencia de las decisiones |
-| `/producto <nombre>` | registrar un producto, sus repositorios y sus terceros |
+| `/producto <nombre> [harness]` | registrar un producto, sus repositorios y sus terceros; con `harness`, crear el repositorio de trabajo de los devs |
 | `/revisar <producto> [repo] [--rama <rama>]` | revisar un repositorio (un chat por repositorio), o solo lo que cambia una rama y publicarlo en su MR |
 | `/triar <producto>` | decidir qué hacer con cada hallazgo |
 | `/crear <producto>` | crear un ADR, una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira |
@@ -50,6 +50,7 @@ La guía paso a paso está en [docs/](docs/README.md):
 6. [Triaje](docs/06-triar.md)
 7. [Crear ADR, Tareas, Spikes, Errores y Hotfix](docs/07-crear.md)
 8. [Mantenimiento](docs/08-mantenimiento.md)
+9. [Harness del producto](docs/09-harness.md): el repositorio de trabajo de los devs
 
 El contrato de trabajo para Cursor está en [AGENTS.md](AGENTS.md), y las decisiones del equipo en
 [equipo/](equipo/README.md).

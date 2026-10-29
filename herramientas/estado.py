@@ -23,7 +23,7 @@ from pathlib import Path
 
 from datetime import timedelta
 
-from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env, escribir_json, git, leer_json
+from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env, carpeta_decisiones_producto, escribir_json, git, leer_json
 
 DIAS_ARQUITECTURA = 7
 DIAS_SEMANAL = 7
@@ -45,6 +45,7 @@ def revisar_estado(raiz: Path) -> dict:
     import revision
     import triaje
     import sonar
+    import harness
 
     config = cargar_config(raiz)
     fuentes = (config.get("arquitectura") or {}).get("fuentes") or []
@@ -58,7 +59,7 @@ def revisar_estado(raiz: Path) -> dict:
     for nombre in productos.leer_productos(raiz):
         repos = revision.pendientes(raiz, nombre)
         registro = hallazgos.cargar(raiz, nombre)
-        filas_adr = adr.listar(raiz, nombre) if (raiz / "productos" / nombre / "decisiones").exists() else []
+        filas_adr = adr.listar(raiz, nombre) if carpeta_decisiones_producto(raiz, nombre).exists() else []
         fichas_terceros = terceros.listar(raiz, nombre)
         al_dia = [r for r in repos if r["situacion"] == "al día"]
         producto_md = raiz / "productos" / nombre / "as-is" / "PRODUCTO.md"
@@ -86,6 +87,8 @@ def revisar_estado(raiz: Path) -> dict:
                             if f["tipo"] == "excepcion" and (f["efecto"] == "vencida" or str(f["efecto"]).startswith("inactiva"))],
             "sin_indexar": sum(f["sin_indexar"] for f in fichas_terceros),
             "dias_semanal": dias_desde(leer_json(archivo_semanal(raiz, nombre)).get("ultima")),
+            "harness": harness.estado(raiz, nombre) if harness.existe(raiz, nombre) else None,
+            "con_revision": len(al_dia),
         })
     env = cargar_env(raiz)
     return {"fuentes": len(fuentes), "edad_arquitectura": edad_arquitectura, "sincronizada": bool(lock),
@@ -136,6 +139,11 @@ def que_sigue(estado: dict) -> list[str]:
             elif t["criterio"] == "EQ-008.8" and not t["cumple"] and t["vencido"]:
                 pasos.append(f"{p['nombre']}: el Spike {t['clave']} superó su duración y no tiene un ADR de producto propuesto "
                              f"(EQ-008.8): `/crear {p['nombre']} adr` con {t['clave']} en Historias de origen.")
+        if p["harness"] is None and p["con_revision"]:
+            pasos.append(f"{p['nombre']}: sin harness para el equipo: `/producto {p['nombre']} harness`.")
+        elif p["harness"] and p["harness"]["sin_subir"]:
+            pasos.append(f"{p['nombre']}: el harness tiene {p['harness']['sin_subir']} commit(s) sin subir: "
+                         f"`git -C productos/{p['nombre']}/harness push`" + ("" if p["harness"]["remoto"] else " (falta configurar el remoto)") + ".")
         if p["terceros_incompletos"]:
             pasos.append(f"{p['nombre']}: fichas de terceros por completar ({', '.join(p['terceros_incompletos'])}): "
                          f"`/producto {p['nombre']}` → terceros.")

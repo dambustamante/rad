@@ -16,6 +16,8 @@ no tiene fuentes, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
 
    Si falla en el paso de herramientas (`doctor`), informar qué falta y cómo instalarlo, y
    detenerse. Si la sincronización informa errores, informarlos y continuar con lo disponible.
+   Si algún harness de producto tuvo cambios generados, recordar que el commit es local: el push lo
+   hace el usuario (`git -C productos/<producto>/harness push`).
 
 2. **Coherencia.** La salida tiene una sección por ámbito: `[equipo]` (ADR-EQ frente a arquitectura)
    y `[<producto>]` (ADR de producto frente a arquitectura y a los ADR-EQ, que aparecen como

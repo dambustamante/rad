@@ -40,6 +40,8 @@ def evaluar(comando: str, cwd: str = "") -> tuple[str, str]:
     if HTTP_ESCRITURA.search(comando):
         return "deny", ("No se escribe por HTTP directamente. Lo que sale hacia la plataforma git o Jira se hace con los "
                         "scripts de herramientas/, que muestran la vista previa.")
+    if re.search(r"\bgit\b[^|;&]*\bpush\b", comando) and (re.search(r"productos/[^/\s]+/harness", comando + " " + cwd)):
+        return "ask", "Push del harness del producto: aprobarlo solo si ya se revisó lo que se sube."
     if re.search(r"(^|\s)--confirmar(\s|$)", comando):
         return "ask", "Este comando publica o crea algo fuera de radiografia. Aprobarlo solo si ya se revisó la vista previa."
     return "allow", ""
