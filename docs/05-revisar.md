@@ -50,8 +50,8 @@ repositorio completo:
 - señales en el código con `archivo:línea`: clientes de sistemas externos, acceso a datos, resiliencia, manejo de excepciones sospechoso y logs con posibles datos sensibles;
 - terceros del repositorio, con su p95, límites y política ante falla;
 - hallazgos automáticos y de Sonar ya registrados (no se repiten);
-- **qué evaluar**, por nivel: documentos de arquitectura vigentes, estándares y criterios de
-  `revisión de código` de las decisiones del equipo y del producto;
+- **qué evaluar**: cada documento de arquitectura vigente con su regla rápida, y los criterios de
+  `revisión de código` agrupados por decisión, con su severidad;
 - los elementos exceptuados por una excepción vigente, que no se evalúan.
 
 **Revisión incremental.** Si el repositorio ya tuvo revisión de código y cambió menos del 40% de
@@ -60,7 +60,7 @@ sus archivos, el paquete:
 - lista los archivos cambiados;
 - pide evaluar solo los elementos afectados;
 - muestra aparte los heredados, que se conservan solos al cerrar;
-- copia el AS IS y los borradores C4 de la revisión anterior, para actualizar solo lo que cambió.
+- copia el AS IS de la revisión anterior, para actualizar solo lo que cambió.
 
 Con `COMPLETA=1` se fuerza una revisión completa. Si la conversación se retoma a mitad de una
 revisión, el paquete se regenera sin repetir la parte automática con
@@ -69,45 +69,28 @@ revisión, el paquete se regenera sin repetir la parte automática con
 ## Paso 3: AS IS
 
 Cursor lee el código empezando por los manifiestos, los puntos de entrada y los archivos señalados,
-y escribe `revisiones/<id>/revision/<repo>-asis.md` con nueve secciones:
+y escribe `revisiones/<id>/revision/<repo>-asis.md` con cinco secciones narrativas:
 
 1. Propósito
 2. Arquitectura real (lo que hay, no lo que debería haber)
-3. Componentes y contenedores
-4. Integraciones (protocolo, timeouts, reintentos, qué pasa ante una falla)
-5. Contratos expuestos y consumidos
-6. Datos y datos sensibles
-7. Configuración y despliegue (variables solo por nombre)
-8. Observabilidad
-9. Riesgos y deuda principales (de tres a cinco)
+3. Configuración y despliegue (variables solo por nombre)
+4. Observabilidad
+5. Riesgos y deuda principales (de tres a cinco)
 
-Cada afirmación lleva su etiqueta de evidencia. Para repositorios `proveedor` o `config`, el foco
-está en integraciones, contratos y configuración.
+Cada afirmación lleva su etiqueta de evidencia. Bases de datos, colas, integraciones, APIs y datos
+no se describen en el AS IS: van como componentes en el lote, y de ahí salen la tabla de la ficha y
+los diagramas C4.
 
-## Paso 4: C4 inferido
+## Paso 4: lote
 
-Borradores de `c4-contexto.md` y `c4-contenedores.md` en Mermaid, en
-`revisiones/<id>/borradores/<repo>/`, con las plantillas de `equipo/plantillas/`. Todo sale del
-código; lo que no se puede deducir queda `NO DETERMINADO`. Es material para el equipo: nunca se
-escribe en el repositorio.
-
-## Paso 5: evaluar en un solo lote
-
-Cursor evalúa cada elemento de "Qué evaluar" y escribe todo en un único archivo,
-`revisiones/<id>/revision/<repo>-lote.yaml`:
+Cursor escribe todo en un único archivo, `revisiones/<id>/revision/<repo>-lote.yaml`. Solo se escribe
+en detalle lo que no cumple:
 
 ```yaml
-evaluaciones:
-  - fuente: decision-records:ADR-010
-    criterio: null
-    resultado: NO CUMPLE
-    motivo: El cliente del buró no define timeout.
-    evidencia: [src/main/java/BuroClient.java:41]
-  - fuente: ADR-EQ-003
-    criterio: EQ-003.3
-    resultado: NO APLICA
-    motivo: El repositorio no hace llamadas salientes ni consume mensajes.
-hallazgos:
+cumple: [EQ-001.2, EQ-002.3, EQ-005.1]                       # claves de "Qué evaluar", sin motivo
+no_aplica: {EQ-003.3: no hace llamadas salientes ni consume mensajes}
+no_determinado: {EQ-004.5: los contratos consumidos están en otro repositorio}
+hallazgos:                                                    # cada hallazgo ya implica NO CUMPLE
   - fuente: decision-records:ADR-010
     criterio: null
     categoria: incumplimiento
@@ -115,47 +98,45 @@ hallazgos:
     titulo: Llamada al buró sin timeout
     detalle: Una demora del buró bloquea los hilos del servicio. Configurar timeout de conexión y de respuesta.
     evidencia: [src/main/java/BuroClient.java:41]
-    fragmento: |
-      return restTemplate.getForObject(url, Respuesta.class);
+    fragmento: return restTemplate.getForObject(url, Respuesta.class);
     cita_documento: Ninguna llamada externa sin timeout explícito
     documento_tercero: terceros/buro-credito/docs/manual.pdf    # opcional
     cita_tercero: Timeout recomendado de 800 ms                 # opcional
-componentes:                                 # todo lo que el repositorio usa o expone, con evidencia
+componentes:                                                  # todo lo que el repositorio usa o expone
   - nombre: Buró de crédito
-    tipo: integracion                          # base-de-datos|mensajeria|cache|integracion|api-expuesta|almacenamiento|programado
+    tipo: integracion          # base-de-datos|mensajeria|cache|integracion|api-expuesta|almacenamiento|programado
     tecnologia: HTTPS/JSON
-    detalle: BURO_URL, timeout no configurado  # variable, tópico, tabla, ruta…: lo que identifica al componente
-    direccion: saliente                        # produce|consume|saliente|entrante o null
-    tercero: buro-credito                      # id de la ficha en terceros/, o null
+    detalle: BURO_URL          # variable, tópico, tabla o ruta que lo identifica
+    direccion: saliente        # produce|consume|saliente|entrante o null
+    tercero: buro-credito      # id de la ficha en terceros/, o null
     evidencia: [src/main/resources/application.yml:41, src/main/java/BuroClient.java:15]
-  - nombre: evaluaciones.resultado
-    tipo: mensajeria
-    tecnologia: Kafka
-    direccion: produce
-    evidencia: [src/main/java/Publicador.java:22]
 ```
 
-**Componentes.** La lista `componentes:` es el inventario del repositorio: todo lo que usa o expone,
-armado por Cursor y validado por el script (tipo válido, evidencia existente y, si se indica, un
-`tercero` con ficha). Queda como tabla en `as-is/<repo>.md` y se consolida en el producto. En una
-revisión incremental se incluyen solo los componentes que tocan archivos cambiados o los nuevos; el
-resto se hereda.
+- **Claves:** para un documento de arquitectura, `fuente:ID`; para una decisión, el criterio
+  (`EQ-002.1`, `MF-001.1`). Cada clave de "Qué evaluar" tiene que quedar clasificada.
+- **Hallazgos:** un hallazgo registra su elemento como NO CUMPLE; no se repite como evaluación. Una
+  clave no puede estar en `cumple` y tener hallazgos.
+- **Componentes:** el inventario del repositorio, validado por el script (tipo válido, evidencia
+  existente y, si se indica, un `tercero` con ficha). En una revisión incremental se incluyen solo los
+  que tocan archivos cambiados o los nuevos; el resto se hereda.
 
-El lote se registra al cerrar (paso 6), con un solo comando: cada comando reenvía la conversación y
-multiplica el costo. Antes de registrar, el script valida:
-
-- que los archivos y líneas existan y que el fragmento esté en el código;
-- que `cita_documento` aparezca textualmente en el documento, y `cita_tercero` en la documentación
-  indexada;
-- que un `incumplimiento` tenga cita;
-- que todo `NO CUMPLE` tenga al menos un hallazgo de la misma fuente y criterio.
-
-Si hay errores, **no registra nada** y los lista todos juntos; se corrige el lote y se vuelve a
-cerrar, sin duplicar hallazgos. Si un problema ya está como issue de Sonar y además incumple un documento de mayor nivel,
-se registra en ese nivel y el issue de Sonar queda asociado.
+Antes de registrar, el script valida que los archivos y líneas existan, que el fragmento esté en el
+código, que las citas aparezcan textualmente en el documento o en la documentación del tercero y que
+un `incumplimiento` tenga cita. Si hay errores, **no registra nada** y los lista todos juntos; se
+corrige el lote y se vuelve a cerrar, sin duplicar hallazgos. Si un problema ya está como issue de
+Sonar y además incumple un documento de mayor nivel, se registra en ese nivel y el issue de Sonar queda
+asociado.
 
 Un buen hallazgo describe una señal concreta en una ubicación concreta: "la clase X mezcla acceso a
 datos y llamadas HTTP (`ruta:línea`)", no "no cumple SOLID".
+
+## Paso 5: C4 generado
+
+Al cerrar, el script genera los borradores `c4-contexto.md` y `c4-contenedores.md` en Mermaid, en
+`revisiones/<id>/borradores/<repo>/`, a partir de los componentes: el sistema, sus bases, colas y
+cachés como contenedores, y las integraciones como sistemas externos, con sus relaciones. Para
+corregir un diagrama se corrige la lista de componentes y se vuelve a cerrar. Es material para el
+equipo: nunca se escribe en el repositorio.
 
 ## Paso 6: cerrar
 
@@ -169,20 +150,23 @@ AS IS tenga sus secciones. Además:
 - registra como NO APLICA los criterios exceptuados;
 - conserva las evaluaciones heredadas de una revisión incremental;
 - informa los avisos de lenguaje;
-- actualiza `as-is/<repo>.md` con la comparación por nivel y el **veredicto** (PASA o NO PASA).
+- genera los borradores C4 desde los componentes;
+- actualiza `as-is/<repo>.md` con la tabla de componentes, la comparación por nivel y el
+  **veredicto** (PASA o NO PASA).
 
 ## Paso 7: consolidar el producto
 
-Cuando todos los repositorios están al día, `/revisar <producto>` escribe la narrativa del producto
-(visión, C4 del producto en Mermaid y conclusiones) y ejecuta:
+Cuando todos los repositorios están al día, Cursor escribe solo la narrativa del producto (visión y
+conclusiones) y ejecuta:
 
 ```sh
 .venv/bin/python herramientas/revision.py producto motor-fraudes --narrativa <archivo>
 ```
 
 Genera `as-is/PRODUCTO.md` con la matriz repositorio × documento, las brechas comunes, la visión del
-producto y los **componentes del producto**: cada base, tópico, caché o integración con los
-repositorios que lo usan (y si producen o consumen) y su tercero. Además muestra tres cruces:
+producto, los **componentes del producto** (cada base, tópico, caché o integración con los
+repositorios que lo usan, si producen o consumen, y su tercero) y el **C4 de contenedores del
+producto**, generado desde esos componentes. Además muestra tres cruces:
 
 - integraciones sin ficha en `terceros/` (nadie documentó el acuerdo con ese sistema);
 - fichas de `terceros/` que ningún repositorio usa (pueden estar desactualizadas);
@@ -228,7 +212,7 @@ Sonar no se consulta en ramas, porque SonarQube Community no las analiza: EQ-008
 ### Paso 2: revisar
 
 Cursor lee el diff (y la copia de la rama solo si hace falta) y escribe en `lote.yaml` los hallazgos
-que la rama **introduce o empeora**, con el mismo formato del paso 5. La evidencia debe estar en un
+que la rama **introduce o empeora**, con el mismo formato del paso 4. La evidencia debe estar en un
 archivo que la rama cambia.
 
 ### Paso 3: registrar, elegir qué publicar y ver la vista previa

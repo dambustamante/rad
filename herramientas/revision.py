@@ -50,14 +50,14 @@ MARCA_PRODUCTO_NARRATIVA = ("<!-- producto-narrativa:inicio -->", "<!-- producto
 RESULTADOS = ("CUMPLE", "NO CUMPLE", "NO APLICA", "NO DETERMINADO")
 CATEGORIAS = ("incumplimiento", "diseño", "error", "seguridad", "deuda", "documentacion")
 SEVERIDADES = ("bloqueante", "alta", "media", "baja")
-SECCIONES_AS_IS = ("Propósito", "Arquitectura real", "Componentes y contenedores", "Integraciones", "Contratos",
-                   "Datos", "Configuración y despliegue", "Observabilidad", "Riesgos y deuda principales")
+SECCIONES_AS_IS = ("Propósito", "Arquitectura real", "Configuración y despliegue", "Observabilidad", "Riesgos y deuda principales")
 VENTANA_FRAGMENTO = 3
 UMBRAL_INCREMENTAL = 0.4   # si cambió más de esta fracción de archivos, la revisión es completa
 MINIMO_ARCHIVOS_UMBRAL = 20  # en repositorios más chicos el umbral no se aplica
 SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
 TIPOS_COMPONENTE = ("base-de-datos", "mensajeria", "cache", "integracion", "api-expuesta", "almacenamiento", "programado")
 DIRECCIONES = ("produce", "consume", "saliente", "entrante")
+PREFIJO_ID = re.compile(r"^[A-Z]+-[0-9]+:\s*")
 
 SENALES = {
     "Clientes de sistemas externos": re.compile(
@@ -284,14 +284,13 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     heredados = heredables(raiz, producto, repo, base) if base else {}
     if base:
         anterior = carpeta_revision(raiz, producto, base["id"])
-        for origen, destino_copia in ((anterior / "revision" / f"{repo}-asis.md", carpeta / "revision" / f"{repo}-asis.md"),
-                                      (anterior / "borradores" / repo, carpeta / "borradores" / repo)):
-            if origen.exists() and not destino_copia.exists():
-                destino_copia.parent.mkdir(parents=True, exist_ok=True)
-                (shutil.copytree if origen.is_dir() else shutil.copy2)(origen, destino_copia)
+        origen, destino_copia = anterior / "revision" / f"{repo}-asis.md", carpeta / "revision" / f"{repo}-asis.md"
+        if origen.exists() and not destino_copia.exists():
+            destino_copia.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(origen, destino_copia)
         lineas += ["## Revisión incremental", "",
                    f"Base: revisión `{base['id']}` (commit `{base['commit'][:12]}`). Cambiaron {len(base['cambiados'])} archivo(s). "
-                   "El AS IS y los borradores C4 se copiaron de la revisión base: actualizar solo lo que cambió. "
+                   "El AS IS se copió de la revisión base: actualizar solo lo que cambió. "
                    "Las evaluaciones heredadas se conservan al cerrar; si un archivo cambiado afecta a alguna, incluirla en el lote. "
                    "Lo mismo con los componentes: incluir en el lote solo los que tocan archivos cambiados (o los nuevos); "
                    "el resto se hereda.",
@@ -325,23 +324,25 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     heredados_control = [e for e in control if not e.get("exceptuado") and e["clave"] in heredados]
     control = [e for e in control if not e.get("exceptuado") and e["clave"] not in heredados]
     lineas += ["## Qué evaluar", "",
-               "Cada elemento se evalúa en el lote (CUMPLE, NO CUMPLE, NO APLICA o NO DETERMINADO). "
-               "Todo NO CUMPLE requiere al menos un hallazgo con la misma fuente y criterio.", ""]
-    for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura vigentes"), (2, "Nivel 2: estándares de arquitectura vigentes"),
-                          (3, "Nivel 3: criterios de revisión de código de las decisiones del equipo y del producto")):
-        del_nivel = [e for e in control if e["nivel"] == nivel]
-        lineas += [f"### {titulo}", ""]
-        if not del_nivel:
-            lineas += ["Nada que evaluar en este nivel.", ""]
-            continue
-        lineas += ["| Fuente | Criterio | Título | Regla o criterio | Modo |", "|---|---|---|---|---|"]
-        lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {e['titulo']} | {e['texto'].replace('|', '/')} | {e['modo']} |"
-                   for e in del_nivel] + [""]
+               "Clasificar **cada clave** en el lote: `cumple: [clave, …]`, `no_aplica: {clave: motivo}` o "
+               "`no_determinado: {clave: motivo}`. Lo que no cumple va solo como hallazgo, con la misma fuente y criterio: "
+               "eso ya lo registra como NO CUMPLE.", ""]
+    arquitectura = [e for e in control if e["nivel"] in (1, 2)]
+    lineas += ["### Niveles 1 y 2: arquitectura vigente (clave: el documento)", ""]
+    lineas += [f"- `{e['fuente']}` {PREFIJO_ID.sub('', e['titulo'])}: {e['texto']}" for e in arquitectura] or ["Nada que evaluar."]
+    lineas += ["", "### Nivel 3: decisiones del equipo y del producto (clave: el criterio)", ""]
+    por_decision: dict[str, list[dict]] = {}
+    for e in control:
+        if e["nivel"] == 3:
+            por_decision.setdefault(e["fuente"], []).append(e)
+    if not por_decision:
+        lineas += ["Nada que evaluar.", ""]
+    for fuente, elementos in por_decision.items():
+        lineas += [f"**`{fuente}` {elementos[0]['titulo']}**" + (" (propuesta: no afecta el veredicto)" if elementos[0]["modo"] == "propuesta" else ""), ""]
+        lineas += [f"- `{e['criterio']}` ({e['severidad'] or '—'}): {e['texto']}" for e in elementos] + [""]
     if heredados_control:
         lineas += [f"### Heredados de la revisión {base['id']} (no evaluar salvo que un cambio los afecte)", "",
-                   "| Fuente | Criterio | Resultado anterior |", "|---|---|---|"]
-        lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {heredados[e['clave']]['evaluacion']['resultado']} |"
-                   for e in heredados_control] + [""]
+                   ", ".join(f"`{e['criterio'] or e['fuente']}` {heredados[e['clave']]['evaluacion']['resultado']}" for e in heredados_control), ""]
     if exceptuados:
         lineas += ["### No evaluar: exceptuados por un ADR del producto", "",
                    "Se registran solos como NO APLICA al cerrar.", ""]
@@ -357,13 +358,12 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     lineas += [
         "## Entregables",
         "",
-        f"1. AS IS: escribir `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-asis.md` con estas secciones (`##`): "
-        + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia.",
-        f"2. C4 inferido: `productos/{producto}/revisiones/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
-        "según las plantillas de `equipo/plantillas/`. Lo que no se pueda deducir, como NO DETERMINADO.",
-        f"3. Un único lote con todas las evaluaciones, hallazgos y componentes: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`. "
-        f"Tipos de componente: {', '.join(TIPOS_COMPONENTE)}.",
-        f"4. Cerrar (registra el lote y cierra): `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
+        f"1. AS IS: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-asis.md` con estas secciones (`##`): "
+        + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia. Los componentes no se describen aquí: van en el lote.",
+        f"2. Lote: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml` con `cumple`, `no_aplica`, "
+        f"`no_determinado`, `hallazgos` y `componentes` (tipos: {', '.join(TIPOS_COMPONENTE)}).",
+        f"3. Cerrar: `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`. Registra el lote y "
+        "genera los borradores C4 desde los componentes.",
     ]
     archivo = carpeta / "paquetes" / f"{repo}.md"
     archivo.parent.mkdir(parents=True, exist_ok=True)
@@ -591,6 +591,39 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
         except ErrorRadiografia as error:
             errores.append(f"{referencia}: {error}")
     hallazgos = hallazgos_del_lote(raiz, ctx, datos, control, errores)
+    por_clave_corta = {(e["criterio"] or e["fuente"]): e for e in control.values()}
+    con_hallazgo = {clave_de(h["fuente"], h["criterio"]) for h in hallazgos}
+    clasificados = [(c, "CUMPLE", "sin observaciones") for c in como_lista(datos.get("cumple"))]
+    for campo, resultado in (("no_aplica", "NO APLICA"), ("no_determinado", "NO DETERMINADO")):
+        valor = datos.get(campo) or {}
+        if not isinstance(valor, dict):
+            errores.append(f"{campo}: se espera un mapa clave: motivo.")
+            continue
+        clasificados += [(str(c), resultado, m) for c, m in valor.items()]
+    for clave_corta, resultado, motivo in clasificados:
+        elemento = por_clave_corta.get(clave_corta)
+        if elemento is None:
+            errores.append(f"{clave_corta}: no está en \"Qué evaluar\" (para un documento de arquitectura, la clave es fuente:ID; "
+                           "para una decisión, el criterio).")
+        elif elemento["clave"] in con_hallazgo:
+            errores.append(f"{clave_corta}: tiene hallazgos en el lote, así que no puede ser {resultado}.")
+        else:
+            try:
+                clave, evaluacion = construir_evaluacion(raiz, ctx, elemento["fuente"], elemento["criterio"], resultado,
+                                                         motivo, [], None, control=control)
+                evaluaciones[clave] = evaluacion
+            except ErrorRadiografia as error:
+                errores.append(f"{clave_corta}: {error}")
+    for h in hallazgos:
+        clave = clave_de(h["fuente"], h["criterio"])
+        previa = evaluaciones.get(clave)
+        if previa and previa["resultado"] != "NO CUMPLE":
+            continue
+        evaluaciones[clave] = {
+            "fuente": h["fuente"], "criterio": h["criterio"], "nivel": h["nivel"], "titulo": control[clave]["titulo"],
+            "resultado": "NO CUMPLE", "motivo": "; ".join(x["titulo"] for x in hallazgos if clave_de(x["fuente"], x["criterio"]) == clave),
+            "evidencia": (previa or {}).get("evidencia") or h["evidencia"], "cita_documento": h["cita_documento"],
+            "cita_tercero": h["cita_tercero"], "modo": h["modo"]}
     fichas = set(terceros.ids(raiz, producto))
     componentes = []
     for indice, c in enumerate(datos.get("componentes") or [], start=1):
@@ -603,6 +636,9 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
 
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     trabajo["evaluaciones"].update(evaluaciones)
+    # Un elemento que ahora cumple, no aplica o no se determina deja de tener los hallazgos de una carga anterior.
+    trabajo["hallazgos"] = [h for h in trabajo["hallazgos"]
+                            if trabajo["evaluaciones"].get(clave_de(h["fuente"], h["criterio"]), {}).get("resultado", "NO CUMPLE") == "NO CUMPLE"]
     for hallazgo in hallazgos:
         agregar_hallazgo(trabajo, hallazgo)
     if "componentes" in datos:
@@ -661,9 +697,10 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
         raise ErrorRadiografia(f"Al AS IS le faltan secciones: {', '.join(sin_seccion)}.")
     import lenguaje
     avisos = [f"lenguaje: {a}" for a in lenguaje.formatear(lenguaje.revisar(texto_asis), asis.name)]
-    for nombre in ("c4-contexto.md", "c4-contenedores.md"):
-        if not (carpeta / "borradores" / repo / nombre).exists():
-            avisos.append(f"falta el borrador {nombre}")
+    stack = ", ".join(leer_json(carpeta / f"{repo}.json").get("stack", [])) or "NO DETERMINADO"
+    (carpeta / "borradores" / repo).mkdir(parents=True, exist_ok=True)
+    for nombre, diagrama in zip(("c4-contexto.md", "c4-contenedores.md"), diagramas_c4(repo, stack, trabajo.get("componentes", []))):
+        (carpeta / "borradores" / repo / nombre).write_text(diagrama, encoding="utf-8")
     if not trabajo.get("componentes"):
         avisos.append("no se registraron componentes (bases, mensajería, integraciones…): agregarlos al lote si los hay")
 
@@ -692,6 +729,47 @@ def absorber_sonar(registro: dict, repo: str, rama: str) -> None:
             continue
         h["absorbido_por"] = next((r["id"] for r in revision for e in r["evidencia"] for es in h["evidencia"]
                                    if e["archivo"] == es["archivo"] and es.get("linea") and abs(e["linea"] - es["linea"]) <= 2), None)
+
+
+def id_mermaid(texto: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", normalizar(texto)).strip("_") or "x"
+
+
+def comillas(texto: str) -> str:
+    return str(texto or "").replace('"', "'")
+
+
+def diagramas_c4(nombre: str, stack: str, componentes: list[dict]) -> tuple[str, str]:
+    """Borradores C4 de contexto y de contenedores generados desde la tabla de componentes."""
+    nota = ("> Borrador generado desde la tabla de componentes de la revisión. Para corregirlo, corregir la tabla "
+            "(lista `componentes:` del lote) y volver a cerrar.\n")
+    externos = [c for c in componentes if c["tipo"] == "integracion"]
+    contexto = ["# Contexto: " + nombre, "", nota, "```mermaid", "C4Context", f"    title Contexto de {nombre}",
+                f'    System(sistema, "{comillas(nombre)}", "{comillas(stack)}")']
+    for c in externos:
+        contexto.append(f'    System_Ext({id_mermaid(c["nombre"])}, "{comillas(c["nombre"])}", "{comillas(c["detalle"] or c["tecnologia"])}")')
+    for c in externos:
+        origen, destino = ("sistema", id_mermaid(c["nombre"])) if c["direccion"] != "entrante" else (id_mermaid(c["nombre"]), "sistema")
+        contexto.append(f'    Rel({origen}, {destino}, "{comillas(c["detalle"] or "integración")}", "{comillas(c["tecnologia"])}")')
+    contexto += ["```", ""]
+    forma = {"base-de-datos": "ContainerDb", "mensajeria": "ContainerQueue", "cache": "ContainerDb", "almacenamiento": "ContainerDb"}
+    verbo = {"base-de-datos": "lee y escribe", "cache": "lee y escribe", "almacenamiento": "guarda y lee"}
+    contenedores = ["# Contenedores: " + nombre, "", nota, "```mermaid", "C4Container", f"    title Contenedores de {nombre}",
+                    f'    Container(app, "{comillas(nombre)}", "{comillas(stack)}", "Aplicación del repositorio")']
+    relaciones = []
+    for c in componentes:
+        if c["tipo"] in ("api-expuesta", "programado"):
+            continue
+        ident = id_mermaid(c["nombre"])
+        if c["tipo"] == "integracion":
+            contenedores.append(f'    System_Ext({ident}, "{comillas(c["nombre"])}", "{comillas(c["tecnologia"])}")')
+        else:
+            contenedores.append(f'    {forma[c["tipo"]]}({ident}, "{comillas(c["nombre"])}", "{comillas(c["tecnologia"])}", "{comillas(c["detalle"])}")')
+        accion = c["direccion"] or verbo.get(c["tipo"], "usa")
+        relacion = (ident, "app") if c["direccion"] == "entrante" else ("app", ident)
+        relaciones.append(f'    Rel({relacion[0]}, {relacion[1]}, "{comillas(accion)}", "{comillas(c["tecnologia"])}")')
+    contenedores += relaciones + ["```", ""]
+    return "\n".join(contexto), "\n".join(contenedores)
 
 
 def ubicaciones(evidencia: list[dict], maximo: int = 3) -> str:
@@ -763,6 +841,22 @@ def componentes_del_producto(raiz: Path, producto: str, estados: list[dict]) -> 
     sin_uso = sorted(set(terceros.ids(raiz, producto)) - usados)
     sin_par = sorted(g["nombre"] for (tipo, _), g in grupos.items() if tipo == "mensajeria"
                      and len({u.split(" (")[-1].rstrip(")") for u in g["usos"]} & {"produce", "consume"}) == 1)
+    diagrama = ["```mermaid", "C4Container", f"    title Contenedores de {producto} (generado desde los componentes)"]
+    repos_con = sorted({u.split(" (")[0] for g in grupos.values() for u in g["usos"]})
+    diagrama += [f'    Container({id_mermaid(r)}, "{r}", "", "Repositorio del producto")' for r in repos_con]
+    for (tipo, clave), g in grupos.items():
+        if tipo in ("api-expuesta", "programado"):
+            continue
+        ident = "c_" + id_mermaid(clave)
+        if tipo == "integracion":
+            diagrama.append(f'    System_Ext({ident}, "{comillas(g["nombre"])}", "{comillas(g["tecnologia"])}")')
+        else:
+            forma = "ContainerQueue" if tipo == "mensajeria" else "ContainerDb"
+            diagrama.append(f'    {forma}({ident}, "{comillas(g["nombre"])}", "{comillas(g["tecnologia"])}", "")')
+        for uso in g["usos"]:
+            repo_uso, _, direccion = uso.partition(" (")
+            diagrama.append(f'    Rel({id_mermaid(repo_uso)}, {ident}, "{comillas(direccion.rstrip(")") or "usa")}", "{comillas(g["tecnologia"])}")')
+    lineas += ["", "### C4 de contenedores del producto", "", *diagrama, "```"]
     lineas += ["", "Cruces:", "",
                f"- Integraciones sin ficha en `terceros/`: {', '.join(sin_ficha) or 'ninguna'}.",
                f"- Fichas de `terceros/` que ningún repositorio usa: {', '.join(sin_uso) or 'ninguna'}.",

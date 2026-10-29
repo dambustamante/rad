@@ -122,7 +122,8 @@ class PruebaRevision(unittest.TestCase):
         paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
         self.assertIn("`decisiones:ADR-010`", paquete)
         self.assertIn("Ninguna llamada externa sin timeout explícito.", paquete)
-        self.assertIn("| `ADR-EQ-002` | EQ-002.1 |", paquete)
+        self.assertIn("- `EQ-002.1` (alta): Cada cliente de un sistema externo tiene timeout", paquete)
+        self.assertIn("- `decisiones:ADR-010` Timeouts obligatorios: Ninguna llamada externa sin timeout explícito.", paquete)
         self.assertNotIn("EQ-006.1", paquete.split("## Qué evaluar")[1], "los criterios automáticos no se piden de nuevo")
         self.assertIn("`src/main/java/EvaluacionController.java:1`", paquete, "señal de API expuesta")
         self.assertIn("Hallazgos automáticos ya registrados", paquete)
@@ -284,6 +285,13 @@ class PruebaRevision(unittest.TestCase):
         lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones, "componentes": componentes}, allow_unicode=True), encoding="utf-8")
         codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
         self.assertEqual(codigo, 0, salida)
+        borradores = carpeta / "borradores" / "fraude-core"
+        contexto = (borradores / "c4-contexto.md").read_text(encoding="utf-8")
+        self.assertIn('System_Ext(buro_de_credito, "Buró de crédito", "BURO_URL")', contexto)
+        self.assertIn('Rel(sistema, buro_de_credito, "BURO_URL", "HTTPS")', contexto)
+        contenedores = (borradores / "c4-contenedores.md").read_text(encoding="utf-8")
+        self.assertIn('ContainerQueue(evaluaciones_resultado, "evaluaciones.resultado", "Kafka", "")', contenedores)
+        self.assertIn('Rel(app, evaluaciones_resultado, "produce", "Kafka")', contenedores)
         ficha = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").read_text(encoding="utf-8")
         self.assertIn("## Componentes", ficha)
         self.assertIn("| Buró de crédito | integracion | HTTPS | BURO_URL | saliente | buro-credito | "
@@ -294,6 +302,41 @@ class PruebaRevision(unittest.TestCase):
         self.assertIn("- Integraciones sin ficha en `terceros/`: Core bancario.", producto)
         self.assertIn("- Fichas de `terceros/` que ningún repositorio usa: listas-sanciones.", producto)
         self.assertIn("- Mensajería que solo se produce o solo se consume dentro del producto: evaluaciones.resultado.", producto)
+        self.assertIn("### C4 de contenedores del producto", producto)
+        self.assertIn('Rel(fraude_core, c_evaluaciones_resultado, "produce", "Kafka")', producto)
+
+    def test_lote_compacto(self) -> None:
+        import yaml
+        carpeta = self.automatica["carpeta"]
+        (carpeta / "revision").mkdir(parents=True, exist_ok=True)
+        claves = [e["criterio"] or e["fuente"] for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")]
+        hallazgo = {"fuente": "decisiones:ADR-010", "categoria": "incumplimiento", "severidad": "alta",
+                    "titulo": "Llamada sin timeout", "detalle": "El cliente no define timeout.",
+                    "evidencia": ["src/main/java/EvaluacionController.java:4"], "fragmento": 'System.out.println("evaluando");',
+                    "cita_documento": "Ninguna llamada externa sin timeout explícito"}
+        resto = [c for c in claves if c not in ("decisiones:ADR-010", "EQ-003.3")]
+        lote = carpeta / "revision" / "fraude-core-lote.yaml"
+        lote.write_text(yaml.safe_dump({"cumple": resto + ["decisiones:ADR-010", "EQ-999.9"], "hallazgos": [hallazgo]},
+                                       allow_unicode=True), encoding="utf-8")
+        codigo, salida = self.ejecutar("registrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 1)
+        self.assertIn("decisiones:ADR-010: tiene hallazgos en el lote", salida)
+        self.assertIn("EQ-999.9: no está en", salida)
+        lote.write_text(yaml.safe_dump({"cumple": resto, "no_aplica": {"EQ-003.3": "no hace llamadas salientes"},
+                                        "hallazgos": [hallazgo]}, allow_unicode=True), encoding="utf-8")
+        (carpeta / "revision" / "fraude-core-asis.md").write_text(AS_IS, encoding="utf-8")
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 0, salida)
+        trabajo = revision.leer_trabajo(self.raiz, "motor-fraudes", self.automatica["id_revision"], "fraude-core")
+        self.assertEqual(trabajo["evaluaciones"]["decisiones:ADR-010"]["resultado"], "NO CUMPLE", "el hallazgo implica NO CUMPLE")
+        self.assertEqual(trabajo["evaluaciones"]["ADR-EQ-003|EQ-003.3"]["resultado"], "NO APLICA")
+        self.assertEqual(trabajo["evaluaciones"]["ADR-EQ-001|EQ-001.2"]["resultado"], "CUMPLE")
+
+        lote.write_text(yaml.safe_dump({"cumple": resto + ["decisiones:ADR-010"], "no_aplica": {"EQ-003.3": "x"}},
+                                       allow_unicode=True), encoding="utf-8")
+        self.assertEqual(self.ejecutar("cerrar", "motor-fraudes", "fraude-core")[0], 0)
+        trabajo = revision.leer_trabajo(self.raiz, "motor-fraudes", self.automatica["id_revision"], "fraude-core")
+        self.assertEqual(trabajo["hallazgos"], [], "si ahora cumple, el hallazgo de la carga anterior se descarta")
 
     def nueva_revision_automatica(self, archivo: str, contenido: str) -> None:
         (self.core / archivo).write_text(contenido, encoding="utf-8")

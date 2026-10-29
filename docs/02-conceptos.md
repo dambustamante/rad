@@ -96,6 +96,8 @@ productos/<producto>/
 ├── estado/                   hallazgos.json, historias, índices de terceros
 └── repos/                    copias de los repositorios (fuera de git, solo lectura)
 .cache/ramas/                 copias de las ramas en revisión (fuera de git, solo lectura)
+.cursor/                      commands/ (comandos), partes/ (pasos que un comando lee solo cuando los
+                              necesita), rules/ y hooks.json (guardia de comandos)
 ```
 
 ## Lenguaje

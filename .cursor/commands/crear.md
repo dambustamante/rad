@@ -1,185 +1,24 @@
 # /crear
 
-Crea un ADR del producto o una Tarea, un Spike, un Error o un Hotfix para Jira.
+Crea un ADR o una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira.
 
-Uso:
+| Uso | Qué crea | Leer y seguir |
+|---|---|---|
+| `/crear <producto> adr` o `excepcion` | ADR del producto | `.cursor/partes/crear-adr.md` |
+| `/crear equipo adr` | ADR del equipo (ADR-EQ) | `.cursor/partes/crear-adr.md` |
+| `/crear <producto> adr --desde-historias` | ADR propuestos desde historias de Jira | `.cursor/partes/crear-historias.md` |
+| `/crear <producto> tarea\|spike\|error\|hotfix` | borrador para Jira (ADR-EQ-009), creado solo con confirmación | `.cursor/partes/crear-jira.md` |
+| `/crear <producto> tarea --desde H-0041,H-0052` | Tarea de Deuda Técnica desde hallazgos | `.cursor/partes/crear-jira.md` |
+| `/crear <producto> error --hotfix FRAUD-300` | Error de seguimiento de un Hotfix | `.cursor/partes/crear-jira.md` |
 
-- `/crear <producto>`: preguntar qué crear.
-- `/crear <producto> adr` o `excepcion`: un ADR del producto (`productos/<producto>/decisiones/`).
-- `/crear <producto> tarea`, `spike`, `error` o `hotfix`: un borrador con la estructura de ADR-EQ-009,
-  que se crea en Jira solo con confirmación.
-- `/crear <producto> error --hotfix FRAUD-300`: el Error de seguimiento de un Hotfix (causa y prueba).
-- `/crear <producto> tarea --desde H-0041,H-0052`: una Tarea de Deuda Técnica a partir de hallazgos
-  (por ejemplo, los marcados como Deuda en `/triar`).
-- `/crear <producto> adr --desde-historias`: proponer ADR a partir de las historias de usuario.
-- `/crear equipo adr`: una decisión del equipo (ADR-EQ), con
-  `.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"`. Se completa
-  igual que una decisión del producto, pero sus criterios pueden ser `automática` o
-  `revisión de código`; después, `/actualizar` verifica su coherencia con arquitectura.
+| Tipo | Campo Tipo | Cuándo |
+|---|---|---|
+| `tarea` | Deuda Técnica | Corregir o mejorar código o arquitectura |
+| `tarea` | Deuda Operativa | Eliminar trabajo manual por falta de un backoffice |
+| `error` | Bau/Incidentes | Corregir algo que falla en producción |
+| `hotfix` | Bau/Incidentes | Corregir de inmediato algo que no puede esperar; la causa y la prueba van en un Error de seguimiento |
+| `spike` | Spike | Investigar para decidir (2 días como máximo) |
 
-| Qué | Cuándo |
-|---|---|
-| `adr` (decision) | Regla propia del producto, evaluable en `/revisar` |
-| `excepcion` | Apartarse formalmente de una regla, con vencimiento |
-| `tarea` · Deuda Técnica | Corregir o mejorar código o arquitectura |
-| `tarea` · Deuda Operativa | Eliminar trabajo manual por falta de un backoffice |
-| `error` · Bau/Incidentes | Corregir algo que falla en producción |
-| `hotfix` · Bau/Incidentes | Corregir de inmediato algo que falla en producción y no puede esperar; la causa y la prueba van después en un Error de seguimiento |
-| `spike` · Spike | Investigar para decidir (2 días como máximo) |
-
-Si no se indicó qué crear, preguntarlo primero. No inventar respuestas: lo que el usuario no sepa
-queda `NO DETERMINADO`.
-
-## ADR y excepciones
-
-1. **Mostrar lo que hay** con `.venv/bin/python herramientas/adr.py listar <producto>` (ADR, tipo,
-   estado, vencimiento y efecto). Destacar las excepciones vencidas o inactivas y los ADR marcados
-   "revisar: …". Preguntar si se crea uno nuevo o se completa o aprueba uno existente.
-2. **Crear:**
-
-   ```sh
-   .venv/bin/python herramientas/adr.py nuevo <producto> --tipo <decision|excepcion> --titulo "<título>" [--historias FRAUD-123]
-   ```
-
-   Si el producto no tiene sigla, proponer una y asignarla con
-   `.venv/bin/python herramientas/productos.py sigla <producto> --asignar <SIGLA>`.
-3. **Completar con el usuario**, sección por sección:
-   - **decision:** contexto, decisión verificable, regla rápida y criterios `XX-NNN.N` con su
-     severidad. Todos los criterios son de `revisión de código`.
-   - **excepcion:** qué criterios se exceptúan (`EQ-006.1`, `MF-002.1` o `fuente:ID` de
-     arquitectura), en qué repositorios, por qué, hasta cuándo y qué se hará para dejar de
-     necesitarla. Si exceptúa arquitectura, pedir la referencia de aprobación; sin ella, la
-     excepción queda inactiva.
-4. **Validar** con `.venv/bin/python herramientas/adr.py validar <producto> --id <ADR>`. Corregir los
-   errores e informar los avisos.
-5. **Coherencia** (solo `decision`): ejecutar `/actualizar`. Una decisión del producto nunca relaja
-   ni contradice lo que tiene más autoridad.
-6. **Aprobar**, solo cuando el usuario lo indique: estado `Aprobado` y fecha de aprobación. Una
-   `decision` solo se aprueba si `decisiones/COHERENCIA.md` no muestra choques ni pares pendientes.
-
-Efectos en `/revisar`: los criterios de una `decision` Propuesta o Aprobada se evalúan en el nivel 3
-(en modo `propuesta` mientras está Propuesta). Una `excepcion` Aprobada y vigente deja sus criterios
-como NO APLICA en su alcance hasta que vence.
-
-### Desde historias de usuario (`--desde-historias`)
-
-La mayoría de las historias no implica una decisión de arquitectura: se usan para **proponer**
-decisiones a partir de requisitos no funcionales, restricciones y Spikes.
-
-1. `.venv/bin/python herramientas/jira.py sincronizar <producto>` (solo lectura). Si el producto no
-   tiene fuente, configurarla (ver "Fuente de historias").
-2. `.venv/bin/python herramientas/jira.py candidatas <producto>`: el script ya filtró sin IA (Spike,
-   Deuda Técnica y las que tienen señales de tiempos, disponibilidad, seguridad, resiliencia…).
-3. Clasificar en un solo lote, `productos/<producto>/historias/clasificacion-lote.yaml`, y registrar
-   con `.venv/bin/python herramientas/jira.py clasificar <producto>`:
-
-   ```yaml
-   historias:
-     - clave: FRAUD-123
-       clasificacion: candidata          # candidata | sin_impacto | choque
-       tema: Latencia de evaluación      # agrupa varias historias en un mismo ADR
-       cita: La evaluación responde en menos de 150 ms   # copiada tal cual de la historia
-       explicacion: Requisito de latencia verificable en el código.
-     - clave: FRAUD-140
-       clasificacion: choque             # contradice un ADR o estándar vigente
-       documento: decision-records:ADR-010
-       cita: Los reintentos se hacen en cada servicio
-       cita_documento: Los reintentos se configuran solo en el API Gateway
-       explicacion: La historia pide algo que arquitectura prohíbe; conversar antes de implementar.
-     - clave: FRAUD-151
-       clasificacion: sin_impacto
-   ```
-
-   Las citas se validan contra la historia y el documento; si hay errores no se registra nada.
-4. Mostrar `jira.py propuestas <producto>` (candidatas por tema) y crear solo los ADR que el usuario
-   elija, con `--historias`. Los choques se informan aparte: son temas para conversar, no ADR.
-
-Si una historia de origen cambia o se retira, el ADR aparece en `listar` con "revisar: …". Ver el
-antes y después en `historias/INDICE.md`: si el ADR sigue vigente,
-`jira.py confirmar <producto> --adr <ADR>`; si no, ajustarlo (Propuesto) o reemplazarlo (Aprobado).
-
-### Fuente de historias
-
-Una sola vez por producto:
-
-```sh
-.venv/bin/python herramientas/productos.py historias <producto> --fuente jira --jql "project = FRAUD AND labels = motor-fraudes" --campo-tipo Tipo --proyecto FRAUD
-.venv/bin/python herramientas/productos.py historias <producto> --fuente archivo --archivo export.csv --campo-tipo Tipo
-.venv/bin/python herramientas/productos.py historias <producto> --fuente ninguna
-```
-
-Preferir `--jql` a `--tablero`: sigue funcionando aunque el tablero se elimine. Si el proyecto está
-archivado, exportar a CSV y usar `--fuente archivo`. `--proyecto` es el destino de las Tareas,
-Spikes, Errores y Hotfix.
-
-## Tareas, Spikes, Errores y Hotfix
-
-1. **Preguntas por tipo**, de a una o todas juntas:
-
-   **Spike:**
-   1. ¿Qué hay que decidir? Una sola pregunta concreta (por ejemplo, "¿Kafka o RabbitMQ para los
-      eventos de evaluación?"). De ahí sale el título: "Evaluar… para decidir…".
-   2. ¿Por qué hay que decidirlo ahora? Qué trabajo queda bloqueado.
-   3. ¿Qué opciones se conocen de entrada?
-   4. ¿Qué pesa más al decidir? (cumplimiento de ADR, latencia, costo, operación, soporte del proveedor…)
-   5. ¿Qué repositorios o terceros toca?
-
-   No preguntar la duración (2 días), el entregable (ADR de producto en Propuesto) ni los criterios
-   fijos: ya vienen en la plantilla.
-
-   **Error:**
-   1. ¿Qué falla y dónde? (servicio, endpoint, proceso)
-   2. ¿Desde cuándo y en qué entorno?
-   3. ¿Cuál es el impacto? (transacciones, clientes o procesos afectados, con cantidades si se conocen)
-   4. ¿Se puede reproducir? Pasos o datos de entrada.
-   5. ¿Hay evidencia? Logs, `trace_id`, alertas o el incidente asociado.
-   6. ¿Es el seguimiento de un Hotfix? Si lo es, su clave va en `--hotfix`.
-
-   **Hotfix** (urgente: solo lo mínimo para actuar ya):
-   1. ¿Qué falla en producción y dónde, y desde cuándo?
-   2. ¿Cuál es el impacto?
-   3. ¿Qué evidencia hay? (logs, `trace_id`, alertas)
-   4. ¿Qué corrección se aplica y cómo se vuelve atrás si falla?
-
-   No preguntar la causa ni cómo reproducirlo: van en el Error de seguimiento. Después de crear el
-   Hotfix en Jira, ofrecer crear ese Error con `--hotfix <clave del Hotfix>`.
-
-   **Tarea de Deuda Operativa:**
-   1. ¿Qué tarea manual se hace hoy y por qué falta un backoffice para evitarla?
-   2. ¿Con qué frecuencia se hace y cuánto tarda cada vez?
-   3. ¿Quién la hace y qué riesgo tiene hacerla a mano?
-   4. ¿Qué repositorios estarían involucrados en automatizarla?
-
-   **Tarea de Deuda Técnica:** con `--desde`, el contexto sale de los hallazgos: solo preguntar si
-   conviene agrupar otros abiertos del mismo tema (el contexto los lista) y confirmar el título. Sin
-   `--desde`: qué hay que corregir o mejorar, dónde, qué problema causa hoy y qué evidencia hay.
-
-   En todos los casos, pedir unas palabras clave del tema si no surgen de las respuestas: sirven para
-   buscar en la documentación de los terceros y en Jira.
-
-2. **Borrador y contexto:**
-
-   ```sh
-   .venv/bin/python herramientas/jira.py nueva <producto> --tipo <tarea|spike|error|hotfix> --titulo "<título>" \
-     [--categoria "Deuda Operativa"] [--desde H-0041,H-0052] [--repos <repo1,repo2>] [--tema "<palabras clave>"] \
-     [--hotfix <clave>]
-   ```
-
-   El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").
-3. **Leer el contexto** (`…-contexto.md`): hallazgos, AS IS, decisiones, terceros, historias
-   parecidas de Jira y Sonar. Si una historia de Jira ya cubre lo mismo, avisar antes de seguir.
-4. **Redactar** `productos/<producto>/historias/borradores/<NNN>-<título>.md` sobre la plantilla ya
-   cargada:
-   - **Como**: un rol real, nunca "sistema". **Para**: el valor, sin repetir el Quiero.
-   - **Criterios de aceptación**: al menos uno propio y medible, más los fijos de su tipo.
-   - Las secciones de su tipo con evidencia (hallazgos, `archivo:línea`, métricas).
-   - Solo las decisiones que el trabajo debe respetar, con su regla rápida.
-   - No editar el encabezado YAML salvo para corregir el Tipo o los repositorios.
-5. **Validar y ver la vista previa:** `.venv/bin/python herramientas/jira.py crear <producto> <borrador>`.
-   Primero valida (ADR-EQ-009 y lenguaje); si hay errores, corregirlos y repetir. Sin errores, mostrar
-   el título, el proyecto, el tipo y el texto completo.
-6. **Crear en Jira** solo si el usuario lo confirma explícitamente sobre la vista previa:
-   `.venv/bin/python herramientas/jira.py crear <producto> <borrador> --confirmar`. La clave queda
-   en el borrador y en cada hallazgo de origen.
-
-No se crean historias de tipo Producto u Otros.
+Si no se indicó qué crear, preguntarlo primero y leer **solo** la parte que corresponde. No inventar
+respuestas: lo que el usuario no sepa queda `NO DETERMINADO`. No se crean historias de tipo Producto u
+Otros.

@@ -3,6 +3,4 @@ description: Reglas generales de radiografia
 alwaysApply: true
 ---
 
-- Leer y seguir `AGENTS.md`: es el contrato único (autoridad, evidencia, lenguaje y reglas no negociables). Ante una contradicción, manda `AGENTS.md` y se reporta.
-- Nunca commit, push, merge, MR ni PR en `productos/*/repos/`, y nada hacia la plataforma git, Sonar o Jira sin vista previa y confirmación explícita.
-- Lo determinista lo hacen `make` y los scripts de `herramientas/`; el agente aporta el criterio.
+- Seguir `AGENTS.md`, el contrato único. Ante una contradicción, manda `AGENTS.md` y se reporta.
