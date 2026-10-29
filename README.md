@@ -1,7 +1,7 @@
 # radiografia
 
-Herramienta del **líder técnico (TL)** para gobernar los productos del equipo. Revisa el estado real
-(AS IS) de los repositorios de cada producto y lo compara con lo que se decidió, en este orden:
+Herramienta para gobernar los productos del equipo. Revisa el estado real (AS IS) de los
+repositorios de cada producto y lo compara con lo que se decidió, en este orden:
 
 1. ADR de arquitectura
 2. Estándares de arquitectura
@@ -11,11 +11,10 @@ Herramienta del **líder técnico (TL)** para gobernar los productos del equipo.
 Además crea y gobierna el **harness de cada producto** (`harness-<producto>`), el repositorio donde
 los devs desarrollan el día a día.
 
-## Quién usa qué
+## radiografia y harness-<producto>
 
 | | radiografia | harness-<producto> |
 |---|---|---|
-| Quién | el TL | los devs del producto |
 | Para qué | gobernar: decisiones, AS IS, coherencia, triaje, revisión de MR, deuda | desarrollar las historias de Jira |
 | Repositorios del producto | solo lectura | se desarrollan en `code/` |
 
@@ -26,7 +25,7 @@ flowchart LR
     ARQ["Arquitectura<br/>ADR y estándares"]
     JIRA["Jira<br/>historias"]
 
-    subgraph TL["radiografia · TL"]
+    subgraph GOB["radiografia"]
         DEC["Decisiones del equipo<br/>y coherencia"]
         ASIS["AS IS de cada repositorio<br/>componentes, terceros, hallazgos"]
         REV["Revisión de MR, triaje<br/>y reporte semanal"]
@@ -49,7 +48,7 @@ flowchart LR
     REGLAS --> HDU
     HDU --> CODE
     CODE --> MR
-    MR -->|"revisión del TL"| REV
+    MR -->|revisión| REV
     REV -->|"Tareas de deuda<br/>con confirmación"| JIRA
     CODE -.->|solo lectura| ASIS
 ```
@@ -65,7 +64,7 @@ flowchart LR
 
 Cada hallazgo lleva su evidencia (`ruta:línea` y la cita del documento). Lo único que radiografia
 escribe fuera es el comentario de la revisión en un MR y las Tareas, Spikes, Errores y Hotfix en Jira,
-siempre con vista previa y confirmación. El push del harness lo hace el TL.
+siempre con vista previa y confirmación. El push del harness es manual.
 
 ## Empezar
 
