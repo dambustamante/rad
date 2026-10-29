@@ -73,7 +73,7 @@ representativos, triar sus hallazgos y medir el consumo de Cursor antes de revis
 | `productos/<p>/agendas/` | hallazgos para conversar con el equipo |
 | `equipo/COHERENCIA.md` | coherencia de las decisiones del equipo con arquitectura |
 | `productos/<p>/decisiones/` | ADR del producto, su índice y su coherencia con arquitectura y con el equipo |
-| `productos/<p>/proveedor/INDICE.md` | documentación del proveedor: contratos reconocidos, documentos indexados y los que no se pudieron leer |
+| `productos/<p>/terceros/INDICE.md` | producto comprado e integraciones: estado de cada ficha, contratos y documentos sin indexar |
 | `arquitectura/INDICE.md` | documentos de arquitectura con su estado y su regla rápida |
 
 ## Estructura
@@ -96,8 +96,7 @@ equipo/                       nivel 3: decisiones del equipo
 productos/<producto>/
 ├── INDICE.md · producto.yaml
 ├── decisiones/               nivel 3: ADR-<SIGLA>-NNN, su INDICE.md y su COHERENCIA.md
-├── proveedor/                documentación del producto comprado, tal cual llega, y su INDICE.md
-├── integraciones/<id>/       ficha (integracion.yaml) y documentación de cada tercero; INDICE.md
+├── terceros/<id>/            ficha.yaml y docs/ del producto comprado y de cada integración; INDICE.md
 ├── historias/                historias de usuario (Jira o CSV): INDICE.md con cambios y candidatas a ADR
 ├── as-is/                    fichas por repositorio y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión

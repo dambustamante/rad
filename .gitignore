@@ -8,8 +8,7 @@ __pycache__/
 .cache/
 productos/*/repos/
 productos/*/revisiones/*/crudo/
-productos/*/estado/proveedor/texto/
-productos/*/estado/integraciones/*/texto/
+productos/*/estado/terceros/*/texto/
 productos/*/historias/borradores/*-jira.json
 
 # Sistema

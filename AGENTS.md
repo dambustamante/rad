@@ -40,9 +40,8 @@ herramientas (`.json`, `.lock`) viven siempre en una carpeta `estado/` y no se e
 ```
 arquitectura/        niveles 1 y 2: INDICE.md, decisiones/<fuente>/, estandares/<fuente>/, estado/
 equipo/              nivel 3: INDICE.md, COHERENCIA.md, decisiones/ (ADR-EQ), plantillas/, estado/
-productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), proveedor/ (documentación del
-                     producto comprado, tal cual llega), integraciones/<id>/ (ficha y documentación de
-                     cada tercero), historias/ (índice de historias de usuario y
+productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), terceros/<id>/ (ficha y
+                     documentación del producto comprado y de cada integración), historias/ (índice de historias de usuario y
                      exportaciones CSV), as-is/, revisiones/, triaje/, agendas/, estado/, repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor

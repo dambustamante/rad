@@ -5,11 +5,11 @@ Uso:
   python herramientas/revision.py paquete <producto> <repo> [--completa]
   python herramientas/revision.py evaluar <producto> <repo> --fuente F [--criterio C] --resultado R --motivo TEXTO
                                           [--evidencia ruta:línea ...] [--cita-documento TEXTO]
-                                          [--documento-proveedor RUTA --cita-proveedor TEXTO]
+                                          [--documento-tercero RUTA --cita-tercero TEXTO]
   python herramientas/revision.py hallazgo <producto> <repo> --fuente F [--criterio C] --categoria CAT --severidad SEV
                                            --titulo TEXTO --detalle TEXTO --evidencia ruta:línea [--evidencia ...]
                                            --fragmento TEXTO [--cita-documento TEXTO]
-                                           [--documento-proveedor RUTA --cita-proveedor TEXTO]
+                                           [--documento-tercero RUTA --cita-tercero TEXTO]
   python herramientas/revision.py registrar <producto> <repo> [--archivo LOTE.yaml]
   python herramientas/revision.py cerrar <producto> <repo> [--archivos-leidos N]
   python herramientas/revision.py producto <producto> [--narrativa ARCHIVO]
@@ -35,9 +35,8 @@ from datetime import date
 from pathlib import Path
 
 import hallazgos as registro_hallazgos
-import integraciones
 import productos
-import proveedor
+import terceros
 import verificaciones
 from adr import excepciones_activas, excepciones_pendientes
 from coherencia import (cita_existe, leer_arquitectura_vigente, leer_decisiones_producto, suspendidos as criterios_suspendidos,
@@ -276,23 +275,6 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         lineas += [f"- `{c['archivo']}:{c['linea']}` {c['fragmento'][:100]}" for c in coincidencias] or ["Ninguna."]
         lineas.append("")
 
-    documentos_proveedor = proveedor.documentos_indexados(raiz, producto)
-    if documentos_proveedor:
-        contratos = [d for d in documentos_proveedor.values() if d["contrato"]]
-        otros = [d for d in documentos_proveedor.values() if d["estado"] == "indexado" and not d["contrato"]]
-        lineas += ["## Documentación del proveedor", "",
-                   "Usarla cuando el repositorio integra el producto comprado o expone algo que el proveedor define: "
-                   "verificar que el código respete sus contratos, códigos de error, tiempos y límites. Buscar con "
-                   f"`.venv/bin/python herramientas/proveedor.py buscar {producto} \"<palabras>\"`; el texto de cada documento "
-                   f"está en `productos/{producto}/estado/proveedor/texto/<archivo>.txt`.", ""]
-        lineas += [f"- Contrato `proveedor/{d['archivo']}`: {d['contrato']['tipo']} «{d['contrato']['titulo'] or '—'}» "
-                   f"versión {d['contrato']['version'] or '—'}" for d in contratos]
-        lineas += [f"- Documento `proveedor/{d['archivo']}`" + (f" ({d['paginas']} páginas)" if d["paginas"] else "") for d in otros]
-        sin_indexar = [d for d in documentos_proveedor.values() if d["estado"] != "indexado"]
-        if sin_indexar:
-            lineas.append(f"- {len(sin_indexar)} documento(s) no indexado(s): ver `proveedor/INDICE.md`")
-        lineas.append("")
-
     base = base_incremental(raiz, producto, repo, ctx, completa)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     trabajo["incremental"] = base
@@ -313,22 +295,25 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
         lineas.append("")
 
-    fichas = integraciones.para_repo(raiz, producto, repo)
+    fichas = terceros.para_repo(raiz, producto, repo)
     if fichas:
-        lineas += ["## Integraciones declaradas", "",
-                   "Fichas de `integraciones/` que corresponden a este repositorio. Contrastarlas con el código: integraciones "
-                   "del código sin ficha (EQ-001.6, EQ-002.5), timeouts frente al p95 del tercero (EQ-003.1), política ante "
-                   "falla declarada frente a la implementada (EQ-003.4; la ficha cuenta como documentación de la política). "
-                   f"Su documentación se busca con `proveedor.py buscar {producto}` y se cita como "
-                   "`integraciones/<id>/docs/<archivo>`.", "",
-                   "| Integración | Dirección | Protocolo | Autenticación | p95 (ms) | Límite (rps) | Política ante falla | Contrato |",
-                   "|---|---|---|---|---|---|---|---|"]
+        lineas += ["## Terceros", "",
+                   "Producto comprado e integraciones que corresponden a este repositorio. Contrastarlos con el código: "
+                   "integraciones del código sin ficha (EQ-001.6, EQ-002.5), timeouts frente al p95 del tercero (EQ-003.1), "
+                   "política ante falla declarada frente a la implementada (EQ-003.4; la ficha cuenta como documentación de "
+                   "la política) y uso de sus contratos, códigos de error y límites. Buscar en su documentación con "
+                   f"`.venv/bin/python herramientas/terceros.py buscar {producto} \"<palabras>\"` y citarla como "
+                   "`terceros/<id>/docs/<archivo>`.", "",
+                   "| Tercero | Rol | Protocolo | Autenticación | p95 (ms) | Límite (rps) | Política ante falla | Contrato | Documentos |",
+                   "|---|---|---|---|---|---|---|---|---|"]
         for f in fichas:
             sla, limites = f.get("sla") or {}, f.get("limites") or {}
-            lineas.append(f"| `{f['id']}` {f.get('nombre') or ''} | {f.get('direccion')} | {f.get('protocolo')} | {f.get('autenticacion')} "
+            documentos = terceros.documentos_indexados(raiz, producto, f["id"])
+            lineas.append(f"| `{f['id']}` {f.get('nombre') or ''} | {f.get('rol')} | {f.get('protocolo')} | {f.get('autenticacion')} "
                           f"| {sla.get('p95_ms') if sla.get('p95_ms') is not None else '—'} "
                           f"| {limites.get('rps') if limites.get('rps') is not None else '—'} | {f.get('politica_ante_falla')} "
-                          f"| {('integraciones/' + f['id'] + '/docs/' + f['contrato']) if f.get('contrato') else '—'} |")
+                          f"| {('terceros/' + f['id'] + '/docs/' + f['contrato']) if f.get('contrato') else '—'} "
+                          f"| {sum(1 for d in documentos.values() if d['estado'] == 'indexado')} indexado(s) |")
         lineas.append("")
 
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
@@ -424,23 +409,22 @@ def texto_fuente(raiz: Path, elemento: dict) -> str:
     return (raiz / elemento["archivo"]).read_text(encoding="utf-8", errors="replace")
 
 
-def validar_cita_proveedor(raiz: Path, producto: str, documento: str | None, cita: str | None) -> dict | None:
-    """Valida una cita de la documentación del proveedor y la devuelve normalizada, o None si no hay."""
+def validar_cita_tercero(raiz: Path, producto: str, documento: str | None, cita: str | None) -> dict | None:
+    """Valida una cita de la documentación de un tercero y la devuelve normalizada, o None si no hay."""
     if not documento and not cita:
         return None
     if not documento or not cita:
-        raise ErrorRadiografia("--documento-proveedor y --cita-proveedor se usan juntos.")
-    documento = documento.removeprefix("proveedor/")
-    if not cita_existe(cita, proveedor.texto_de(raiz, producto, documento)):
-        raise ErrorRadiografia(f"La --cita-proveedor no aparece textualmente en '{documento}'. Copiarla tal como está escrita.")
+        raise ErrorRadiografia("el documento y la cita del tercero se indican juntos.")
+    if not cita_existe(cita, terceros.texto_de(raiz, producto, documento)):
+        raise ErrorRadiografia(f"la cita del tercero no aparece textualmente en '{documento}'. Copiarla tal como está escrita.")
     return {"documento": documento, "texto": cita.strip()}
 
 
 # --- Registro de evaluaciones y hallazgos ------------------------------------------------------
 
 def construir_evaluacion(raiz: Path, ctx: dict, fuente: str, criterio: str | None, resultado: str, motivo: str,
-                         evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
-                         cita_proveedor: str | None = None, control: dict | None = None) -> tuple[str, dict]:
+                         evidencias: list[str], cita_documento: str | None, documento_tercero: str | None = None,
+                         cita_tercero: str | None = None, control: dict | None = None) -> tuple[str, dict]:
     """Valida una evaluación y la devuelve como (clave, datos). Lanza ErrorRadiografia si algo no es válido."""
     if resultado not in RESULTADOS:
         raise ErrorRadiografia(f"Resultado '{resultado}' inválido; valores válidos: {', '.join(RESULTADOS)}.")
@@ -452,17 +436,17 @@ def construir_evaluacion(raiz: Path, ctx: dict, fuente: str, criterio: str | Non
         validar_evidencia(ctx["destino"], evidencia)
     if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
         raise ErrorRadiografia("la cita del documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
-    cita_del_proveedor = validar_cita_proveedor(raiz, ctx["producto"], documento_proveedor, cita_proveedor)
+    cita_del_tercero = validar_cita_tercero(raiz, ctx["producto"], documento_tercero, cita_tercero)
     return elemento["clave"], {
         "fuente": fuente, "criterio": criterio, "nivel": elemento["nivel"], "titulo": elemento["titulo"],
         "resultado": resultado, "motivo": str(motivo).strip(), "evidencia": lista, "cita_documento": cita_documento,
-        "cita_proveedor": cita_del_proveedor, "modo": elemento["modo"],
+        "cita_tercero": cita_del_tercero, "modo": elemento["modo"],
     }
 
 
 def construir_hallazgo(raiz: Path, ctx: dict, fuente: str, criterio: str | None, categoria: str, severidad: str,
                        titulo: str, detalle: str, evidencias: list[str], fragmento: str, cita_documento: str | None,
-                       documento_proveedor: str | None = None, cita_proveedor: str | None = None,
+                       documento_tercero: str | None = None, cita_tercero: str | None = None,
                        control: dict | None = None) -> dict:
     """Valida un hallazgo y lo devuelve listo para registrar. Lanza ErrorRadiografia si algo no es válido."""
     if categoria not in CATEGORIAS:
@@ -484,13 +468,13 @@ def construir_hallazgo(raiz: Path, ctx: dict, fuente: str, criterio: str | None,
         raise ErrorRadiografia("un hallazgo de categoría 'incumplimiento' requiere la cita del documento incumplido.")
     if cita_documento and not cita_existe(cita_documento, texto_fuente(raiz, elemento)):
         raise ErrorRadiografia("la cita del documento no aparece textualmente en el documento. Copiarla tal como está escrita.")
-    cita_del_proveedor = validar_cita_proveedor(raiz, ctx["producto"], documento_proveedor, cita_proveedor)
+    cita_del_tercero = validar_cita_tercero(raiz, ctx["producto"], documento_tercero, cita_tercero)
     return {
         "huella": registro_hallazgos.huella(ctx["repo"], ctx["rama"], fuente, criterio, lista[0]["archivo"],
                                             texto_comparable(str(fragmento))),
         "nivel": elemento["nivel"], "fuente": fuente, "criterio": criterio, "categoria": categoria, "severidad": severidad,
         "titulo": str(titulo).strip(), "detalle": str(detalle).strip(), "evidencia": lista, "fragmento": str(fragmento).strip(),
-        "cita_documento": cita_documento, "cita_proveedor": cita_del_proveedor, "origen": "revision", "modo": elemento["modo"],
+        "cita_documento": cita_documento, "cita_tercero": cita_del_tercero, "origen": "revision", "modo": elemento["modo"],
     }
 
 
@@ -500,11 +484,11 @@ def agregar_hallazgo(trabajo: dict, hallazgo: dict) -> None:
 
 
 def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, resultado: str, motivo: str,
-            evidencias: list[str], cita_documento: str | None, documento_proveedor: str | None = None,
-            cita_proveedor: str | None = None) -> None:
+            evidencias: list[str], cita_documento: str | None, documento_tercero: str | None = None,
+            cita_tercero: str | None = None) -> None:
     ctx = contexto(raiz, producto, repo)
     clave, datos = construir_evaluacion(raiz, ctx, fuente, criterio, resultado, motivo, evidencias, cita_documento,
-                                        documento_proveedor, cita_proveedor)
+                                        documento_tercero, cita_tercero)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     trabajo["evaluaciones"][clave] = datos
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
@@ -512,11 +496,11 @@ def evaluar(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | N
 
 def registrar_hallazgo(raiz: Path, producto: str, repo: str, fuente: str, criterio: str | None, categoria: str,
                        severidad: str, titulo: str, detalle: str, evidencias: list[str], fragmento: str,
-                       cita_documento: str | None, documento_proveedor: str | None = None,
-                       cita_proveedor: str | None = None) -> None:
+                       cita_documento: str | None, documento_tercero: str | None = None,
+                       cita_tercero: str | None = None) -> None:
     ctx = contexto(raiz, producto, repo)
     hallazgo = construir_hallazgo(raiz, ctx, fuente, criterio, categoria, severidad, titulo, detalle, evidencias,
-                                  fragmento, cita_documento, documento_proveedor, cita_proveedor)
+                                  fragmento, cita_documento, documento_tercero, cita_tercero)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     agregar_hallazgo(trabajo, hallazgo)
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
@@ -552,8 +536,8 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
         try:
             clave, evaluacion = construir_evaluacion(
                 raiz, ctx, str(e.get("fuente", "")), e.get("criterio"), str(e.get("resultado", "")), e.get("motivo"),
-                como_lista(e.get("evidencia")), e.get("cita_documento"), e.get("documento_proveedor"),
-                e.get("cita_proveedor"), control)
+                como_lista(e.get("evidencia")), e.get("cita_documento"), e.get("documento_tercero"),
+                e.get("cita_tercero"), control)
             evaluaciones[clave] = evaluacion
         except ErrorRadiografia as error:
             errores.append(f"{referencia}: {error}")
@@ -563,7 +547,7 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
             hallazgos.append(construir_hallazgo(
                 raiz, ctx, str(h.get("fuente", "")), h.get("criterio"), str(h.get("categoria", "")),
                 str(h.get("severidad", "")), h.get("titulo"), h.get("detalle"), como_lista(h.get("evidencia")),
-                h.get("fragmento"), h.get("cita_documento"), h.get("documento_proveedor"), h.get("cita_proveedor"),
+                h.get("fragmento"), h.get("cita_documento"), h.get("documento_tercero"), h.get("cita_tercero"),
                 control))
         except ErrorRadiografia as error:
             errores.append(f"{referencia}: {error}")
@@ -749,8 +733,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--motivo", required=True)
     p.add_argument("--evidencia", action="append", default=[])
     p.add_argument("--cita-documento")
-    p.add_argument("--documento-proveedor")
-    p.add_argument("--cita-proveedor")
+    p.add_argument("--documento-tercero")
+    p.add_argument("--cita-tercero")
     p = sub.add_parser("hallazgo")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -763,8 +747,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--evidencia", action="append", default=[])
     p.add_argument("--fragmento", required=True)
     p.add_argument("--cita-documento")
-    p.add_argument("--documento-proveedor")
-    p.add_argument("--cita-proveedor")
+    p.add_argument("--documento-tercero")
+    p.add_argument("--cita-tercero")
     p = sub.add_parser("registrar")
     p.add_argument("producto")
     p.add_argument("repo")
@@ -787,11 +771,11 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"Paquete: {generar_paquete(raiz, o.producto, o.repo, o.completa).relative_to(raiz)}")
         elif o.accion == "evaluar":
             evaluar(raiz, o.producto, o.repo, o.fuente, o.criterio, o.resultado, o.motivo, o.evidencia, o.cita_documento,
-                    o.documento_proveedor, o.cita_proveedor)
+                    o.documento_tercero, o.cita_tercero)
             print(f"Evaluado: {clave_de(o.fuente, o.criterio)} = {o.resultado}")
         elif o.accion == "hallazgo":
             registrar_hallazgo(raiz, o.producto, o.repo, o.fuente, o.criterio, o.categoria, o.severidad, o.titulo,
-                               o.detalle, o.evidencia, o.fragmento, o.cita_documento, o.documento_proveedor, o.cita_proveedor)
+                               o.detalle, o.evidencia, o.fragmento, o.cita_documento, o.documento_tercero, o.cita_tercero)
             print(f"Hallazgo registrado: {clave_de(o.fuente, o.criterio)} · {o.severidad} · {o.titulo}")
         elif o.accion == "registrar":
             r = registrar_lote(raiz, o.producto, o.repo, o.archivo)

@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv estado doctor sync-arquitectura coherencia repos proveedor historias indices actualizar revisar test
+.PHONY: help venv estado doctor sync-arquitectura coherencia repos terceros historias indices actualizar revisar test
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -32,8 +32,8 @@ coherencia: $(ENTORNO) ## Actualiza equipo/COHERENCIA.md y lista los pares por e
 repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los productos
 	@$(PYTHON) herramientas/productos.py sincronizar
 
-proveedor: $(ENTORNO) ## Indexa la documentación del proveedor y de las integraciones de todos los productos
-	@$(PYTHON) herramientas/proveedor.py indexar
+terceros: $(ENTORNO) ## Indexa la documentación de los terceros de todos los productos
+	@$(PYTHON) herramientas/terceros.py indexar
 
 historias: $(ENTORNO) ## Sincroniza las historias de usuario de los productos que las tienen configuradas
 	-@$(PYTHON) herramientas/jira.py sincronizar
@@ -41,7 +41,7 @@ historias: $(ENTORNO) ## Sincroniza las historias de usuario de los productos qu
 indices: $(ENTORNO) ## Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py
 
-actualizar: doctor sync-arquitectura coherencia repos proveedor historias indices ## Ejecuta la parte automática de /actualizar
+actualizar: doctor sync-arquitectura coherencia repos terceros historias indices ## Ejecuta la parte automática de /actualizar
 
 revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)

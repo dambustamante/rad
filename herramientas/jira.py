@@ -40,9 +40,8 @@ import yaml
 
 import hallazgos as registro_hallazgos
 import lenguaje
-import integraciones
 import productos
-import proveedor
+import terceros
 from coherencia import leer_arquitectura_vigente, leer_decisiones_equipo, leer_decisiones_producto
 from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env, escribir_json, leer_json, normalizar, slug
 from sync_arquitectura import secciones
@@ -693,17 +692,17 @@ def contexto(raiz: Path, producto: str, tipo: str, categoria: str, titulo: str, 
         if relacionado:
             lineas.append(f"- `{clave}` {documento['titulo']}: {documento.get('regla_rapida') or 'sin regla rápida'}")
 
-    fichas = [f for repo in repos for f in integraciones.para_repo(raiz, producto, repo)] if repos else []
+    fichas = [f for repo in repos for f in terceros.para_repo(raiz, producto, repo)] if repos else []
     if fichas:
-        lineas += ["", "## Integraciones involucradas", ""]
+        lineas += ["", "## Terceros involucrados", ""]
         for f in {f["id"]: f for f in fichas}.values():
             sla = f.get("sla") or {}
             lineas.append(f"- `{f['id']}` {f.get('nombre')}: {f.get('protocolo')}, p95 {sla.get('p95_ms') or '—'} ms, "
                           f"política ante falla {f.get('politica_ante_falla')} ({f.get('justificacion')})")
 
     if tema:
-        coincidencias = proveedor.buscar(raiz, producto, tema, limite=10)
-        lineas += ["", f"## Documentación del proveedor y de terceros sobre «{tema}»", ""]
+        coincidencias = terceros.buscar(raiz, producto, tema, limite=10)
+        lineas += ["", f"## Documentación de terceros sobre «{tema}»", ""]
         lineas += [f"- `{c['archivo']}`" + (f" (página {c['pagina']})" if c["pagina"] else "") + f":{c['linea']}: {c['texto']}"
                    for c in coincidencias] or ["Sin coincidencias."]
 

@@ -16,9 +16,9 @@ este comando: siempre mediante el script.
    ```
 
    - Si el producto existe, mostrar sus repositorios en una tabla (`id`, `tipo`, `rama`, `sonar`,
-     `estado`) y preguntar: agregar repositorios, retirar uno, cargar documentación del proveedor,
-     registrar o completar integraciones con terceros, configurar las historias de usuario (ver
-     `/adr`, sección "Configurar la fuente") o nada.
+     `estado`) y preguntar: agregar repositorios, retirar uno, registrar o completar terceros
+     (el producto comprado y las integraciones), configurar las historias de usuario (ver `/crear`,
+     sección "Fuente de historias") o nada.
    - Si no existe, informar que se creará y pedir una descripción de una frase. Al crearse, el
      script le asigna una sigla (por ejemplo `MF` para motor-fraudes) para numerar sus ADR. Mostrarla
      y ofrecer cambiarla mientras el producto no tenga ADR:
@@ -78,51 +78,40 @@ este comando: siempre mediante el script.
 8. **Cerrar** con la tabla final del producto y el resultado de la descarga, y sugerir
    `/revisar <producto>` para obtener la línea base AS IS de los repositorios nuevos.
 
-## Documentación del proveedor
+## Terceros
 
-Para un producto comprado (o cualquier producto con documentación de un tercero):
+El producto comprado y cada sistema externo con el que el producto se integra (buró, red de
+tarjetas, listas de sanciones, otro producto…) se registran igual: una ficha y su documentación.
 
-1. Pedir al usuario que copie los archivos, tal como vienen, en `productos/<producto>/proveedor/`
-   (manuales, guías, contratos OpenAPI o AsyncAPI, notas de versión; PDF, Word, PowerPoint, Excel,
-   HTML, markdown o texto). Puede organizarlos en subcarpetas como prefiera.
-2. Indexar:
+1. Crear la ficha (`--rol producto-comprado` para lo comprado; `integracion` por defecto):
 
    ```sh
-   .venv/bin/python herramientas/proveedor.py indexar <producto>
+   .venv/bin/python herramientas/terceros.py nuevo <producto> --id <id> --nombre "<nombre>" [--rol producto-comprado]
    ```
 
-3. Mostrar el resultado: contratos reconocidos (con título y versión), documentos indexados y, sobre
-   todo, los **no indexados** con su motivo y la acción sugerida (por ejemplo, guardar un `.doc` como
-   `.docx`, o pedir al proveedor un PDF con texto en lugar de uno escaneado).
-
-Los originales nunca se modifican. `/actualizar` vuelve a indexar solo lo que cambió.
-
-## Integraciones con terceros
-
-Para cada sistema externo con el que el producto se integra (buró, red de tarjetas, listas de
-sanciones, otro producto…):
-
-1. Crear la ficha:
+2. Pedir al usuario que copie la documentación, tal como viene, en
+   `productos/<producto>/terceros/<id>/docs/` (manuales, contratos OpenAPI o AsyncAPI, acuerdos de
+   servicio, notas de versión; PDF, Word, PowerPoint, Excel, HTML, markdown o texto), e indexarla:
 
    ```sh
-   .venv/bin/python herramientas/integraciones.py nueva <producto> --id <id> --nombre "<nombre>"
+   .venv/bin/python herramientas/terceros.py indexar <producto>
    ```
 
-2. Pedir al usuario que copie la documentación del tercero, tal como viene, en
-   `productos/<producto>/integraciones/<id>/docs/` (contrato OpenAPI, manuales, acuerdos de servicio),
-   e indexarla con `.venv/bin/python herramientas/proveedor.py indexar <producto>`.
-3. Completar `integraciones/<id>/integracion.yaml` con el usuario. Proponer valores a partir de la
-   documentación indexada (buscar con `proveedor.py buscar <producto> "<palabras>"`), citando de dónde
-   sale cada uno; lo que no se sepa queda `NO DETERMINADO`. La política ante falla (fail-open o
-   fail-closed) y su justificación son decisiones de negocio: las define el usuario.
-4. Validar y mostrar el resultado:
+   Mostrar los contratos reconocidos y, sobre todo, los documentos **no indexados** con su motivo y
+   la acción sugerida (guardar un `.doc` como `.docx`, pedir un PDF con texto en lugar de uno escaneado).
+3. Completar `terceros/<id>/ficha.yaml` con el usuario. Proponer valores a partir de la documentación
+   (`terceros.py buscar <producto> "<palabras>"`), citando de dónde sale cada uno; lo que no se sepa
+   queda `NO DETERMINADO`. La política ante falla (fail-open o fail-closed) y su justificación son
+   decisiones de negocio: las define el usuario.
+4. Validar:
 
    ```sh
-   .venv/bin/python herramientas/integraciones.py validar <producto> --id <id>
+   .venv/bin/python herramientas/terceros.py validar <producto> --id <id>
    ```
 
-`/revisar` usa estas fichas para contrastar el código: integraciones sin ficha, timeouts frente al
-tiempo de respuesta del tercero y política ante falla declarada frente a la implementada.
+Los originales nunca se modifican; `/actualizar` vuelve a indexar solo lo que cambió. `/revisar` usa
+las fichas para contrastar el código: integraciones sin ficha, timeouts frente al tiempo de respuesta
+del tercero y política ante falla declarada frente a la implementada.
 
 ## Reglas
 

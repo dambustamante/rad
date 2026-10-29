@@ -110,9 +110,9 @@ hallazgos:
     fragmento: |
       return restTemplate.getForObject(url, Respuesta.class);
     cita_documento: Ninguna llamada externa sin timeout explícito
-    # opcional, si la evidencia viene de la documentación del proveedor:
-    # documento_proveedor: manual.pdf
-    # cita_proveedor: Timeout recomendado de 800 ms
+    # opcional, si la evidencia viene de la documentación de un tercero:
+    # documento_tercero: terceros/motor/docs/manual.pdf
+    # cita_tercero: Timeout recomendado de 800 ms
 ```
 
 ```sh
@@ -131,11 +131,10 @@ Reglas del registro:
   que no están en el documento. Si rechaza algo, volver a copiar el texto desde la fuente: nunca
   reformular para que pase.
 - `incumplimiento` exige `cita_documento`. Sin cita, el hallazgo es `diseño`, `error` o `deuda`.
-- Si la evidencia viene de la documentación del proveedor (un contrato, un código de error, un tiempo
-  o un límite que el código no respeta), agregar `documento_proveedor` (ruta dentro de `proveedor/`,
-  o `integraciones/<id>/docs/<archivo>` para la documentación de un tercero) y `cita_proveedor`
-  (texto copiado tal cual). Para encontrar el texto:
-  `.venv/bin/python herramientas/proveedor.py buscar <producto> "<palabras>"`.
+- Si la evidencia viene de la documentación de un tercero (un contrato, un código de error, un tiempo
+  o un límite que el código no respeta), agregar `documento_tercero` (`terceros/<id>/docs/<archivo>`)
+  y `cita_tercero` (texto copiado tal cual). Para encontrar el texto:
+  `.venv/bin/python herramientas/terceros.py buscar <producto> "<palabras>"`.
 - Severidad de un criterio de un ADR-EQ: la de su tabla, salvo motivo explícito en el detalle.
 - No repetir los hallazgos automáticos ni los de Sonar del paquete. Si un problema ya está como
   issue de Sonar y además incumple un documento de mayor nivel, registrarlo en ese nivel: el script

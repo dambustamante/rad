@@ -29,10 +29,9 @@ def revisar_estado(raiz: Path) -> dict:
     import adr
     import coherencia
     import jira
-    import integraciones
     import hallazgos
     import productos
-    import proveedor
+    import terceros
     import revision
     import triaje
     import sonar
@@ -50,7 +49,7 @@ def revisar_estado(raiz: Path) -> dict:
         repos = revision.pendientes(raiz, nombre)
         registro = hallazgos.cargar(raiz, nombre)
         filas_adr = adr.listar(raiz, nombre) if (raiz / "productos" / nombre / "decisiones").exists() else []
-        docs = proveedor.documentos_indexados(raiz, nombre).values()
+        fichas_terceros = terceros.listar(raiz, nombre)
         al_dia = [r for r in repos if r["situacion"] == "al día"]
         producto_md = raiz / "productos" / nombre / "as-is" / "PRODUCTO.md"
         ultima_revision = max((r["codigo"]["fecha"] for r in al_dia), default=None)
@@ -62,7 +61,7 @@ def revisar_estado(raiz: Path) -> dict:
             fuente_historias = "ninguna"
         estado_productos.append({
             "borradores": [b["archivo"] for b in jira.listar(raiz, nombre) if b["estado"] != "creada"],
-            "integraciones_incompletas": [f["id"] for f in integraciones.listar(raiz, nombre) if f["errores"] or f["pendientes"]],
+            "terceros_incompletos": [f["id"] for f in fichas_terceros if f["errores"] or f["pendientes"]],
             "historias_fuente": fuente_historias,
             "historias_pendientes": len(jira.candidatas(raiz, nombre)),
             "historias_atencion": sorted(jira.atencion(raiz, nombre)),
@@ -74,7 +73,7 @@ def revisar_estado(raiz: Path) -> dict:
             "triaje": len(triaje.pendientes(registro)),
             "excepciones": [f["id"] for f in filas_adr
                             if f["tipo"] == "excepcion" and (f["efecto"] == "vencida" or str(f["efecto"]).startswith("inactiva"))],
-            "sin_indexar": sum(1 for d in docs if d["estado"] != "indexado"),
+            "sin_indexar": sum(f["sin_indexar"] for f in fichas_terceros),
         })
     env = cargar_env(raiz)
     return {"fuentes": len(fuentes), "edad_arquitectura": edad_arquitectura, "sincronizada": bool(lock),
@@ -115,9 +114,9 @@ def que_sigue(estado: dict) -> list[str]:
         if p["borradores"]:
             pasos.append(f"{p['nombre']}: {len(p['borradores'])} borrador(es) de Tarea, Spike o Bug sin crear en Jira: "
                          f"`/historia {p['nombre']}`.")
-        if p["integraciones_incompletas"]:
-            pasos.append(f"{p['nombre']}: fichas de integración por completar ({', '.join(p['integraciones_incompletas'])}): "
-                         f"`/producto {p['nombre']}` → integraciones.")
+        if p["terceros_incompletos"]:
+            pasos.append(f"{p['nombre']}: fichas de terceros por completar ({', '.join(p['terceros_incompletos'])}): "
+                         f"`/producto {p['nombre']}` → terceros.")
         if p["historias_atencion"]:
             pasos.append(f"{p['nombre']}: ADR con historias de origen modificadas o retiradas ({', '.join(p['historias_atencion'])}): "
                          f"`/adr {p['nombre']}`.")
@@ -125,8 +124,8 @@ def que_sigue(estado: dict) -> list[str]:
             pasos.append(f"{p['nombre']}: {p['historias_pendientes']} historia(s) candidata(s) a ADR por analizar: "
                          f"`/adr {p['nombre']} --desde-historias`.")
         if p["sin_indexar"]:
-            pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) del proveedor sin indexar: ver "
-                         f"`productos/{p['nombre']}/proveedor/INDICE.md`.")
+            pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) de terceros sin indexar: ver "
+                         f"`productos/{p['nombre']}/terceros/INDICE.md`.")
     return pasos or ["Todo al día."]
 
 
