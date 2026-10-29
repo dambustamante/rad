@@ -253,12 +253,12 @@ Commit `3f2a9c1d8e7b` · 1 hallazgo(s) por resolver.
 
 ### Paso 4: publicar
 
-Solo si el usuario lo confirma explícitamente sobre la vista previa, se repite con `--confirmar`:
+Solo si el usuario lo confirma explícitamente sobre la vista previa, se repite con `--confirmar`.
 
-| Situación | Dónde se publica |
-|---|---|
-| La rama tiene MR o PR abierto | un comentario en el MR; las publicaciones siguientes **editan el mismo comentario**, y lo que se corrigió aparece como ✅ |
-| No tiene MR | un comentario en el último commit de la rama, una vez por commit |
+- Se publica un comentario en el MR o PR. Las publicaciones siguientes **editan el mismo
+  comentario**, y lo que se corrigió aparece como ✅.
+- **Solo se comentan MR o PR.** Si la rama no tiene uno abierto, no se publica: la revisión queda
+  registrada y la vista previa queda en `revisiones/<id>/comentario.md`. Se publica cuando exista el MR.
 
 Para seguir la rama después de nuevos commits, se repiten los pasos: preparar, registrar (los
 hallazgos que ya no aparecen quedan corregidos) y publicar.

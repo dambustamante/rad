@@ -220,11 +220,12 @@ principal si no hay MR. No hace falta AS IS, C4 ni evaluar cada elemento.
    .venv/bin/python herramientas/rama.py publicar <producto> <repo> <rama> --incluir H-0012,H-0015
    ```
 
-   Mostrar el destino (MR o commit) y el comentario completo. Si hay avisos de lenguaje, corregir el
+   Mostrar el destino (el MR o PR) y el comentario completo. Si hay avisos de lenguaje, corregir el
    título o el detalle de esos hallazgos en el lote y registrar de nuevo.
 6. **Publicar**, solo si el usuario lo confirma explícitamente sobre la vista previa: repetir con
    `--confirmar`. En el MR se crea un solo comentario y las publicaciones siguientes lo editan (los
-   corregidos aparecen como ✅). Sin MR se comenta el último commit, una vez por commit.
+   corregidos aparecen como ✅). Solo se comentan MR o PR: si la rama no tiene uno abierto, no se
+   publica y la vista previa queda en `comentario.md` hasta que exista el MR.
 
 Responder con el veredicto de la rama, los hallazgos principales y dónde se publicó.
 

@@ -16,8 +16,8 @@ rama principal del repositorio si no hay MR):
 2. `registrar` valida el lote de hallazgos de la revisión de código (evidencia en archivos cambiados) y
    lo incorpora al registro: los hallazgos de la rama se triaron y se publican como los demás.
 3. `publicar` arma un único comentario con los hallazgos a resolver. Sin --confirmar solo muestra la vista
-   previa. Con --confirmar lo publica en el MR o PR (y en las siguientes publicaciones edita el mismo
-   comentario) o, si no hay MR, en el último commit de la rama.
+   previa. Con --confirmar lo publica en el MR o PR y en las siguientes publicaciones edita el mismo
+   comentario. Solo se comentan MR o PR: sin MR abierto no se publica.
 
 Sonar no se consulta en ramas: SonarQube Community no las analiza.
 """
@@ -184,7 +184,7 @@ def escribir_paquete(raiz: Path, producto: str, estado: dict, carpeta: Path, clo
                     f"Aprobado por otra persona (EQ-008.2): {'sí' if aprobado else 'todavía no'}.")
     else:
         linea_mr = (f"sin MR abierto ({estado['aviso_mr']})" if estado["aviso_mr"] else "sin MR abierto") + \
-                   ": se compara con la rama principal y se publicará en el último commit."
+                   ": se compara con la rama principal. Para publicar el comentario hace falta un MR o PR abierto."
     lineas = [
         f"# Revisión de la rama `{rama}`: {repo} ({producto})", "",
         f"- Commit `{estado['commit'][:12]}` · base `{estado['base'][:12]}` (punto común con `{estado['destino']}`) · "
@@ -344,7 +344,7 @@ def publicar(raiz: Path, producto: str, repo: str, rama: str, incluir: list[str]
         else (lambda archivo, linea: f"{archivo}#L{linea}" if linea else archivo)
     cuerpo = armar_comentario(estado, seleccion, corregidos, enlace)
     avisos = lenguaje.formatear(lenguaje.revisar(cuerpo), "comentario")
-    destino = f"MR {mr['url']}" if mr else f"commit {estado['commit'][:12]}"
+    destino = f"MR {mr['url']}" if mr else "sin MR o PR abierto: no se puede publicar"
     carpeta = raiz / "productos" / producto / "revisiones" / estado["id_revision"]
     carpeta.mkdir(parents=True, exist_ok=True)
     (carpeta / "comentario.md").write_text(cuerpo, encoding="utf-8")
@@ -357,24 +357,21 @@ def publicar(raiz: Path, producto: str, repo: str, rama: str, incluir: list[str]
                                + "\n  - ".join(avisos))
     if cliente is None:
         raise ErrorRadiografia(f"No se puede publicar: {motivo}.")
+    if not mr:
+        raise ErrorRadiografia(f"La rama '{rama}' no tiene un MR o PR abierto: solo se comentan MR o PR. "
+                               f"La vista previa quedó en {(carpeta / 'comentario.md').relative_to(raiz)}.")
 
     hoy = date.today().isoformat()
-    if mr:
-        id_previo = anterior.get("id_comentario") if anterior.get("destino") == "mr" and anterior.get("numero") == mr["numero"] else None
-        id_comentario = cliente.comentar_mr(proyecto, mr["numero"], cuerpo, id_previo)
-        nueva = {"destino": "mr", "numero": mr["numero"], "id_comentario": id_comentario}
-    else:
-        if anterior.get("destino") == "commit" and anterior.get("commit") == estado["commit"]:
-            raise ErrorRadiografia("Ya se publicó en este commit. Se vuelve a publicar cuando la rama tenga commits nuevos o un MR.")
-        cliente.comentar_commit(proyecto, estado["commit"], cuerpo)
-        nueva = {"destino": "commit"}
+    id_previo = anterior.get("id_comentario") if anterior.get("numero") == mr["numero"] else None
+    id_comentario = cliente.comentar_mr(proyecto, mr["numero"], cuerpo, id_previo)
     for id_hallazgo in incluir:
         h = de_la_rama[id_hallazgo]
         if (h.get("triaje") or {}).get("decision") != "resolver":
             if h.get("triaje"):
                 h.setdefault("historial_triaje", []).append(h["triaje"])
             h["triaje"] = {"decision": "resolver", "motivo": "elegido al publicar la revisión de la rama", "vence": None, "fecha": hoy}
-    estado["publicacion"] = {**nueva, "commit": estado["commit"], "fecha": hoy, "publicados": [h["id"] for h in seleccion]}
+    estado["publicacion"] = {"numero": mr["numero"], "id_comentario": id_comentario, "commit": estado["commit"], "fecha": hoy,
+                             "publicados": [h["id"] for h in seleccion]}
     registro_hallazgos.guardar(raiz, producto, registro)
     return {**resultado, "publicado": True}
 

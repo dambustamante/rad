@@ -56,7 +56,7 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, ca
 
 1. **Solo lectura sobre lo ajeno.** `productos/*/repos/` y `arquitectura/` no se editan a mano.
    Nunca se hace commit, push, merge, MR ni PR en los repositorios de los productos. Lo único que se
-   escribe en la plataforma git es el comentario de una revisión de rama, en su MR o PR o en su commit.
+   escribe en la plataforma git es el comentario de una revisión de rama en su MR o PR.
 2. **Nada sale sin confirmación.** Ninguna escritura hacia la plataforma git, Sonar o Jira ocurre sin
    una vista previa y la confirmación explícita del usuario.
 3. **Nada se ejecuta solo.** Sin cron, tareas programadas ni procesos en segundo plano.

@@ -44,8 +44,8 @@ Sin Sonar, el nivel 4 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se 
 historias ni crear incidencias. Sin la plataforma git, una rama se revisa contra la rama principal y
 no se puede publicar el comentario. El resto funciona igual.
 
-Permisos de los tokens de la plataforma: en GitLab, `api`; en GitHub, pull requests y contents de
-lectura y escritura (para comentar el MR o PR y el commit).
+Permisos de los tokens de la plataforma: en GitLab, `api`; en GitHub, pull requests de lectura y
+escritura (para leer el PR y comentarlo).
 
 ## Paso 3: verificar
 

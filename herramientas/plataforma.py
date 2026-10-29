@@ -3,7 +3,7 @@
 Solo hace lo necesario:
 - buscar el MR o PR abierto de una rama, con sus aprobaciones;
 - listar los MR o PR actualizados desde una fecha;
-- crear o editar un comentario en un MR o PR, o comentar un commit.
+- crear o editar un comentario en un MR o PR (no se comentan commits).
 
 La conexión se lee de .env (GIT_PLATAFORMA, GITLAB_URL/GITLAB_TOKEN o GITHUB_URL/GITHUB_TOKEN). Este módulo
 no decide qué publicar ni pide confirmación: eso lo hace rama.py.
@@ -146,9 +146,3 @@ class ClientePlataforma:
             datos = (self._pedir("PATCH", f"{self._proyecto(proyecto)}/issues/comments/{id_comentario}", json={"body": cuerpo})
                      if id_comentario else self._pedir("POST", f"{self._proyecto(proyecto)}/issues/{numero}/comments", json={"body": cuerpo}))
         return int(datos["id"])
-
-    def comentar_commit(self, proyecto: str, commit: str, cuerpo: str) -> None:
-        if self.config.tipo == "gitlab":
-            self._pedir("POST", f"{self._proyecto(proyecto)}/repository/commits/{commit}/comments", json={"note": cuerpo})
-        else:
-            self._pedir("POST", f"{self._proyecto(proyecto)}/commits/{commit}/comments", json={"body": cuerpo})

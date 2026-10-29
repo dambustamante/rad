@@ -1,4 +1,4 @@
-"""Pruebas de la fase 2: revisión de ramas, publicación en el MR o en el commit, reporte semanal y cliente de la plataforma."""
+"""Pruebas de la fase 2: revisión de ramas, publicación en el MR o PR, reporte semanal y cliente de la plataforma."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class ClienteFalso:
     """Plataforma git simulada: registra lo que se publica."""
 
     def __init__(self, mr: dict | None = None) -> None:
-        self.mr, self.comentarios, self.commits, self.siguiente = mr, {}, [], 100
+        self.mr, self.comentarios, self.siguiente = mr, {}, 100
 
     def mr_de_rama(self, proyecto: str, rama_: str) -> dict | None:
         return self.mr
@@ -49,9 +49,6 @@ class ClienteFalso:
             id_comentario, self.siguiente = self.siguiente, self.siguiente + 1
         self.comentarios[id_comentario] = cuerpo
         return id_comentario
-
-    def comentar_commit(self, proyecto: str, commit_: str, cuerpo: str) -> None:
-        self.commits.append((commit_, cuerpo))
 
     def mrs_desde(self, proyecto: str, desde: str) -> list[dict]:
         return [{"numero": 7, "titulo": "Consulta al buró", "url": "https://gitlab.com/x/-/merge_requests/7",
@@ -159,17 +156,19 @@ class PruebaRama(unittest.TestCase):
         self.assertEqual(list(cliente.comentarios), [100], "se edita el mismo comentario")
         self.assertIn("| ✅ corregido | alta | Llamada al buró sin timeout |", cliente.comentarios[100])
 
-    def test_sin_mr_publica_en_el_ultimo_commit_una_vez(self) -> None:
+    def test_sin_mr_no_se_publica(self) -> None:
         cliente = ClienteFalso(None)
-        r = self.preparar(cliente)
+        self.preparar(cliente)
         self.lote(LOTE)
         rama.registrar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro")
         id_timeout = self.de_la_rama()["decisiones:ADR-010"]["id"]
-        rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", [id_timeout], confirmar=True, cliente=cliente)
-        self.assertEqual(cliente.commits[0][0], r["estado"]["commit"])
+        vista = rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", [id_timeout], cliente=cliente)
+        self.assertIn("no se puede publicar", vista["destino"])
         with self.assertRaises(ErrorRadiografia) as error:
-            rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", confirmar=True, cliente=cliente)
-        self.assertIn("Ya se publicó en este commit", str(error.exception))
+            rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", [id_timeout], confirmar=True, cliente=cliente)
+        self.assertIn("solo se comentan MR o PR", str(error.exception))
+        self.assertEqual(cliente.comentarios, {})
+        self.assertIsNone(self.de_la_rama()["decisiones:ADR-010"]["triaje"], "si no se publica, no se marca nada")
 
     def test_el_lenguaje_bloquea_la_publicacion(self) -> None:
         cliente = ClienteFalso(MR)
