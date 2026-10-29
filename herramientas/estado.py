@@ -28,8 +28,7 @@ def dias_desde(fecha_iso: str | None) -> int | None:
 def revisar_estado(raiz: Path) -> dict:
     import adr
     import coherencia
-    import historia
-    import historias
+    import jira
     import integraciones
     import hallazgos
     import productos
@@ -58,15 +57,15 @@ def revisar_estado(raiz: Path) -> dict:
         consolidar = bool(repos) and len(al_dia) == len(repos) and (
             not producto_md.exists() or (ultima_revision and date.fromtimestamp(producto_md.stat().st_mtime).isoformat() < ultima_revision))
         try:
-            fuente_historias = historias.leer_config(raiz, nombre)["fuente"]
+            fuente_historias = jira.leer_config(raiz, nombre)["fuente"]
         except ErrorRadiografia:
             fuente_historias = "ninguna"
         estado_productos.append({
-            "borradores": [b["archivo"] for b in historia.listar(raiz, nombre) if b["estado"] != "creada"],
+            "borradores": [b["archivo"] for b in jira.listar(raiz, nombre) if b["estado"] != "creada"],
             "integraciones_incompletas": [f["id"] for f in integraciones.listar(raiz, nombre) if f["errores"] or f["pendientes"]],
             "historias_fuente": fuente_historias,
-            "historias_pendientes": len(historias.candidatas(raiz, nombre)),
-            "historias_atencion": sorted(historias.atencion(raiz, nombre)),
+            "historias_pendientes": len(jira.candidatas(raiz, nombre)),
+            "historias_atencion": sorted(jira.atencion(raiz, nombre)),
             "nombre": nombre,
             "repos": len(repos),
             "sin_automatica": [r["repo"] for r in repos if r["situacion"] == "falta la parte automática"],

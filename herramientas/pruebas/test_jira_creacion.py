@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import hallazgos  # noqa: E402
-import historia  # noqa: E402
+import jira as historia  # noqa: E402
 import productos  # noqa: E402
 import test_revision  # noqa: E402
 

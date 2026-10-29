@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from comun import RAIZ, ErrorRadiografia, actualizar_clon, cargar_config, git, normalizar, resolver_commit
+from comun import RAIZ, ErrorRadiografia, actualizar_clon, cargar_config, git, normalizar, resolver_commit, leer_json
 
 TIPOS = ("adr", "estandar", "referencia")
 VIGENCIAS = ("vigente", "pendiente", "no_vigente")
@@ -261,13 +261,6 @@ def analizar_fuente(fuente: dict, estados: dict[str, list[str]], raiz: Path) -> 
 
 # --- Salidas -----------------------------------------------------------------------------------
 
-def leer_json(archivo: Path) -> dict:
-    if not archivo.exists():
-        return {}
-    try:
-        return json.loads(archivo.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
 
 
 def calcular_cambios(anterior: dict, documentos: list[dict], lock_anterior: dict, lock: dict) -> dict:

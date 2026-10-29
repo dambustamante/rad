@@ -66,7 +66,7 @@ Uso:
 2. **Crear el borrador y el contexto:**
 
    ```sh
-   .venv/bin/python herramientas/historia.py nueva <producto> --tipo <tarea|spike|bug> --titulo "<título>" \
+   .venv/bin/python herramientas/jira.py nueva <producto> --tipo <tarea|spike|bug> --titulo "<título>" \
      [--categoria "Deuda Operativa"] [--desde H-0041,H-0052] [--repos <repo1,repo2>] [--tema "<palabras clave>"]
    ```
 
@@ -92,7 +92,7 @@ Uso:
 5. **Validar:**
 
    ```sh
-   .venv/bin/python herramientas/historia.py validar <producto> <borrador>
+   .venv/bin/python herramientas/jira.py validar <producto> <borrador>
    ```
 
    Corregir hasta que no haya errores.
@@ -101,13 +101,13 @@ Uso:
    el texto completo:
 
    ```sh
-   .venv/bin/python herramientas/historia.py crear <producto> <borrador>
+   .venv/bin/python herramientas/jira.py crear <producto> <borrador>
    ```
 
 7. **Crear en Jira**, solo si el usuario lo confirma explícitamente:
 
    ```sh
-   .venv/bin/python herramientas/historia.py crear <producto> <borrador> --confirmar
+   .venv/bin/python herramientas/jira.py crear <producto> <borrador> --confirmar
    ```
 
    La clave queda en el borrador y, si nació de hallazgos, en cada hallazgo.

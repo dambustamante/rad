@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import re
 import shutil
 import subprocess
 import unicodedata
@@ -161,3 +163,24 @@ def leer_yaml_conservador(archivo: Path):
 def escribir_yaml_conservador(archivo: Path, datos) -> None:
     with archivo.open("w", encoding="utf-8") as salida:
         yaml_conservador().dump(datos, salida)
+
+
+def leer_json(archivo: Path, defecto=None):
+    """Contenido de un JSON, o `defecto` ({} si no se indica) si no existe o no se puede leer."""
+    defecto = {} if defecto is None else defecto
+    if not archivo.exists():
+        return defecto
+    try:
+        return json.loads(archivo.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return defecto
+
+
+def escribir_json(archivo: Path, datos) -> None:
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+    archivo.write_text(json.dumps(datos, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def slug(texto: str, largo: int = 60) -> str:
+    """Texto en minúsculas, sin tildes y con guiones, para nombres de archivo."""
+    return re.sub(r"[^a-z0-9]+", "-", normalizar(texto)).strip("-")[:largo] or "documento"

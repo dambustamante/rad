@@ -55,7 +55,7 @@ c4: null
 #   estado: activo | retirado
 repos: []
 
-# Historias de usuario para proponer ADR (ver herramientas/historias.py).
+# Historias de usuario para proponer ADR (ver herramientas/jira.py).
 #   fuente: jira (con jql o tablero, y campo_tipo) | archivo (exportación CSV en historias/) | ninguna
 historias:
   fuente: ninguna

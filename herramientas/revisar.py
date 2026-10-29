@@ -28,7 +28,7 @@ import sonar
 import verificaciones
 from adr import excepciones_activas
 from coherencia import leer_decisiones_equipo, suspendidos as criterios_suspendidos
-from comun import RAIZ, ErrorRadiografia, cargar_env, git, normalizar
+from comun import RAIZ, ErrorRadiografia, cargar_env, git, normalizar, leer_json
 
 MARCA_AUTOMATICO = ("<!-- automatico:inicio -->", "<!-- automatico:fin -->")
 MARCA_REVISION = ("<!-- revision:inicio -->", "<!-- revision:fin -->")
@@ -44,8 +44,6 @@ def decisiones_con_criterios(raiz: Path) -> dict[str, dict]:
     return {k: v for k, v in decisiones.items() if normalizar(v["estado"]) in ("propuesto", "aprobado")}
 
 
-def leer_json(archivo: Path) -> dict:
-    return json.loads(archivo.read_text(encoding="utf-8")) if archivo.exists() else {}
 
 
 def carpeta_reporte(raiz: Path, producto: str, repo: str | None) -> tuple[str, Path]:

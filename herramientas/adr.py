@@ -24,7 +24,7 @@ from pathlib import Path
 import hallazgos as registro_hallazgos
 import productos
 from coherencia import leer_arquitectura_vigente, leer_decisiones_equipo, leer_decisiones_producto, sigla_de
-from comun import RAIZ, ErrorRadiografia, normalizar
+from comun import RAIZ, ErrorRadiografia, normalizar, slug
 
 TIPOS = ("decision", "mejora", "excepcion")
 ESTADOS = ("propuesto", "aprobado", "reemplazado", "rechazado")
@@ -159,8 +159,6 @@ def validar_adr(raiz: Path, producto: str, adr: dict) -> tuple[list[str], list[s
 
 # --- Creación ----------------------------------------------------------------------------------
 
-def slug(texto: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", normalizar(texto)).strip("-")[:60] or "decision"
 
 
 def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], historias: list[str] | None = None) -> Path:
@@ -202,11 +200,11 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], h
         texto = texto.replace("- **Hallazgos de origen:** —", f"- **Hallazgos de origen:** {', '.join(desde)}", 1)
 
     if historias:
-        import historias as modulo_historias
+        import jira as modulo_historias
         guardadas, analisis = modulo_historias.historias_de(raiz, producto), modulo_historias.analisis_de(raiz, producto)
         inexistentes = [c for c in historias if c not in guardadas]
         if inexistentes:
-            raise ErrorRadiografia(f"Historias que no existen (ejecutar historias.py sincronizar): {', '.join(inexistentes)}.")
+            raise ErrorRadiografia(f"Historias que no existen (ejecutar jira.py sincronizar): {', '.join(inexistentes)}.")
         filas = ["| Historia | Tipo | Título | Requisito citado |", "|---|---|---|---|"]
         for clave in historias:
             h = guardadas[clave]
@@ -230,7 +228,7 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], h
 def listar(raiz: Path, producto: str) -> list[dict]:
     if producto not in productos.leer_productos(raiz):
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
-    import historias as modulo_historias
+    import jira as modulo_historias
     avisos = modulo_historias.atencion(raiz, producto)
     filas = []
     for adr in leer_decisiones_producto(raiz, producto).values():

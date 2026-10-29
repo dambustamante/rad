@@ -65,14 +65,14 @@ usan para **proponer** decisiones a partir de requisitos no funcionales, restric
 1. **Sincronizar** (solo lectura; si el producto no tiene fuente, ofrecer configurarla, ver abajo):
 
    ```sh
-   .venv/bin/python herramientas/historias.py sincronizar <producto>
+   .venv/bin/python herramientas/jira.py sincronizar <producto>
    ```
 
 2. **Candidatas.** El script ya filtró sin IA: todas las de tipo Spike y Deuda Técnica, y las demás
    solo si tienen señales (tiempos, disponibilidad, retención, seguridad, resiliencia…):
 
    ```sh
-   .venv/bin/python herramientas/historias.py candidatas <producto>
+   .venv/bin/python herramientas/jira.py candidatas <producto>
    ```
 
 3. **Clasificar en un solo lote**, `productos/<producto>/historias/clasificacion-lote.yaml`:
@@ -95,13 +95,13 @@ usan para **proponer** decisiones a partir de requisitos no funcionales, restric
    ```
 
    ```sh
-   .venv/bin/python herramientas/historias.py clasificar <producto>
+   .venv/bin/python herramientas/jira.py clasificar <producto>
    ```
 
    Las citas se validan contra el texto de la historia y del documento. Si hay errores no se
    registra nada. Una historia analizada no se vuelve a pedir mientras no cambie.
 
-4. **Proponer.** Mostrar `historias.py propuestas <producto>` (candidatas agrupadas por tema) y, para
+4. **Proponer.** Mostrar `jira.py propuestas <producto>` (candidatas agrupadas por tema) y, para
    cada tema, proponer un ADR de tipo `decision`. Crear solo los que el usuario elija:
 
    ```sh
@@ -124,7 +124,7 @@ está archivado en Jira, exportar sus historias a CSV y usar `--fuente archivo`.
 
 **Cuando una historia de origen cambia o se retira**, el ADR aparece en `listar` con
 "revisar: …". Ver el antes y después en `historias/INDICE.md` y decidir con el usuario: si el ADR
-sigue vigente, `historias.py confirmar <producto> --adr <ADR>`; si no, ajustarlo (si está Propuesto)
+sigue vigente, `jira.py confirmar <producto> --adr <ADR>`; si no, ajustarlo (si está Propuesto)
 o reemplazarlo por uno nuevo (si está Aprobado).
 
 ## Efectos en /revisar

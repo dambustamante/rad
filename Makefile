@@ -36,7 +36,7 @@ proveedor: $(ENTORNO) ## Indexa la documentación del proveedor y de las integra
 	@$(PYTHON) herramientas/proveedor.py indexar
 
 historias: $(ENTORNO) ## Sincroniza las historias de usuario de los productos que las tienen configuradas
-	-@$(PYTHON) herramientas/historias.py sincronizar
+	-@$(PYTHON) herramientas/jira.py sincronizar
 
 indices: $(ENTORNO) ## Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py

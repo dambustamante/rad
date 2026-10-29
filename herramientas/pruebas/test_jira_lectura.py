@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import adr  # noqa: E402
-import historias  # noqa: E402
+import jira as historias  # noqa: E402
 from comun import RAIZ  # noqa: E402
 
 

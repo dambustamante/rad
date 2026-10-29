@@ -106,14 +106,14 @@ def indice_producto(raiz: Path, producto: str) -> Path:
             incompletas = sum(1 for f in fichas if f["errores"] or f["pendientes"])
             lineas.append(f"- Integraciones con terceros: [integraciones/INDICE.md](integraciones/INDICE.md) "
                           f"({len(fichas)} ficha(s), {incompletas} por completar)")
-    import historia
-    borradores = historia.listar(raiz, producto)
+    import jira
+    borradores = jira.listar(raiz, producto)
     if borradores:
         pendientes_jira = sum(1 for b in borradores if b["estado"] != "creada")
         lineas.append(f"- Tareas, Spikes y Bugs: {len(borradores)} borrador(es) en `historias/borradores/` "
                       f"({pendientes_jira} sin crear en Jira)")
     if (carpeta / "historias" / "INDICE.md").exists():
-        import historias
+        import jira as historias
         lineas.append(f"- Historias de usuario: [historias/INDICE.md](historias/INDICE.md) "
                       f"({len(historias.candidatas(raiz, producto))} candidata(s) por analizar)")
     if (carpeta / "as-is" / "PRODUCTO.md").exists():
