@@ -77,4 +77,4 @@ los del mismo tema:
 /crear motor-fraudes tarea --desde H-0041,H-0052
 ```
 
-Ver [Crear ADR, Tareas, Spikes y Bugs](07-crear.md).
+Ver [Crear ADR, Tareas, Spikes, Errores y Hotfix](07-crear.md).

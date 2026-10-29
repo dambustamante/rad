@@ -1,4 +1,4 @@
-"""Todo lo relacionado con Jira: leer historias de usuario y crear Tareas, Spikes y Bugs.
+"""Todo lo relacionado con Jira: leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix.
 
 Lectura (insumo para proponer ADR de producto):
   python herramientas/jira.py sincronizar [<producto>]
@@ -8,9 +8,10 @@ Lectura (insumo para proponer ADR de producto):
   python herramientas/jira.py confirmar <producto> --adr ADR-XX-NNN
 
 Creación (ADR-EQ-009):
-  python herramientas/jira.py nueva <producto> --tipo tarea|spike|bug --titulo TEXTO
+  python herramientas/jira.py nueva <producto> --tipo tarea|spike|error|hotfix --titulo TEXTO
                                     [--categoria "Deuda Técnica"|"Deuda Operativa"]
                                     [--desde H-0001,H-0002] [--repos a,b] [--tema "palabras clave"]
+                                    [--hotfix CLAVE]   (un Error de seguimiento de un Hotfix)
   python herramientas/jira.py validar <producto> <borrador>
   python herramientas/jira.py listar <producto>
   python herramientas/jira.py crear <producto> <borrador> [--confirmar]
@@ -548,25 +549,28 @@ def escribir_indice(raiz: Path, producto: str) -> Path | None:
 
 
 
-# ===== Creación de Tareas, Spikes y Bugs ======================================================
+# ===== Creación de Tareas, Spikes, Errores y Hotfix ===========================================
 
-TIPOS = ("tarea", "spike", "bug")
-COMBINACIONES = {"tarea": ("Deuda Técnica", "Deuda Operativa"), "bug": ("Bau/Incidentes",), "spike": ("Spike",)}
+TIPOS = ("tarea", "spike", "error", "hotfix")
+COMBINACIONES = {"tarea": ("Deuda Técnica", "Deuda Operativa"), "error": ("Bau/Incidentes",),
+                 "hotfix": ("Bau/Incidentes",), "spike": ("Spike",)}
 SECCIONES = {
     "tarea": ("criterios de aceptacion", "contexto", "decisiones que aplican", "fuera de alcance", "trazabilidad"),
-    "bug": ("criterios de aceptacion", "comportamiento actual", "comportamiento esperado", "como reproducirlo",
-            "impacto", "causa", "trazabilidad"),
+    "error": ("criterios de aceptacion", "comportamiento actual", "comportamiento esperado", "como reproducirlo",
+              "impacto", "causa", "trazabilidad"),
+    "hotfix": ("criterios de aceptacion", "comportamiento actual", "impacto", "correccion", "trazabilidad"),
     "spike": ("criterios de aceptacion", "pregunta", "contexto", "opciones a evaluar", "criterios de decision",
               "restricciones", "duracion maxima", "entregable", "trazabilidad"),
 }
-CRITERIOS_FIJOS = {
+CRITERIOS_FIJOS = {   # por tipo de incidencia o, en una Tarea, por su campo Tipo
     "Deuda Técnica": ("ya no reporta",),
     "Deuda Operativa": ("deja de ser necesaria",),
-    "Bau/Incidentes": ("reproduce el error", "causa queda documentada", "evita que el error se repita"),
-    "Spike": ("pregunta tiene respuesta documentada", "adr de producto en estado propuesto", "duracion maxima"),
+    "error": ("reproduce el error", "causa queda documentada", "evita que el error se repita"),
+    "hotfix": ("correccion esta en produccion", "error de seguimiento"),
+    "spike": ("pregunta tiene respuesta documentada", "adr de producto en estado propuesto", "duracion maxima"),
 }
 DURACION_MAXIMA_SPIKE = 2
-NOMBRES = {"tarea": "Una Tarea", "spike": "Un Spike", "bug": "Un Bug"}
+NOMBRES = {"tarea": "Una Tarea", "spike": "Un Spike", "error": "Un Error", "hotfix": "Un Hotfix"}
 PATRON_MEDIBLE = re.compile(r"\d|^\s*[-*]?\s*(dado|cuando|entonces)\b|\b(no reporta|deja de|rechaza|responde|registra|devuelve)\b")
 VERBO_INFINITIVO = re.compile(r"^[a-záéíóúñ]+(ar|er|ir)\b", re.IGNORECASE)
 
@@ -579,7 +583,8 @@ def config_jira(raiz: Path) -> dict:
         "equipos": jira.get("equipos", "Back"),
         "campo_equipos": jira.get("campo_equipos", "Equipos"),
         "campo_tipo": jira.get("campo_tipo", "Tipo"),
-        "tipos_incidencia": {"tarea": "Tarea", "spike": "Spike", "bug": "Bug", **(jira.get("tipos_incidencia") or {})},
+        "tipos_incidencia": {"tarea": "Tarea", "spike": "Spike", "error": "Error", "hotfix": "Hotfix",
+                             **(jira.get("tipos_incidencia") or {})},
     }
 
 
@@ -725,9 +730,11 @@ def contexto(raiz: Path, producto: str, tipo: str, categoria: str, titulo: str, 
 
 
 def nueva(raiz: Path, producto: str, tipo: str, categoria: str | None, titulo: str, desde: list[str],
-          repos: list[str], tema: str | None) -> tuple[Path, Path]:
+          repos: list[str], tema: str | None, hotfix: str | None = None) -> tuple[Path, Path]:
     if tipo not in TIPOS:
         raise ErrorRadiografia(f"Tipo de incidencia '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}.")
+    if hotfix and tipo != "error":
+        raise ErrorRadiografia("--hotfix solo se usa al crear el Error de seguimiento de un Hotfix.")
     categoria = categoria or COMBINACIONES[tipo][0]
     if categoria not in COMBINACIONES[tipo]:
         raise ErrorRadiografia(f"{NOMBRES[tipo]} solo admite Tipo {', '.join(COMBINACIONES[tipo])}.")
@@ -752,7 +759,11 @@ def nueva(raiz: Path, producto: str, tipo: str, categoria: str | None, titulo: s
     datos.update({"tipo": categoria, "equipos": config_jira(raiz)["equipos"], "producto": producto,
                   "repos": sorted(set(repos) | {h["repo"] for h in registro["hallazgos"].values() if h["id"] in desde}),
                   "hallazgos": desde, "estado": "borrador", "jira": None})
+    if hotfix:
+        datos["historias_relacionadas"] = [hotfix]
     cuerpo = re.sub(r"^# .*$", f"# {titulo}", cuerpo, count=1, flags=re.MULTILINE)
+    if hotfix:
+        cuerpo = cuerpo.replace("si es el seguimiento de un Hotfix, su clave>", f"seguimiento del Hotfix {hotfix}>", 1)
     if tipo == "tarea":
         fijo = (f"- La revisión ya no reporta los hallazgos de origen ({', '.join(desde)})." if categoria == "Deuda Técnica" and desde
                 else "- La revisión ya no reporta los hallazgos de origen." if categoria == "Deuda Técnica"
@@ -789,7 +800,7 @@ def validar(raiz: Path, producto: str, archivo: Path) -> list[str]:
     titulo = re.search(r"^# (.+)$", cuerpo, re.MULTILINE)
     if not titulo:
         errores.append("falta el título (línea que empieza con '# ')")
-    elif tipo != "bug" and not VERBO_INFINITIVO.match(titulo.group(1).strip()):
+    elif tipo in ("tarea", "spike") and not VERBO_INFINITIVO.match(titulo.group(1).strip()):
         errores.append("el título de una Tarea o un Spike empieza con un verbo en infinitivo (por ejemplo «Agregar…», «Evaluar…»)")
 
     como, quiero, para = (campo_encabezado(cuerpo, n) for n in ("Como", "Quiero", "Para"))
@@ -808,10 +819,10 @@ def validar(raiz: Path, producto: str, archivo: Path) -> list[str]:
             errores.append(f"falta la sección «{seccion}» o está vacía (EQ-009.4)")
     criterios = [l.strip() for l in contenido.get("criterios de aceptacion", []) if l.strip().startswith(("-", "*")) or
                  re.match(r"^\s*(dado|cuando|entonces|y)\b", normalizar(l))]
-    fijos = CRITERIOS_FIJOS.get(categoria, ())
+    fijos = CRITERIOS_FIJOS.get(categoria if tipo == "tarea" else tipo, ())
     for fijo in fijos:
         if not any(fijo in normalizar(c) for c in criterios):
-            errores.append(f"falta el criterio fijo de {categoria}: «…{fijo}…» (ADR-EQ-009)")
+            errores.append(f"falta el criterio fijo de {categoria if tipo == 'tarea' else NOMBRES[tipo][3:]}: «…{fijo}…» (ADR-EQ-009)")
     propios = [c for c in criterios if not any(f in normalizar(c) for f in fijos)]
     if tipo != "spike" and not any(PATRON_MEDIBLE.search(normalizar(c)) for c in propios):
         errores.append("se necesita al menos un criterio de aceptación propio y medible (EQ-009.3)")
@@ -860,6 +871,7 @@ def terminado(raiz: Path, producto: str, hoy: date | None = None) -> list[dict]:
     - EQ-008.5 (Tarea con hallazgos de origen): cumple cuando todos sus hallazgos están corregidos.
     - EQ-008.8 (Spike): cumple cuando un ADR de producto en Propuesto o Aprobado lo cita en "Historias de
       origen". Se informa como pendiente pasada la duración máxima del Spike.
+    - EQ-008.9 (Hotfix): cumple cuando hay un Error de seguimiento creado en Jira que lo cita.
     """
     import hallazgos as registro_hallazgos
     from coherencia import leer_decisiones_producto
@@ -869,13 +881,18 @@ def terminado(raiz: Path, producto: str, hoy: date | None = None) -> list[dict]:
     adrs = leer_decisiones_producto(raiz, producto)
     resultado = []
     carpeta = carpeta_borradores(raiz, producto)
+    creados = []
     for archivo in sorted(carpeta.glob("*.md")) if carpeta.exists() else []:
-        if archivo.name.endswith("-contexto.md"):
-            continue
-        datos, _ = leer_borrador(archivo)
-        if datos.get("estado") != "creada" or not datos.get("jira"):
-            continue
+        if not archivo.name.endswith("-contexto.md"):
+            datos, _ = leer_borrador(archivo)
+            if datos.get("estado") == "creada" and datos.get("jira"):
+                creados.append(datos)
+    seguimientos = {str(c) for d in creados if d.get("tipo_incidencia") == "error" for c in d.get("historias_relacionadas") or []}
+    for datos in creados:
         clave = str(datos["jira"])
+        if datos.get("tipo_incidencia") == "hotfix":
+            resultado.append({"clave": clave, "criterio": "EQ-008.9", "cumple": clave in seguimientos})
+            continue
         if datos.get("tipo_incidencia") == "tarea" and datos.get("hallazgos"):
             abiertos = [i for i in datos["hallazgos"] if por_id.get(i, {}).get("estado") == "abierto"]
             resultado.append({"clave": clave, "criterio": "EQ-008.5", "cumple": not abiertos, "pendientes": abiertos})
@@ -992,7 +1009,7 @@ def crear(raiz: Path, producto: str, archivo: Path, confirmar: bool, sesion=None
 # --- Programa principal ------------------------------------------------------------------------
 
 def main(argumentos: list[str] | None = None, sesion=None) -> int:
-    parser = argparse.ArgumentParser(description="Historias de Jira: lectura y creación de Tareas, Spikes y Bugs.")
+    parser = argparse.ArgumentParser(description="Historias de Jira: lectura y creación de Tareas, Spikes, Errores y Hotfix.")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
     sub = parser.add_subparsers(dest="accion", required=True)
     p = sub.add_parser("sincronizar")
@@ -1016,6 +1033,7 @@ def main(argumentos: list[str] | None = None, sesion=None) -> int:
     p.add_argument("--desde", default="")
     p.add_argument("--repos", default="")
     p.add_argument("--tema")
+    p.add_argument("--hotfix", help="clave del Hotfix del que este Error es el seguimiento")
     p = sub.add_parser("validar")
     p.add_argument("producto")
     p.add_argument("borrador")
@@ -1087,7 +1105,7 @@ def _main_creacion(o, raiz: Path, sesion) -> int:
     try:
         if o.accion == "nueva":
             borrador, archivo_contexto = nueva(raiz, o.producto, o.tipo, o.categoria, o.titulo, separar(o.desde),
-                                               separar(o.repos), o.tema)
+                                               separar(o.repos), o.tema, o.hotfix)
             print(f"Borrador: {borrador.relative_to(raiz)}\nContexto: {archivo_contexto.relative_to(raiz)}")
         elif o.accion == "validar":
             errores = validar(raiz, o.producto, resolver_borrador(raiz, o.producto, o.borrador))

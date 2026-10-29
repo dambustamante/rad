@@ -10,7 +10,7 @@ decidió, en este orden:
 
 Cada hallazgo lleva su evidencia (`ruta:línea` y la cita del documento). `radiografia` no modifica
 los repositorios que revisa. Lo único que escribe fuera son el comentario de la revisión de una rama
-en su MR o PR, y Tareas, Spikes y Bugs en Jira; siempre con vista previa y confirmación.
+en su MR o PR, y Tareas, Spikes, Errores y Hotfix en Jira; siempre con vista previa y confirmación.
 
 ## Empezar
 
@@ -33,7 +33,7 @@ Detalle en [Instalación](docs/01-instalacion.md).
 | `/producto <nombre>` | registrar un producto, sus repositorios y sus terceros |
 | `/revisar <producto> [repo] [--rama <rama>]` | revisar un repositorio (un chat por repositorio), o solo lo que cambia una rama y publicarlo en su MR |
 | `/triar <producto>` | decidir qué hacer con cada hallazgo |
-| `/crear <producto>` | crear un ADR, una excepción, o una Tarea, un Spike o un Bug para Jira |
+| `/crear <producto>` | crear un ADR, una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira |
 
 Orden habitual: `/actualizar fuentes` → `/actualizar` → `/producto` → `/revisar` → `/triar` →
 `/crear`.
@@ -48,7 +48,7 @@ La guía paso a paso está en [docs/](docs/README.md):
 4. [Productos y terceros](docs/04-productos.md)
 5. [Revisión de repositorios y ramas](docs/05-revisar.md)
 6. [Triaje](docs/06-triar.md)
-7. [Crear ADR, Tareas, Spikes y Bugs](docs/07-crear.md)
+7. [Crear ADR, Tareas, Spikes, Errores y Hotfix](docs/07-crear.md)
 8. [Mantenimiento](docs/08-mantenimiento.md)
 
 El contrato de trabajo para Cursor está en [AGENTS.md](AGENTS.md), y las decisiones del equipo en

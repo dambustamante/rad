@@ -142,7 +142,7 @@ def configurar_historias(raiz: Path, producto: str, fuente: str, jql: str | None
     if campo_tipo and fuente != "ninguna":
         configuracion["campo_tipo"] = campo_tipo
     if proyecto:
-        configuracion["proyecto"] = proyecto  # donde se crean Tareas, Spikes y Bugs
+        configuracion["proyecto"] = proyecto  # donde se crean Tareas, Spikes, Errores y Hotfix
     datos = leer_yaml_conservador(archivo)
     datos["historias"] = configuracion
     escribir_yaml_conservador(archivo, datos)
@@ -408,7 +408,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p_historias.add_argument("--etiqueta")
     p_historias.add_argument("--campo-tipo")
     p_historias.add_argument("--archivo")
-    p_historias.add_argument("--proyecto", help="clave del proyecto de Jira donde se crean Tareas, Spikes y Bugs")
+    p_historias.add_argument("--proyecto", help="clave del proyecto de Jira donde se crean Tareas, Spikes, Errores y Hotfix")
     p_sigla = sub.add_parser("sigla", help="muestra o cambia la sigla de un producto")
     p_sigla.add_argument("producto")
     p_sigla.add_argument("--asignar")

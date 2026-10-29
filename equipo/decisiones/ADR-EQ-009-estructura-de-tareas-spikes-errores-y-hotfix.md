@@ -1,4 +1,4 @@
-# ADR-EQ-009: Estructura de Tareas, Spikes y Bugs
+# ADR-EQ-009: Estructura de Tareas, Spikes, Errores y Hotfix
 
 ## 2. Estado
 
@@ -11,15 +11,15 @@ Propuesto
 
 ## 4. Contexto
 
-- **Problema o necesidad:** las Tareas, Spikes y Bugs del equipo se escriben con estructuras
+- **Problema o necesidad:** las Tareas, Spikes, Errores y Hotfix del equipo se escriben con estructuras
   distintas. Falta la evidencia del problema, el alcance no queda claro y cuesta estimar y revisar.
-- **Alcance:** Tareas, Spikes y Bugs del equipo Back.
+- **Alcance:** Tareas, Spikes, Errores y Hotfix del equipo Back.
 - **Restricciones:** mantener el formato que el equipo ya usa (Como, Quiero, Para y Criterios de
   aceptación) y que se entienda sin importar el seniority de quien lo lea.
 
 ## 5. Decisión
 
-Toda Tarea, Spike o Bug tiene:
+Toda Tarea, Spike, Error o Hotfix tiene:
 
 1. **Campos de Jira:** Equipos = Back; Tipo según la tabla de combinaciones válidas.
 2. **Encabezado común:** Como / Quiero / Para y Criterios de aceptación.
@@ -29,8 +29,13 @@ Toda Tarea, Spike o Bug tiene:
 | Tipo de incidencia | Campo "Tipo" permitido |
 |---|---|
 | Tarea | Deuda Técnica, Deuda Operativa |
-| Bug | Bau/Incidentes |
+| Error | Bau/Incidentes |
+| Hotfix | Bau/Incidentes |
 | Spike | Spike |
+
+Un **Hotfix** es la corrección urgente de algo que falla en producción y no puede esperar: se
+escribe con lo mínimo para actuar ya, y la causa y la prueba que reproduce la falla se documentan
+después en un **Error de seguimiento**.
 
 ## 6. Alternativas evaluadas
 
@@ -57,7 +62,7 @@ Toda Tarea, Spike o Bug tiene:
 
 ## 8. Impacto
 
-Todas las Tareas, Spikes y Bugs que crea el equipo Back.
+Todas las Tareas, Spikes, Errores y Hotfix que crea el equipo Back.
 
 ## 9. Acciones requeridas
 
@@ -82,7 +87,7 @@ Todas las Tareas, Spikes y Bugs que crea el equipo Back.
 Criterio fijo: en Deuda Técnica, "la revisión ya no reporta los hallazgos de origen"; en Deuda
 Operativa, "la tarea manual deja de ser necesaria", indicando cómo se verifica.
 
-**Bug (Bau/Incidentes)**
+**Error (Bau/Incidentes)**
 
 | Sección | Contenido |
 |---|---|
@@ -94,7 +99,20 @@ Operativa, "la tarea manual deja de ser necesaria", indicando cómo se verifica.
 | Trazabilidad | Incidente, hallazgos e integraciones involucradas |
 
 Criterios fijos: prueba que reproduce el error, causa documentada y medida que evita que se
-repita sin aviso.
+repita sin aviso. Si es el seguimiento de un Hotfix, la Trazabilidad incluye la clave del Hotfix.
+
+**Hotfix (Bau/Incidentes)**
+
+| Sección | Contenido |
+|---|---|
+| Comportamiento actual | Qué falla en producción, con evidencia: logs, `trace_id`, alertas, desde cuándo |
+| Impacto | Transacciones, clientes o procesos afectados, con cantidades si se conocen |
+| Corrección | Qué se cambia para recuperar el servicio y cómo se vuelve atrás si falla |
+| Trazabilidad | Incidente, alertas y repositorios involucrados |
+
+Criterios fijos: la corrección está en producción y el servicio vuelve a funcionar, verificado
+con el indicador o la alerta que detectó la falla; y hay un Error de seguimiento creado para la
+causa y la prueba.
 
 **Spike**
 
@@ -117,7 +135,8 @@ repita sin aviso.
 - Sin adornos ni muletillas ("robusto", "potenciar", "integral", "Es importante destacar"): cada
   frase dice algo verificable. Lo que no se sabe se marca NO DETERMINADO.
 
-Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md` y `equipo/plantillas/bug.md`.
+Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md`, `equipo/plantillas/error.md` y
+`equipo/plantillas/hotfix.md`.
 
 ## 10. Referencias
 
@@ -126,8 +145,8 @@ Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md` y `equipo
 
 ## 11. Regla rápida
 
-> Toda Tarea, Spike o Bug tiene Como/Quiero/Para, criterios de aceptación verificables, la evidencia
-> del problema y las secciones de su tipo, en lenguaje técnico y claro.
+> Toda Tarea, Spike, Error o Hotfix tiene Como/Quiero/Para, criterios de aceptación verificables, la
+> evidencia del problema y las secciones de su tipo, en lenguaje técnico y claro.
 
 ## 12. Relación con arquitectura
 

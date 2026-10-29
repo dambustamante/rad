@@ -11,7 +11,7 @@
 | [ADR-EQ-005](decisiones/ADR-EQ-005-principios-solid-kiss.md) | Principios de diseño SOLID y KISS | Propuesto | 6 | sin evaluar |
 | [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-c4.md) | Documentación de arquitectura C4 en cada repositorio | Propuesto | 7 | sin evaluar |
 | [ADR-EQ-007](decisiones/ADR-EQ-007-readme-estandar.md) | README estándar en español neutro y técnico | Propuesto | 5 | sin evaluar |
-| [ADR-EQ-008](decisiones/ADR-EQ-008-definicion-de-terminado.md) | Definición de terminado | Propuesto | 8 | sin evaluar |
-| [ADR-EQ-009](decisiones/ADR-EQ-009-estructura-de-tareas-spikes-y-bugs.md) | Estructura de Tareas, Spikes y Bugs | Propuesto | 6 | sin evaluar |
+| [ADR-EQ-008](decisiones/ADR-EQ-008-definicion-de-terminado.md) | Definición de terminado | Propuesto | 9 | sin evaluar |
+| [ADR-EQ-009](decisiones/ADR-EQ-009-estructura-de-tareas-spikes-errores-y-hotfix.md) | Estructura de Tareas, Spikes, Errores y Hotfix | Propuesto | 6 | sin evaluar |
 
 Detalle de la coherencia con arquitectura: [COHERENCIA.md](COHERENCIA.md). Cómo se crean y aprueban: [README.md](README.md).

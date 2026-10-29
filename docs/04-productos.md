@@ -140,7 +140,7 @@ valida contra el texto indexado.
 
 ## Fuente de historias de usuario
 
-Opcional. Permite proponer ADR a partir de historias de Jira y crear Tareas, Spikes y Bugs. Se
+Opcional. Permite proponer ADR a partir de historias de Jira y crear Tareas, Spikes, Errores y Hotfix. Se
 configura una vez por producto:
 
 ```sh
@@ -151,5 +151,5 @@ configura una vez por producto:
 - Conviene `--jql` antes que `--tablero`: sigue funcionando aunque el tablero se elimine.
 - `--campo-tipo` es el campo personalizado que clasifica la historia (Bau/Incidentes, Deuda
   Operativa, Deuda Técnica, Spike…).
-- `--proyecto` es el proyecto donde se crean las Tareas, Spikes y Bugs.
+- `--proyecto` es el proyecto donde se crean las Tareas, Spikes, Errores y Hotfix.
 - Para un proyecto archivado, exportar a CSV y usar `--fuente archivo --archivo export.csv`.

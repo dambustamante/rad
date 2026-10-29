@@ -1,5 +1,5 @@
 ---
-tipo_incidencia: bug
+tipo_incidencia: error
 tipo: Bau/Incidentes
 equipos: Back
 producto: <producto>
@@ -19,7 +19,7 @@ jira: null
 
 - <criterio medible de la corrección>
 - Hay una prueba automatizada que reproduce el error y pasa con la corrección.
-- La causa queda documentada en este Bug, o se documenta por qué no se pudo determinar.
+- La causa queda documentada en este Error, o se documenta por qué no se pudo determinar.
 - Existe una medida que evita que el error se repita sin aviso (prueba, alerta o criterio de un ADR).
 
 ## Comportamiento actual
@@ -44,7 +44,7 @@ jira: null
 
 ## Trazabilidad
 
-- <Incidente, hallazgos e integraciones involucradas>
+- <Incidente, hallazgos e integraciones involucradas; si es el seguimiento de un Hotfix, su clave>
 
 ## Definición de terminado
 

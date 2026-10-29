@@ -1,4 +1,4 @@
-"""Pruebas de /crear (Tareas, Spikes y Bugs): borrador, contexto del producto, validación según ADR-EQ-009 y creación en Jira."""
+"""Pruebas de /crear (Tareas, Spikes, Errores y Hotfix): borrador, contexto del producto, validación según ADR-EQ-009 y creación en Jira."""
 
 from __future__ import annotations
 
@@ -131,8 +131,8 @@ class PruebaHistoria(unittest.TestCase):
         self.assertIn("«es importante destacar»", errores)
 
     def test_combinaciones_y_reglas_de_spike(self) -> None:
-        codigo, salida = self.ejecutar("nueva", "motor-fraudes", "--tipo", "bug", "--categoria", "Deuda Técnica", "--titulo", "x")
-        self.assertIn("Un Bug solo admite Tipo Bau/Incidentes", salida)
+        codigo, salida = self.ejecutar("nueva", "motor-fraudes", "--tipo", "error", "--categoria", "Deuda Técnica", "--titulo", "x")
+        self.assertIn("Un Error solo admite Tipo Bau/Incidentes", salida)
         spike = self.nueva("--tipo", "spike", "--titulo", "Evaluar brokers de mensajería para decidir cuál usar")
         _, cuerpo = historia.leer_borrador(spike)
         cuerpo = cuerpo.replace("2 días.", "5 días.").replace("<Una sola pregunta, concreta.>", "¿Kafka o RabbitMQ? ¿Con qué costo?")
@@ -140,6 +140,44 @@ class PruebaHistoria(unittest.TestCase):
         errores = "\n".join(historia.validar(self.raiz, "motor-fraudes", spike))
         self.assertIn("la duración máxima de un Spike es 2 días", errores)
         self.assertIn("una sola pregunta", errores)
+
+    def test_hotfix_y_error_de_seguimiento(self) -> None:
+        hotfix = self.nueva("--tipo", "hotfix", "--titulo", "Rechazo masivo por timeout del buró en fraude-core")
+        datos, cuerpo = historia.leer_borrador(hotfix)
+        self.assertEqual((datos["tipo_incidencia"], datos["tipo"]), ("hotfix", "Bau/Incidentes"))
+        rellenos = {"<Título: qué falla en producción + dónde>": "x",
+                    "<rol afectado: operador, analista de fraude, cliente…>": "analista de fraude",
+                    "<recuperar el comportamiento correcto, en términos concretos>": "que las evaluaciones vuelvan a responder",
+                    "<el valor: detener el impacto que hoy causa la falla>": "detener los rechazos de transacciones legítimas",
+                    "<criterio medible de la recuperación: por ejemplo, la tasa de error vuelve a menos de 1%>":
+                        "La tasa de rechazos por timeout vuelve a menos de 1% durante 30 minutos.",
+                    "<Qué falla en producción, con evidencia: logs, `trace_id`, alertas, desde cuándo.>":
+                        "Desde las 10:05 el 40% de las evaluaciones termina en timeout (alerta `EVAL-TIMEOUT`).",
+                    "<Transacciones, clientes o procesos afectados, con cantidades si se conocen.>": "Unas 3000 transacciones por hora.",
+                    "<Qué se cambia para recuperar el servicio y cómo se vuelve atrás si falla.>":
+                        "Se sube el timeout del cliente del buró a 800 ms; se vuelve atrás desplegando la versión anterior.",
+                    "<Incidente, alertas y repositorios involucrados>": "Alerta `EVAL-TIMEOUT`, fraude-core"}
+        for marcador, valor in rellenos.items():
+            cuerpo = cuerpo.replace(marcador, valor)
+        cuerpo = cuerpo.replace("# x", "# Rechazo masivo por timeout del buró en fraude-core")
+        self.completar(hotfix, cuerpo)
+        self.assertEqual(historia.validar(self.raiz, "motor-fraudes", hotfix), [],
+                         "un Hotfix válido no pide causa ni cómo reproducirlo, y su título no exige infinitivo")
+        self.completar(hotfix, cuerpo.replace("- Hay un Error de seguimiento creado", "- Hay un ticket creado"))
+        self.assertIn("error de seguimiento", "\n".join(historia.validar(self.raiz, "motor-fraudes", hotfix)))
+
+        codigo, salida = self.ejecutar("nueva", "motor-fraudes", "--tipo", "tarea", "--hotfix", "FRAUD-300", "--titulo", "Agregar x")
+        self.assertIn("--hotfix solo se usa", salida)
+        seguimiento = self.nueva("--tipo", "error", "--hotfix", "FRAUD-300", "--titulo", "Rechazo masivo por timeout del buró")
+        datos, cuerpo = historia.leer_borrador(seguimiento)
+        self.assertEqual(datos["historias_relacionadas"], ["FRAUD-300"])
+        self.assertIn("seguimiento del Hotfix FRAUD-300", cuerpo)
+
+        datos_hotfix, cuerpo_hotfix = historia.leer_borrador(hotfix)
+        historia.escribir_borrador(hotfix, {**datos_hotfix, "estado": "creada", "jira": "FRAUD-300"}, cuerpo_hotfix)
+        self.assertFalse({t["criterio"]: t for t in historia.terminado(self.raiz, "motor-fraudes")}["EQ-008.9"]["cumple"])
+        historia.escribir_borrador(seguimiento, {**datos, "estado": "creada", "jira": "FRAUD-301"}, cuerpo)
+        self.assertTrue({t["criterio"]: t for t in historia.terminado(self.raiz, "motor-fraudes")}["EQ-008.9"]["cumple"])
 
     def test_crear_con_vista_previa_y_confirmacion(self) -> None:
         borrador = self.nueva("--tipo", "tarea", "--titulo", "Agregar el diagrama", "--desde", "H-0001")

@@ -1,7 +1,7 @@
-# 7. Crear ADR, Tareas, Spikes y Bugs (`/crear`)
+# 7. Crear ADR, Tareas, Spikes, Errores y Hotfix (`/crear`)
 
 ```
-/crear motor-fraudes [adr | excepcion | tarea | spike | bug]
+/crear motor-fraudes [adr | excepcion | tarea | spike | error | hotfix]
 ```
 
 Sin tipo, Cursor pregunta qué crear. En todos los casos no se inventan respuestas: lo que el
@@ -13,7 +13,8 @@ usuario no sepa queda `NO DETERMINADO`.
 | `excepcion` | apartarse formalmente de una regla, con vencimiento | `productos/<p>/decisiones/` |
 | `tarea` | Deuda Técnica o Deuda Operativa | `productos/<p>/historias/borradores/` y Jira |
 | `spike` | investigar para decidir (2 días como máximo) | `productos/<p>/historias/borradores/` y Jira |
-| `bug` | algo que falla en producción | `productos/<p>/historias/borradores/` y Jira |
+| `error` | algo que falla en producción | `productos/<p>/historias/borradores/` y Jira |
+| `hotfix` | corregir de inmediato algo que falla en producción y no puede esperar | `productos/<p>/historias/borradores/` y Jira |
 
 ## Decisión del equipo (ADR-EQ)
 
@@ -155,7 +156,7 @@ decisiones a partir de requisitos no funcionales, restricciones y Spikes.
    "revisar: …". Si sigue vigente, se confirma con `jira.py confirmar motor-fraudes --adr ADR-MF-001`;
    si no, se ajusta (si está Propuesto) o se reemplaza (si está Aprobado).
 
-## Tareas, Spikes y Bugs
+## Tareas, Spikes, Errores y Hotfix
 
 Siguen ADR-EQ-009 (estructura) y ADR-EQ-008 (definición de terminado).
 
@@ -163,17 +164,31 @@ Siguen ADR-EQ-009 (estructura) y ADR-EQ-008 (definición de terminado).
 |---|---|---|
 | Tarea | Deuda Técnica | la revisión ya no reporta los hallazgos de origen |
 | Tarea | Deuda Operativa | la tarea manual deja de ser necesaria |
-| Bug | Bau/Incidentes | se reproduce el error, la causa queda documentada y hay una prueba que evita que se repita |
+| Error | Bau/Incidentes | se reproduce el error, la causa queda documentada y hay una prueba que evita que se repita |
+| Hotfix | Bau/Incidentes | la corrección está en producción y el servicio vuelve a funcionar, y hay un Error de seguimiento |
 | Spike | Spike | la pregunta tiene respuesta documentada, hay un ADR de producto Propuesto y se respetó la duración máxima |
 
 Los tipos Producto y Otros no se crean desde aquí. El campo Equipos siempre es `Back`.
+
+**Hotfix y Error de seguimiento.** Un Hotfix se escribe con lo mínimo para corregir ya. Después de
+crearlo en Jira se crea su Error de seguimiento, que documenta la causa y agrega la prueba que
+reproduce la falla:
+
+```sh
+.venv/bin/python herramientas/jira.py nueva motor-fraudes --tipo error --hotfix FRAUD-300 \
+  --titulo "Rechazo masivo por timeout del buró en fraude-core"
+```
+
+La clave del Hotfix queda en las historias relacionadas del Error. `/estado` avisa si un Hotfix creado
+todavía no tiene su Error de seguimiento (EQ-008.9).
 
 ### Paso 1: preguntas por tipo
 
 | Tipo | Qué pregunta Cursor |
 |---|---|
 | Spike | qué hay que decidir (una sola pregunta), por qué ahora, qué opciones se conocen, qué pesa más al decidir y qué repositorios o terceros toca |
-| Bug | qué falla y dónde, desde cuándo y en qué entorno, el impacto, cómo reproducirlo y la evidencia (logs, `trace_id`, incidente) |
+| Error | qué falla y dónde, desde cuándo y en qué entorno, el impacto, cómo reproducirlo, la evidencia (logs, `trace_id`, incidente) y si es el seguimiento de un Hotfix |
+| Hotfix | solo lo mínimo para actuar ya: qué falla y desde cuándo, el impacto, la evidencia y la corrección con su vuelta atrás. La causa y cómo reproducirlo van en el Error de seguimiento |
 | Deuda Operativa | qué tarea manual se hace hoy, con qué frecuencia y cuánto tarda, quién la hace y con qué riesgo, y qué repositorios intervienen |
 | Deuda Técnica | con `--desde`, solo si conviene agrupar otros hallazgos del mismo tema; sin `--desde`, qué corregir, dónde, qué problema causa y qué evidencia hay |
 
@@ -187,7 +202,7 @@ Además pide unas palabras clave del tema para buscar en la documentación de te
 ```
 
 Opciones: `--categoria "Deuda Operativa"`, `--repos <repo1,repo2>`, `--desde <hallazgos>`,
-`--tema "<palabras clave>"`. Crea dos archivos en `historias/borradores/`:
+`--tema "<palabras clave>"` y, en un Error, `--hotfix <clave>`. Crea dos archivos en `historias/borradores/`:
 
 - `<NNN>-<título>.md`: el borrador, con la plantilla de su tipo ya cargada;
 - `<NNN>-<título>-contexto.md`: lo que Cursor necesita para redactarlo: hallazgos de origen y

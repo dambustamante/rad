@@ -37,7 +37,7 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `SONAR_URL` | sí | por ejemplo `https://sonar.empresa.com` o `https://sonarcloud.io` |
 | `SONAR_ORGANIZACION` | solo SonarCloud | clave de la organización |
 | `SONAR_TOKEN` | sí | token con permiso de lectura (Browse) sobre los proyectos |
-| `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes y Bugs |
+| `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix |
 | `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar ramas con su MR o PR, publicar el comentario y contar MR en el reporte semanal |
 
 Sin Sonar, el nivel 4 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer

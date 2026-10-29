@@ -124,12 +124,15 @@ def que_sigue(estado: dict) -> list[str]:
         if p["excepciones"]:
             pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/crear {p['nombre']} adr`.")
         if p["borradores"]:
-            pasos.append(f"{p['nombre']}: {len(p['borradores'])} borrador(es) de Tarea, Spike o Bug sin crear en Jira: "
+            pasos.append(f"{p['nombre']}: {len(p['borradores'])} borrador(es) de Tarea, Spike, Error o Hotfix sin crear en Jira: "
                          f"`/crear {p['nombre']}`.")
         for t in p["terminado"]:
             if t["criterio"] == "EQ-008.5" and t["cumple"]:
                 pasos.append(f"{p['nombre']}: {t['clave']} tiene todos sus hallazgos de origen corregidos (EQ-008.5): "
                              "se puede cerrar en Jira.")
+            elif t["criterio"] == "EQ-008.9" and not t["cumple"]:
+                pasos.append(f"{p['nombre']}: el Hotfix {t['clave']} no tiene su Error de seguimiento (EQ-008.9): "
+                             f"`/crear {p['nombre']} error --hotfix {t['clave']}`.")
             elif t["criterio"] == "EQ-008.8" and not t["cumple"] and t["vencido"]:
                 pasos.append(f"{p['nombre']}: el Spike {t['clave']} superó su duración y no tiene un ADR de producto propuesto "
                              f"(EQ-008.8): `/crear {p['nombre']} adr` con {t['clave']} en Historias de origen.")

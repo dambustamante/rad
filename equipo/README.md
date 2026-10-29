@@ -8,7 +8,7 @@ de arquitectura.
 | [INDICE.md](INDICE.md) | las decisiones con su estado y su coherencia (generado) |
 | [COHERENCIA.md](COHERENCIA.md) | comparación de cada ADR-EQ con arquitectura (generado) |
 | `decisiones/` | los ADR-EQ: `ADR-EQ-NNN-<titulo>.md` |
-| `plantillas/` | plantilla de ADR (del equipo y de producto), Tarea, Spike, Bug, README y diagramas C4 |
+| `plantillas/` | plantilla de ADR (del equipo y de producto), Tarea, Spike, Error, Hotfix, README y diagramas C4 |
 | `estado/` | datos de las herramientas (no se editan) |
 
 ## Orden
@@ -25,7 +25,7 @@ Los ADR-EQ están numerados por importancia, según el riesgo que cubren:
 | 006 | Documentación | C4 |
 | 007 | Documentación | README |
 | 008 | Forma de trabajar | Definición de terminado |
-| 009 | Forma de trabajar | Estructura de Tareas, Spikes y Bugs |
+| 009 | Forma de trabajar | Estructura de Tareas, Spikes, Errores y Hotfix |
 
 Una decisión nueva toma el siguiente número libre; la numeración no se cambia después de aprobar.
 
@@ -57,11 +57,11 @@ Quién verifica la definición de terminado (ADR-EQ-008):
 
 | Criterio | Quién lo verifica |
 |---|---|
-| EQ-008.1 (pruebas de los criterios de aceptación), EQ-008.7 (prueba que reproduce el Bug) | la persona que aprueba el MR |
+| EQ-008.1 (pruebas de los criterios de aceptación), EQ-008.7 (prueba que reproduce el Error) | la persona que aprueba el MR |
 | EQ-008.2 (MR aprobado por otra persona) | la plataforma git; la revisión de la rama lo informa |
 | EQ-008.3 (Sonar en verde) | Sonar, en la rama principal |
 | EQ-008.4 (sin secretos) | gitleaks, en la revisión de la rama |
-| EQ-008.5 (hallazgos de origen corregidos), EQ-008.8 (Spike con ADR propuesto) | `/estado`, sobre lo creado en Jira |
+| EQ-008.5 (hallazgos de origen corregidos), EQ-008.8 (Spike con ADR propuesto), EQ-008.9 (Hotfix con Error de seguimiento) | `/estado`, sobre lo creado en Jira |
 | EQ-008.6 (ADR-EQ que aplican según lo que cambió) | la revisión de la rama |
 
 Un ADR-EQ nuevo se crea con `.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"`.

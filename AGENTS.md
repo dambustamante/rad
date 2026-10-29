@@ -119,7 +119,7 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | `/producto <nombre>` | crea un producto (con su sigla), le agrega o retira repositorios y registra sus terceros |
 | `/revisar <producto> [repo] [--rama <rama>]` | línea base AS IS de un repositorio por conversación; al final, consolidación del producto. Con `--rama`, revisa solo lo que cambia la rama y publica el resultado en su MR o PR (con confirmación) |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
-| `/crear <producto> [tipo]` | crea un ADR del producto o una excepción, o una Tarea, un Spike o un Bug para Jira (solo con confirmación) |
+| `/crear <producto> [tipo]` | crea un ADR del producto o una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira (solo con confirmación) |
 
 Cada comando ejecuta primero su parte determinista (`make` o los scripts de `herramientas/`) y
 después hace la parte que requiere criterio. `harness.yaml` se modifica solo mediante esos

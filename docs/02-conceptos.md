@@ -81,7 +81,7 @@ arquitectura/                 niveles 1 y 2: copia de arquitectura
 equipo/                       nivel 3: decisiones del equipo
 ├── INDICE.md · COHERENCIA.md · README.md
 ├── decisiones/               ADR-EQ-NNN
-├── plantillas/               ADR, Tarea, Spike, Bug, README y C4
+├── plantillas/               ADR, Tarea, Spike, Error, Hotfix, README y C4
 ├── lenguaje.yaml             expresiones a evitar
 └── estado/                   coherencia.json
 productos/<producto>/

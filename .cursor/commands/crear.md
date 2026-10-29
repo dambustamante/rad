@@ -1,13 +1,14 @@
 # /crear
 
-Crea un ADR del producto o una Tarea, un Spike o un Bug para Jira.
+Crea un ADR del producto o una Tarea, un Spike, un Error o un Hotfix para Jira.
 
 Uso:
 
 - `/crear <producto>`: preguntar qué crear.
 - `/crear <producto> adr` o `excepcion`: un ADR del producto (`productos/<producto>/decisiones/`).
-- `/crear <producto> tarea`, `spike` o `bug`: un borrador con la estructura de ADR-EQ-009, que se crea
-  en Jira solo con confirmación.
+- `/crear <producto> tarea`, `spike`, `error` o `hotfix`: un borrador con la estructura de ADR-EQ-009,
+  que se crea en Jira solo con confirmación.
+- `/crear <producto> error --hotfix FRAUD-300`: el Error de seguimiento de un Hotfix (causa y prueba).
 - `/crear <producto> tarea --desde H-0041,H-0052`: una Tarea de Deuda Técnica a partir de hallazgos
   (por ejemplo, los marcados como Deuda en `/triar`).
 - `/crear <producto> adr --desde-historias`: proponer ADR a partir de las historias de usuario.
@@ -22,7 +23,8 @@ Uso:
 | `excepcion` | Apartarse formalmente de una regla, con vencimiento |
 | `tarea` · Deuda Técnica | Corregir o mejorar código o arquitectura |
 | `tarea` · Deuda Operativa | Eliminar trabajo manual por falta de un backoffice |
-| `bug` · Bau/Incidentes | Corregir algo que falla en producción |
+| `error` · Bau/Incidentes | Corregir algo que falla en producción |
+| `hotfix` · Bau/Incidentes | Corregir de inmediato algo que falla en producción y no puede esperar; la causa y la prueba van después en un Error de seguimiento |
 | `spike` · Spike | Investigar para decidir (2 días como máximo) |
 
 Si no se indicó qué crear, preguntarlo primero. No inventar respuestas: lo que el usuario no sepa
@@ -108,9 +110,9 @@ Una sola vez por producto:
 
 Preferir `--jql` a `--tablero`: sigue funcionando aunque el tablero se elimine. Si el proyecto está
 archivado, exportar a CSV y usar `--fuente archivo`. `--proyecto` es el destino de las Tareas,
-Spikes y Bugs.
+Spikes, Errores y Hotfix.
 
-## Tareas, Spikes y Bugs
+## Tareas, Spikes, Errores y Hotfix
 
 1. **Preguntas por tipo**, de a una o todas juntas:
 
@@ -125,12 +127,22 @@ Spikes y Bugs.
    No preguntar la duración (2 días), el entregable (ADR de producto en Propuesto) ni los criterios
    fijos: ya vienen en la plantilla.
 
-   **Bug:**
+   **Error:**
    1. ¿Qué falla y dónde? (servicio, endpoint, proceso)
    2. ¿Desde cuándo y en qué entorno?
    3. ¿Cuál es el impacto? (transacciones, clientes o procesos afectados, con cantidades si se conocen)
    4. ¿Se puede reproducir? Pasos o datos de entrada.
    5. ¿Hay evidencia? Logs, `trace_id`, alertas o el incidente asociado.
+   6. ¿Es el seguimiento de un Hotfix? Si lo es, su clave va en `--hotfix`.
+
+   **Hotfix** (urgente: solo lo mínimo para actuar ya):
+   1. ¿Qué falla en producción y dónde, y desde cuándo?
+   2. ¿Cuál es el impacto?
+   3. ¿Qué evidencia hay? (logs, `trace_id`, alertas)
+   4. ¿Qué corrección se aplica y cómo se vuelve atrás si falla?
+
+   No preguntar la causa ni cómo reproducirlo: van en el Error de seguimiento. Después de crear el
+   Hotfix en Jira, ofrecer crear ese Error con `--hotfix <clave del Hotfix>`.
 
    **Tarea de Deuda Operativa:**
    1. ¿Qué tarea manual se hace hoy y por qué falta un backoffice para evitarla?
@@ -148,8 +160,9 @@ Spikes y Bugs.
 2. **Borrador y contexto:**
 
    ```sh
-   .venv/bin/python herramientas/jira.py nueva <producto> --tipo <tarea|spike|bug> --titulo "<título>" \
-     [--categoria "Deuda Operativa"] [--desde H-0041,H-0052] [--repos <repo1,repo2>] [--tema "<palabras clave>"]
+   .venv/bin/python herramientas/jira.py nueva <producto> --tipo <tarea|spike|error|hotfix> --titulo "<título>" \
+     [--categoria "Deuda Operativa"] [--desde H-0041,H-0052] [--repos <repo1,repo2>] [--tema "<palabras clave>"] \
+     [--hotfix <clave>]
    ```
 
    El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").

@@ -18,7 +18,8 @@ Muestra un resumen y la lista "Qué sigue", en orden de prioridad:
   historias de origen modificadas, historias candidatas por analizar, documentos sin indexar,
   reporte semanal pendiente (más de 7 días) y la definición de terminado que se verifica sola: Tareas
   de Jira cuyos hallazgos de origen ya están corregidos (EQ-008.5, se pueden cerrar) y Spikes que
-  superaron los 2 días sin un ADR de producto propuesto (EQ-008.8).
+  superaron los 2 días sin un ADR de producto propuesto (EQ-008.8) y Hotfix sin su Error de
+  seguimiento (EQ-008.9).
 
 ## Reporte semanal (`/estado semanal`)
 
@@ -81,7 +82,7 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `arquitectura.fuentes` | repositorios de arquitectura; se administran con `/actualizar fuentes` |
 | `arquitectura.estados` | cómo se interpreta la sección Estado de los documentos |
 | `calibracion` | `minimo_triados` y `maximo_falsos_positivos` |
-| `jira` | valores para crear Tareas, Spikes y Bugs: Equipos, nombres de campos y tipos de incidencia |
+| `jira` | valores para crear Tareas, Spikes, Errores y Hotfix: Equipos, nombres de campos y tipos de incidencia |
 
 `harness.yaml` se modifica solo mediante los scripts, que validan los datos y conservan los
 comentarios.
