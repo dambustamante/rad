@@ -1,6 +1,6 @@
 # Diagrama de contexto: <nombre del sistema>
 
-> Plantilla de ADR-EQ-001. Muestra el sistema, quién lo usa y con qué sistemas externos se
+> Plantilla de ADR-EQ-006. Muestra el sistema, quién lo usa y con qué sistemas externos se
 > comunica. No muestra componentes internos: eso va en el diagrama de contenedores.
 
 ```mermaid

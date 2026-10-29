@@ -6,7 +6,7 @@ Uso:
 
 - `/crear <producto>`: preguntar qué crear.
 - `/crear <producto> adr` o `excepcion`: un ADR del producto (`productos/<producto>/decisiones/`).
-- `/crear <producto> tarea`, `spike` o `bug`: un borrador con la estructura de ADR-EQ-008, que se crea
+- `/crear <producto> tarea`, `spike` o `bug`: un borrador con la estructura de ADR-EQ-009, que se crea
   en Jira solo con confirmación.
 - `/crear <producto> tarea --desde H-0041,H-0052`: una Tarea de Deuda Técnica a partir de hallazgos
   (por ejemplo, los marcados como Deuda en `/triar`).
@@ -40,7 +40,7 @@ queda `NO DETERMINADO`.
 3. **Completar con el usuario**, sección por sección:
    - **decision:** contexto, decisión verificable, regla rápida y criterios `XX-NNN.N` con su
      severidad. Todos los criterios son de `revisión de código`.
-   - **excepcion:** qué criterios se exceptúan (`EQ-001.1`, `MF-002.1` o `fuente:ID` de
+   - **excepcion:** qué criterios se exceptúan (`EQ-006.1`, `MF-002.1` o `fuente:ID` de
      arquitectura), en qué repositorios, por qué, hasta cuándo y qué se hará para dejar de
      necesitarla. Si exceptúa arquitectura, pedir la referencia de aprobación; sin ella, la
      excepción queda inactiva.

@@ -1,4 +1,4 @@
-# ADR-EQ-008: Estructura de Tareas, Spikes y Bugs
+# ADR-EQ-009: Estructura de Tareas, Spikes y Bugs
 
 ## 2. Estado
 
@@ -24,7 +24,7 @@ Toda Tarea, Spike o Bug tiene:
 1. **Campos de Jira:** Equipos = Back; Tipo según la tabla de combinaciones válidas.
 2. **Encabezado común:** Como / Quiero / Para y Criterios de aceptación.
 3. **Secciones propias de su tipo de incidencia** (ver Acciones requeridas).
-4. **Enlace a la definición de terminado** (ADR-EQ-009), sin repetirla.
+4. **Enlace a la definición de terminado** (ADR-EQ-008), sin repetirla.
 
 | Tipo de incidencia | Campo "Tipo" permitido |
 |---|---|
@@ -121,7 +121,7 @@ Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md` y `equipo
 
 ## 10. Referencias
 
-- ADR-EQ-009 (definición de terminado), ADR-EQ-001 a ADR-EQ-007
+- ADR-EQ-008 (definición de terminado), ADR-EQ-001 a ADR-EQ-007
 - Lista de expresiones a evitar: `equipo/lenguaje.yaml`
 
 ## 11. Regla rápida
@@ -137,9 +137,9 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-008.1` | Equipos = Back y combinación válida de tipo de incidencia y campo Tipo | automática | alta |
-| `EQ-008.2` | Tiene Como, Quiero y Para, y el Para no repite el Quiero | automática + revisión de la historia | media |
-| `EQ-008.3` | Tiene al menos un criterio de aceptación medible | automática + revisión de la historia | alta |
-| `EQ-008.4` | Tiene las secciones obligatorias de su tipo de incidencia | automática | media |
-| `EQ-008.5` | Un Spike tiene una sola pregunta, duración máxima y ADR como entregable | automática | alta |
-| `EQ-008.6` | Cumple las reglas de lenguaje | automática + revisión de la historia | baja |
+| `EQ-009.1` | Equipos = Back y combinación válida de tipo de incidencia y campo Tipo | automática | alta |
+| `EQ-009.2` | Tiene Como, Quiero y Para, y el Para no repite el Quiero | automática + revisión de la historia | media |
+| `EQ-009.3` | Tiene al menos un criterio de aceptación medible | automática + revisión de la historia | alta |
+| `EQ-009.4` | Tiene las secciones obligatorias de su tipo de incidencia | automática | media |
+| `EQ-009.5` | Un Spike tiene una sola pregunta, duración máxima y ADR como entregable | automática | alta |
+| `EQ-009.6` | Cumple las reglas de lenguaje | automática + revisión de la historia | baja |

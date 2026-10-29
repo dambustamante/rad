@@ -299,8 +299,8 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     if fichas:
         lineas += ["## Terceros", "",
                    "Producto comprado e integraciones que corresponden a este repositorio. Contrastarlos con el código: "
-                   "integraciones del código sin ficha (EQ-001.6, EQ-002.5), timeouts frente al p95 del tercero (EQ-003.1), "
-                   "política ante falla declarada frente a la implementada (EQ-003.4; la ficha cuenta como documentación de "
+                   "integraciones del código sin ficha (EQ-004.5, EQ-006.6), timeouts frente al p95 del tercero (EQ-002.1), "
+                   "política ante falla declarada frente a la implementada (EQ-002.4; la ficha cuenta como documentación de "
                    "la política) y uso de sus contratos, códigos de error y límites. Buscar en su documentación con "
                    f"`.venv/bin/python herramientas/terceros.py buscar {producto} \"<palabras>\"` y citarla como "
                    "`terceros/<id>/docs/<archivo>`.", "",
@@ -397,7 +397,7 @@ def elemento_de_control(raiz: Path, ctx: dict, fuente: str, criterio: str | None
     clave = clave_de(fuente, criterio)
     if clave not in control:
         if re.match(r"^ADR-[A-Z]{2,5}-\d{3}$", fuente) and not criterio:
-            raise ErrorRadiografia("Para una decisión del equipo o del producto, indicar --criterio (por ejemplo EQ-003.1).")
+            raise ErrorRadiografia("Para una decisión del equipo o del producto, indicar --criterio (por ejemplo EQ-002.1).")
         raise ErrorRadiografia(f"'{clave}' no es una fuente vigente ni un criterio de revisión de código aplicable a este "
                                "repositorio (ver la sección \"Qué evaluar\" del paquete).")
     if control[clave].get("exceptuado"):

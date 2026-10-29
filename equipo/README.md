@@ -8,8 +8,26 @@ de arquitectura.
 | [INDICE.md](INDICE.md) | las decisiones con su estado y su coherencia (generado) |
 | [COHERENCIA.md](COHERENCIA.md) | comparación de cada ADR-EQ con arquitectura (generado) |
 | `decisiones/` | los ADR-EQ: `ADR-EQ-NNN-<titulo>.md` |
-| `plantillas/` | plantillas de ADR del equipo y de producto, README y diagramas C4 |
+| `plantillas/` | plantilla de ADR (del equipo y de producto), Tarea, Spike, Bug, README y diagramas C4 |
 | `estado/` | datos de las herramientas (no se editan) |
+
+## Orden
+
+Los ADR-EQ están numerados por importancia, según el riesgo que cubren:
+
+| ADR-EQ | Grupo | Tema |
+|---|---|---|
+| 001 | Seguridad y operación | Datos sensibles |
+| 002 | Seguridad y operación | Integraciones resilientes |
+| 003 | Seguridad y operación | Logs |
+| 004 | Diseño | Contratos como código |
+| 005 | Diseño | SOLID y KISS |
+| 006 | Documentación | C4 |
+| 007 | Documentación | README |
+| 008 | Forma de trabajar | Definición de terminado |
+| 009 | Forma de trabajar | Estructura de Tareas, Spikes y Bugs |
+
+Una decisión nueva toma el siguiente número libre; la numeración no se cambia después de aprobar.
 
 ## Ciclo de vida
 

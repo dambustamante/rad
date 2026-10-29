@@ -1,4 +1,4 @@
-# ADR-EQ-003: Integraciones resilientes con política de degradación explícita
+# ADR-EQ-002: Integraciones resilientes con política de degradación explícita
 
 ## 2. Estado
 
@@ -36,8 +36,8 @@ Toda llamada a un sistema externo cumple:
    - *fail-closed*: si la dependencia falla, la operación se rechaza.
 
    La política se documenta con su justificación de negocio y quién la aprobó.
-5. **Fallas visibles:** cada falla se registra en logs (ADR-EQ-007) y métricas, sin datos
-   sensibles (ADR-EQ-004). Nunca se ignora una excepción en silencio.
+5. **Fallas visibles:** cada falla se registra en logs (ADR-EQ-003) y métricas, sin datos
+   sensibles (ADR-EQ-001). Nunca se ignora una excepción en silencio.
 
 ## 6. Alternativas evaluadas
 
@@ -76,11 +76,11 @@ de degradación requiere una conversación con negocio por cada integración cr�
   implementaciones propias.
 - Documentar cada integración en el README (sección Integraciones) con: sistema, timeout,
   reintentos, circuit breaker y política de degradación con su justificación.
-- Reflejar cada integración en el C4 (ADR-EQ-001).
+- Reflejar cada integración en el C4 (ADR-EQ-006).
 
 ## 10. Referencias
 
-- ADR-EQ-001 (C4), ADR-EQ-004 (datos sensibles), ADR-EQ-007 (logs)
+- ADR-EQ-001 (datos sensibles), ADR-EQ-003 (logs), ADR-EQ-006 (C4)
 - Patrones *Timeout*, *Retry*, *Circuit Breaker* y *Bulkhead*
 
 ## 11. Regla rápida
@@ -96,8 +96,8 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-003.1` | Cada cliente de un sistema externo tiene timeout explícito de conexión y de respuesta | revisión de código | alta |
-| `EQ-003.2` | Los reintentos se aplican solo a operaciones idempotentes, con espera exponencial y máximo de intentos | revisión de código | alta |
-| `EQ-003.3` | Las dependencias críticas tienen circuit breaker | revisión de código | media |
-| `EQ-003.4` | Cada integración tiene su política de degradación documentada con justificación | revisión de código | alta |
-| `EQ-003.5` | Ninguna falla de integración se ignora en silencio (bloques `catch` vacíos o que solo continúan) | revisión de código | alta |
+| `EQ-002.1` | Cada cliente de un sistema externo tiene timeout explícito de conexión y de respuesta | revisión de código | alta |
+| `EQ-002.2` | Los reintentos se aplican solo a operaciones idempotentes, con espera exponencial y máximo de intentos | revisión de código | alta |
+| `EQ-002.3` | Las dependencias críticas tienen circuit breaker | revisión de código | media |
+| `EQ-002.4` | Cada integración tiene su política de degradación documentada con justificación | revisión de código | alta |
+| `EQ-002.5` | Ninguna falla de integración se ignora en silencio (bloques `catch` vacíos o que solo continúan) | revisión de código | alta |

@@ -1,4 +1,4 @@
-# ADR-EQ-009: Definición de terminado
+# ADR-EQ-008: Definición de terminado
 
 ## 2. Estado
 
@@ -28,7 +28,7 @@ que correspondan según lo que cambió.
 1. Los criterios de aceptación se cumplen y hay pruebas automatizadas que los verifican.
 2. El MR fue revisado y aprobado por otra persona del equipo.
 3. El quality gate de Sonar está en verde después del merge.
-4. No hay secretos ni datos sensibles en el código, los logs ni las pruebas (ADR-EQ-004).
+4. No hay secretos ni datos sensibles en el código, los logs ni las pruebas (ADR-EQ-001).
 5. Si el trabajo nace de hallazgos de una revisión de código o de arquitectura, la revisión
    siguiente ya no los reporta.
 
@@ -44,11 +44,11 @@ que correspondan según lo que cambió.
 
 | Si el cambio… | Debe cumplir |
 |---|---|
-| Agrega o modifica una API o un evento | ADR-EQ-002: contrato actualizado y versionado |
-| Agrega o modifica un contenedor o una integración | ADR-EQ-001: C4 actualizado; ADR-EQ-003: timeout, reintentos y política ante falla |
-| Agrega o modifica logs | ADR-EQ-007: JSON, `trace_id` y nivel correcto |
-| Cambia cómo se ejecuta, configura u opera | ADR-EQ-005: README actualizado |
-| Cambia el diseño de clases o módulos | ADR-EQ-006: principios SOLID y KISS |
+| Agrega o modifica una API o un evento | ADR-EQ-004: contrato actualizado y versionado |
+| Agrega o modifica un contenedor o una integración | ADR-EQ-002: timeout, reintentos y política ante falla; ADR-EQ-006: C4 actualizado |
+| Agrega o modifica logs | ADR-EQ-003: JSON, `trace_id` y nivel correcto |
+| Cambia cómo se ejecuta, configura u opera | ADR-EQ-007: README actualizado |
+| Cambia el diseño de clases o módulos | ADR-EQ-005: principios SOLID y KISS |
 | Toca una decisión del producto (ADR-<SIGLA>) | Los criterios de verificación de esa decisión |
 
 **Condiciones para Spikes:**
@@ -89,12 +89,12 @@ ADR en lugar de repetir la lista.
 
 ## 9. Acciones requeridas
 
-- Las plantillas de Tarea, Spike y Bug (ADR-EQ-008) enlazan a este ADR.
+- Las plantillas de Tarea, Spike y Bug (ADR-EQ-009) enlazan a este ADR.
 - En la revisión de cada MR se indica qué condiciones se cumplen y cuáles faltan.
 
 ## 10. Referencias
 
-- ADR-EQ-001, ADR-EQ-002, ADR-EQ-003, ADR-EQ-004, ADR-EQ-005, ADR-EQ-006, ADR-EQ-007, ADR-EQ-008
+- ADR-EQ-001 a ADR-EQ-007, ADR-EQ-009
 
 ## 11. Regla rápida
 
@@ -110,11 +110,11 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-009.1` | Los criterios de aceptación tienen pruebas que los verifican | revisión del MR | alta |
-| `EQ-009.2` | El MR fue aprobado por otra persona | plataforma git | alta |
-| `EQ-009.3` | Quality gate de Sonar en verde | automática | alta |
-| `EQ-009.4` | Sin secretos (remite a EQ-004.1) | automática | bloqueante |
-| `EQ-009.5` | Los hallazgos de origen ya no se reportan | automática | alta |
-| `EQ-009.6` | Se cumplen los ADR-EQ que aplican según lo que cambió | automática + revisión del MR | según el ADR-EQ |
-| `EQ-009.7` | Un Bug tiene una prueba que reproduce el error y su causa documentada | revisión del MR | alta |
-| `EQ-009.8` | Un Spike deja un ADR de producto en estado Propuesto | automática | alta |
+| `EQ-008.1` | Los criterios de aceptación tienen pruebas que los verifican | revisión del MR | alta |
+| `EQ-008.2` | El MR fue aprobado por otra persona | plataforma git | alta |
+| `EQ-008.3` | Quality gate de Sonar en verde | automática | alta |
+| `EQ-008.4` | Sin secretos (remite a EQ-001.1) | automática | bloqueante |
+| `EQ-008.5` | Los hallazgos de origen ya no se reportan | automática | alta |
+| `EQ-008.6` | Se cumplen los ADR-EQ que aplican según lo que cambió | automática + revisión del MR | según el ADR-EQ |
+| `EQ-008.7` | Un Bug tiene una prueba que reproduce el error y su causa documentada | revisión del MR | alta |
+| `EQ-008.8` | Un Spike deja un ADR de producto en estado Propuesto | automática | alta |

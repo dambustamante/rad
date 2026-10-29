@@ -75,7 +75,7 @@ def revisar(texto: str, reglas: dict | None = None) -> list[dict]:
             if base in reglas["siglas_conocidas"] or sigla in reglas["siglas_conocidas"] or base in siglas_explicadas:
                 continue
             if re.match(r"^[A-Z]+-\d", linea[coincidencia.start():]) or base.isdigit():
-                continue  # identificadores como ADR-EQ-003, EQ-001.1 o FRAUD-123
+                continue  # identificadores como ADR-EQ-002, EQ-006.1 o FRAUD-123
             # Una sigla de varias palabras ("PCI DSS (…)") se explica una sola vez, al final.
             resto = re.sub(r"^(\s+[A-Z][A-Z0-9]{1,5})+", "", linea[coincidencia.end():])
             siguiente = resto[:3]

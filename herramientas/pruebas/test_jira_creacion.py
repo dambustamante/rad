@@ -1,4 +1,4 @@
-"""Pruebas de /crear (Tareas, Spikes y Bugs): borrador, contexto del producto, validación según ADR-EQ-008 y creación en Jira."""
+"""Pruebas de /crear (Tareas, Spikes y Bugs): borrador, contexto del producto, validación según ADR-EQ-009 y creación en Jira."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ El repositorio no tiene diagrama de contexto (H-0001).
 
 ## Decisiones que aplican
 
-- ADR-EQ-001: todo contenedor e integración real aparece en el diagrama.
+- ADR-EQ-006: todo contenedor e integración real aparece en el diagrama.
 
 ## Fuera de alcance
 
@@ -46,7 +46,7 @@ El repositorio no tiene diagrama de contexto (H-0001).
 
 ## Definición de terminado
 
-Según ADR-EQ-009 (Definición de terminado) del equipo Back.
+Según ADR-EQ-008 (Definición de terminado) del equipo Back.
 """
 
 
@@ -107,12 +107,12 @@ class PruebaHistoria(unittest.TestCase):
         self.assertEqual((datos["repos"], datos["hallazgos"]), (["fraude-core"], ["H-0001"]))
         self.assertIn("- La revisión ya no reporta los hallazgos de origen (H-0001).", cuerpo, "el criterio fijo se completa solo")
         contexto = borrador.with_name(borrador.stem + "-contexto.md").read_text(encoding="utf-8")
-        self.assertIn("**H-0001** · fraude-core · EQ-001.1", contexto)
-        self.assertIn("`ADR-EQ-001`", contexto, "la decisión del hallazgo de origen aparece entre las que aplican")
+        self.assertIn("**H-0001** · fraude-core · EQ-006.1", contexto)
+        self.assertIn("`ADR-EQ-006`", contexto, "la decisión del hallazgo de origen aparece entre las que aplican")
         self.assertIn("## AS IS de los repositorios", contexto)
         self.assertIn("## Historias de Jira parecidas", contexto)
 
-    def test_validacion_segun_adr_eq_008(self) -> None:
+    def test_validacion_segun_adr_eq_009(self) -> None:
         borrador = self.nueva("--tipo", "tarea", "--titulo", "Agregar el diagrama", "--desde", "H-0001")
         self.assertIn("quedan textos de la plantilla sin completar (<…>)", historia.validar(self.raiz, "motor-fraudes", borrador))
         self.completar(borrador)

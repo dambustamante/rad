@@ -23,7 +23,7 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
    ```sh
    .venv/bin/python herramientas/triaje.py grupo <producto> --decision <resolver|a-conversar|deuda|falso-positivo> \
      [--motivo "<motivo>"] [--vence AAAA-MM-DD] [--repo <repo>] [--nivel 1,2,3,4] [--severidad alta,media] \
-     [--fuente <prefijo, por ejemplo sonar: o EQ-006>] --simular
+     [--fuente <prefijo, por ejemplo sonar: o EQ-005>] --simular
    ```
 
    Con la confirmación del usuario, ejecutar lo mismo sin `--simular`.

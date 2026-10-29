@@ -1,4 +1,4 @@
-# ADR-EQ-005: README estándar en español neutro y técnico
+# ADR-EQ-007: README estándar en español neutro y técnico
 
 ## 2. Estado
 
@@ -50,8 +50,8 @@ Cada repositorio de tipo `propio` tiene en su raíz un `README.md` que:
 
 ### Riesgos
 
-- README completos en forma pero desactualizados. Se mitiga con los criterios `EQ-005.2` y
-  `EQ-005.3`.
+- README completos en forma pero desactualizados. Se mitiga con los criterios `EQ-007.2` y
+  `EQ-007.3`.
 
 ## 8. Impacto
 
@@ -68,8 +68,8 @@ cuando falta el README o sus secciones.
 4. Stack y versiones
 5. Cómo se ejecuta en local (prerrequisitos y pasos)
 6. Configuración (variables de entorno, solo por nombre)
-7. Integraciones (con su política de degradación, ADR-EQ-003)
-8. Contratos (enlace a `docs/contratos/`, ADR-EQ-002)
+7. Integraciones (con su política de degradación, ADR-EQ-002)
+8. Contratos (enlace a `docs/contratos/`, ADR-EQ-004)
 9. Entornos y despliegue
 10. Observabilidad
 11. Operación y resolución de problemas
@@ -85,7 +85,7 @@ cuando falta el README o sus secciones.
 ## 10. Referencias
 
 - Plantilla: `equipo/plantillas/README.md`
-- ADR-EQ-001 (C4), ADR-EQ-002 (contratos), ADR-EQ-003 (integraciones)
+- ADR-EQ-002 (integraciones), ADR-EQ-004 (contratos), ADR-EQ-006 (C4)
 
 ## 11. Regla rápida
 
@@ -100,8 +100,8 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-005.1` | Existe `README.md` con las secciones obligatorias | automática | media |
-| `EQ-005.2` | Los comandos del README existen (Makefile, scripts del gestor de paquetes, wrappers de build) | automática + revisión de código | media |
-| `EQ-005.3` | Las variables documentadas coinciden con las que lee el código | revisión de código | media |
-| `EQ-005.4` | El texto está en español neutro y técnico, con las siglas explicadas | revisión de código | baja |
-| `EQ-005.5` | Los pasos para ejecutar en local son completos y no suponen conocimiento implícito | revisión de código | media |
+| `EQ-007.1` | Existe `README.md` con las secciones obligatorias | automática | media |
+| `EQ-007.2` | Los comandos del README existen (Makefile, scripts del gestor de paquetes, wrappers de build) | automática + revisión de código | media |
+| `EQ-007.3` | Las variables documentadas coinciden con las que lee el código | revisión de código | media |
+| `EQ-007.4` | El texto está en español neutro y técnico, con las siglas explicadas | revisión de código | baja |
+| `EQ-007.5` | Los pasos para ejecutar en local son completos y no suponen conocimiento implícito | revisión de código | media |

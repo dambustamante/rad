@@ -1,4 +1,4 @@
-# ADR-EQ-004: Protección de datos sensibles en código, logs y pruebas
+# ADR-EQ-001: Protección de datos sensibles en código, logs y pruebas
 
 ## 2. Estado
 
@@ -14,7 +14,7 @@ Propuesto
 - **Problema o necesidad:** los productos procesan datos de tarjetas, de identificación y de
   clientes. Un dato sensible en un log, en un repositorio o en un archivo de prueba es una
   exposición que no se puede deshacer y un incumplimiento regulatorio.
-- **Alcance:** todos los repositorios de tipo `propio`. El criterio `EQ-004.1` (secretos) aplica
+- **Alcance:** todos los repositorios de tipo `propio`. El criterio `EQ-001.1` (secretos) aplica
   también a los repositorios de tipo `config`, donde suelen vivir las credenciales.
 - **Restricciones:** normativa de protección de datos personales y requisitos PCI DSS (estándar de
   seguridad de datos de la industria de tarjetas de pago) para
@@ -53,7 +53,7 @@ Propuesto
 ### Riesgos
 
 - Datos sensibles en campos no evidentes (por ejemplo, el cuerpo completo de una solicitud).
-  Se mitiga con el criterio `EQ-004.3`.
+  Se mitiga con el criterio `EQ-001.3`.
 
 ## 8. Impacto
 
@@ -81,7 +81,7 @@ Todos los puntos donde se escriben logs, se manejan errores o se preparan datos 
 ## 10. Referencias
 
 - PCI DSS (requisito 3, protección de datos de tarjeta almacenados)
-- ADR-EQ-003 (logs de fallas de integración), ADR-EQ-007 (manejo de logs)
+- ADR-EQ-002 (logs de fallas de integración), ADR-EQ-003 (manejo de logs)
 
 ## 11. Regla rápida
 
@@ -96,8 +96,8 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-004.1` | No hay secretos en el repositorio ni en su historial | automática (gitleaks) | bloqueante |
-| `EQ-004.2` | Ningún log registra PAN completo, CVV o fecha de vencimiento | revisión de código | bloqueante |
-| `EQ-004.3` | Ningún log registra cuerpos completos de solicitudes o respuestas con datos sensibles, ni datos personales sin enmascarar | revisión de código | alta |
-| `EQ-004.4` | Las pruebas y archivos de ejemplo no contienen datos reales | revisión de código | alta |
-| `EQ-004.5` | Los mensajes de error externos no incluyen datos sensibles ni trazas internas | revisión de código | alta |
+| `EQ-001.1` | No hay secretos en el repositorio ni en su historial | automática (gitleaks) | bloqueante |
+| `EQ-001.2` | Ningún log registra PAN completo, CVV o fecha de vencimiento | revisión de código | bloqueante |
+| `EQ-001.3` | Ningún log registra cuerpos completos de solicitudes o respuestas con datos sensibles, ni datos personales sin enmascarar | revisión de código | alta |
+| `EQ-001.4` | Las pruebas y archivos de ejemplo no contienen datos reales | revisión de código | alta |
+| `EQ-001.5` | Los mensajes de error externos no incluyen datos sensibles ni trazas internas | revisión de código | alta |

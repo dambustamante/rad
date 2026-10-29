@@ -1,4 +1,4 @@
-# ADR-EQ-006: Principios de diseño SOLID y KISS
+# ADR-EQ-005: Principios de diseño SOLID y KISS
 
 ## 2. Estado
 
@@ -95,9 +95,9 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-006.1` | Responsabilidad única (señal S) | revisión de código | media |
-| `EQ-006.2` | Abierto/cerrado (señal O) | revisión de código | baja |
-| `EQ-006.3` | Sustitución de Liskov (señal L) | revisión de código | media |
-| `EQ-006.4` | Segregación de interfaces (señal I) | revisión de código | baja |
-| `EQ-006.5` | Inversión de dependencias (señal D) | revisión de código | media |
-| `EQ-006.6` | Simplicidad (señal KISS) | revisión de código | baja |
+| `EQ-005.1` | Responsabilidad única (señal S) | revisión de código | media |
+| `EQ-005.2` | Abierto/cerrado (señal O) | revisión de código | baja |
+| `EQ-005.3` | Sustitución de Liskov (señal L) | revisión de código | media |
+| `EQ-005.4` | Segregación de interfaces (señal I) | revisión de código | baja |
+| `EQ-005.5` | Inversión de dependencias (señal D) | revisión de código | media |
+| `EQ-005.6` | Simplicidad (señal KISS) | revisión de código | baja |

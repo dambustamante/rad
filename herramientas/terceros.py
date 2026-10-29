@@ -184,7 +184,7 @@ limites:
 
 datos_sensibles: []                   # por ejemplo [rut, nombre, pan]
 
-# Qué pasa con la operación si el tercero no responde (ADR-EQ-003).
+# Qué pasa con la operación si el tercero no responde (ADR-EQ-002).
 politica_ante_falla: NO DETERMINADO   # fail-open | fail-closed | no aplica
 justificacion: NO DETERMINADO         # motivo de negocio de la política
 

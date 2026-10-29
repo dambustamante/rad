@@ -98,7 +98,7 @@ Valores:
 - **Tipo:** `decision` (regla propia del producto) o `excepcion` (apartarse formalmente de una regla).
 - **Repositorios:** `todos` o una lista separada por comas con los `id` de `producto.yaml`.
 - **Criterios exceptuados** (solo `excepcion`): criterios de decisiones del equipo o del producto
-  (`EQ-001.1`, `MF-002.1`) o documentos de arquitectura (`fuente:ID`).
+  (`EQ-006.1`, `MF-002.1`) o documentos de arquitectura (`fuente:ID`).
 - **Vence** (solo `excepcion`): fecha `AAAA-MM-DD`. Al vencer, los criterios se vuelven a evaluar.
 - **Referencia de aprobación de arquitectura** (solo si exceptúa un documento de arquitectura):
   ticket, acta o correo. Sin ella, la excepción queda registrada pero inactiva.

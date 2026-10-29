@@ -95,12 +95,12 @@ class PruebaCoherencia(unittest.TestCase):
 
         equipo = self.raiz / "equipo" / "decisiones"
         equipo.mkdir(parents=True)
-        (equipo / "ADR-EQ-003-resiliencia.md").write_text(adr_equipo(
-            "003", "Integraciones resilientes",
+        (equipo / "ADR-EQ-002-resiliencia.md").write_text(adr_equipo(
+            "002", "Integraciones resilientes",
             "Los reintentos se aplican solo en operaciones idempotentes, con espera exponencial y un máximo de intentos.",
             "Ninguna integración sin timeout.", 3), encoding="utf-8")
-        (equipo / "ADR-EQ-007-logs.md").write_text(adr_equipo(
-            "007", "Manejo de logs",
+        (equipo / "ADR-EQ-003-logs.md").write_text(adr_equipo(
+            "003", "Manejo de logs",
             "Los logs se emiten en JSON, una línea por evento, e incluyen el campo trace_id.",
             "Un log es una línea JSON con su trace_id.", 2), encoding="utf-8")
 
@@ -140,28 +140,28 @@ class PruebaCoherencia(unittest.TestCase):
 
     def registrar_choque(self) -> tuple[int, str]:
         return self.ejecutar(
-            "registrar", "--eq", "ADR-EQ-003", "--doc", "decisiones:ADR-010", "--relacion", "choca",
+            "registrar", "--eq", "ADR-EQ-002", "--doc", "decisiones:ADR-010", "--relacion", "choca",
             "--cita-arquitectura", "los servicios no implementan reintentos propios",
             "--cita-equipo", "Los reintentos se aplican solo en operaciones idempotentes",
-            "--criterios", "EQ-003.2", "--explicacion", "Arquitectura centraliza los reintentos en el gateway.")
+            "--criterios", "EQ-002.2", "--explicacion", "Arquitectura centraliza los reintentos en el gateway.")
 
     def registrar_todo(self) -> None:
         self.assertEqual(self.registrar_choque()[0], 0)
         codigo, salida = self.ejecutar(
-            "registrar", "--eq", "ADR-EQ-007", "--doc", "decisiones:ADR-011", "--relacion", "duplica",
+            "registrar", "--eq", "ADR-EQ-003", "--doc", "decisiones:ADR-011", "--relacion", "duplica",
             "--cita-arquitectura", "emiten logs en formato JSON e incluyen el campo trace_id",
             "--cita-equipo", "Los logs se emiten en JSON, una línea por evento",
             "--explicacion", "Arquitectura ya exige JSON con trace_id.")
         self.assertEqual(codigo, 0, salida)
-        for eq, doc in (("ADR-EQ-003", "decisiones:ADR-011"), ("ADR-EQ-003", "decisiones:ADR-012"),
-                        ("ADR-EQ-007", "decisiones:ADR-010"), ("ADR-EQ-007", "decisiones:ADR-012")):
+        for eq, doc in (("ADR-EQ-002", "decisiones:ADR-011"), ("ADR-EQ-002", "decisiones:ADR-012"),
+                        ("ADR-EQ-003", "decisiones:ADR-010"), ("ADR-EQ-003", "decisiones:ADR-012")):
             codigo, salida = self.ejecutar("registrar", "--eq", eq, "--doc", doc, "--relacion", "sin_relacion")
             self.assertEqual(codigo, 0, salida)
 
     def test_preparar_lista_todos_los_pares_la_primera_vez(self) -> None:
         plan = self.plan()
         self.assertEqual(plan["total_pares"], 6)
-        self.assertEqual(set(plan["pendientes"]), {"ADR-EQ-003", "ADR-EQ-007"})
+        self.assertEqual(set(plan["pendientes"]), {"ADR-EQ-002", "ADR-EQ-003"})
         self.assertEqual(plan["documentos"]["decisiones:ADR-010"]["regla_rapida"], "Reintentos solo en el API Gateway.")
 
     def test_extracto_trae_decision_y_regla(self) -> None:
@@ -172,23 +172,23 @@ class PruebaCoherencia(unittest.TestCase):
 
     def test_rechaza_citas_inventadas_y_criterios_invalidos(self) -> None:
         codigo, salida = self.ejecutar(
-            "registrar", "--eq", "ADR-EQ-003", "--doc", "decisiones:ADR-010", "--relacion", "choca",
+            "registrar", "--eq", "ADR-EQ-002", "--doc", "decisiones:ADR-010", "--relacion", "choca",
             "--cita-arquitectura", "los servicios tienen prohibido reintentar cualquier llamada",
             "--cita-equipo", "Los reintentos se aplican solo en operaciones idempotentes",
-            "--criterios", "EQ-003.2", "--explicacion", "x")
+            "--criterios", "EQ-002.2", "--explicacion", "x")
         self.assertEqual(codigo, 1)
         self.assertIn("no aparece textualmente", salida)
 
         codigo, salida = self.ejecutar(
-            "registrar", "--eq", "ADR-EQ-003", "--doc", "decisiones:ADR-010", "--relacion", "choca",
+            "registrar", "--eq", "ADR-EQ-002", "--doc", "decisiones:ADR-010", "--relacion", "choca",
             "--cita-arquitectura", "los servicios no implementan reintentos propios",
             "--cita-equipo", "Los reintentos se aplican solo en operaciones idempotentes",
-            "--criterios", "EQ-003.9", "--explicacion", "x")
+            "--criterios", "EQ-002.9", "--explicacion", "x")
         self.assertEqual(codigo, 1)
-        self.assertIn("Criterios que no existen en ADR-EQ-003: EQ-003.9", salida)
+        self.assertIn("Criterios que no existen en ADR-EQ-002: EQ-002.9", salida)
 
         codigo, salida = self.ejecutar(
-            "registrar", "--eq", "ADR-EQ-003", "--doc", "decisiones:ADR-010", "--relacion", "choca",
+            "registrar", "--eq", "ADR-EQ-002", "--doc", "decisiones:ADR-010", "--relacion", "choca",
             "--cita-arquitectura", "los servicios no implementan reintentos propios",
             "--cita-equipo", "Los reintentos se aplican solo en operaciones idempotentes", "--explicacion", "x")
         self.assertEqual(codigo, 1)
@@ -201,16 +201,16 @@ class PruebaCoherencia(unittest.TestCase):
         codigo, salida = self.ejecutar("generar")
         self.assertEqual(codigo, 0, salida)
         texto = (self.raiz / "equipo" / "COHERENCIA.md").read_text(encoding="utf-8")
-        self.assertIn("❌ 1 choque(s) | EQ-003.2", texto)
+        self.assertIn("❌ 1 choque(s) | EQ-002.2", texto)
         self.assertIn("⚠️ 1 duplicación(es)", texto)
-        self.assertIn("### ADR-EQ-003 × decisiones:ADR-010", texto)
+        self.assertIn("### ADR-EQ-002 × decisiones:ADR-010", texto)
         self.assertIn("decisiones@", texto)
         estado = json.loads((self.raiz / "equipo" / "estado" / "coherencia.json").read_text(encoding="utf-8"))
-        self.assertEqual(estado["suspendidos"], {"ADR-EQ-003": ["EQ-003.2"]})
+        self.assertEqual(estado["suspendidos"], {"ADR-EQ-002": ["EQ-002.2"]})
 
     def test_solo_reevalua_lo_que_cambia(self) -> None:
         self.registrar_todo()
-        archivo_eq = self.raiz / "equipo" / "decisiones" / "ADR-EQ-003-resiliencia.md"
+        archivo_eq = self.raiz / "equipo" / "decisiones" / "ADR-EQ-002-resiliencia.md"
 
         # Cambiar el estado o la fecha no exige volver a evaluar.
         archivo_eq.write_text(archivo_eq.read_text(encoding="utf-8").replace("Propuesto", "Aprobado"), encoding="utf-8")
@@ -220,7 +220,7 @@ class PruebaCoherencia(unittest.TestCase):
         archivo_eq.write_text(archivo_eq.read_text(encoding="utf-8").replace("máximo de intentos", "máximo de tres intentos"),
                               encoding="utf-8")
         plan = self.plan()
-        self.assertEqual(plan["pendientes"], {"ADR-EQ-003": ["decisiones:ADR-010", "decisiones:ADR-011", "decisiones:ADR-012"]})
+        self.assertEqual(plan["pendientes"], {"ADR-EQ-002": ["decisiones:ADR-010", "decisiones:ADR-011", "decisiones:ADR-012"]})
 
     def test_documento_de_arquitectura_modificado_o_retirado(self) -> None:
         self.registrar_todo()
@@ -228,7 +228,7 @@ class PruebaCoherencia(unittest.TestCase):
         adr.write_text(adr.read_text(encoding="utf-8").replace("PostgreSQL.", "PostgreSQL 16."), encoding="utf-8")
         commit(self.origen, "Cambia ADR-012")
         self.sincronizar()
-        self.assertEqual(self.plan()["pendientes"], {"ADR-EQ-003": ["decisiones:ADR-012"], "ADR-EQ-007": ["decisiones:ADR-012"]})
+        self.assertEqual(self.plan()["pendientes"], {"ADR-EQ-002": ["decisiones:ADR-012"], "ADR-EQ-003": ["decisiones:ADR-012"]})
 
         adr = self.origen / "adrs" / "0010-reintentos.md"
         adr.write_text(adr.read_text(encoding="utf-8").replace("Aprobado", "Reemplazado"), encoding="utf-8")

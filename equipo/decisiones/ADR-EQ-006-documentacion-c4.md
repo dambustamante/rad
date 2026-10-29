@@ -1,4 +1,4 @@
-# ADR-EQ-001: Documentación de arquitectura C4 en cada repositorio
+# ADR-EQ-006: Documentación de arquitectura C4 en cada repositorio
 
 ## 2. Estado
 
@@ -56,7 +56,7 @@ los terceros.
 
 ### Riesgos
 
-- Diagramas que se escriben una vez y no se mantienen. Se mitiga con el criterio `EQ-001.7`.
+- Diagramas que se escriben una vez y no se mantienen. Se mitiga con el criterio `EQ-006.7`.
 
 ## 8. Impacto
 
@@ -101,10 +101,10 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-001.1` | Existe `docs/arquitectura/c4-contexto.md` con un diagrama `C4Context` | automática | alta |
-| `EQ-001.2` | Existe `docs/arquitectura/c4-contenedores.md` con un diagrama `C4Container` | automática | alta |
-| `EQ-001.3` | Notación mínima: título, nombre y descripción en cada elemento, tecnología en cada contenedor, descripción y protocolo en cada relación, externos marcados | automática | media |
-| `EQ-001.4` | El diagrama es código Mermaid y no solo una imagen | automática | baja |
-| `EQ-001.5` | Los contenedores del diagrama existen en el código o la configuración | revisión de código | media |
-| `EQ-001.6` | Toda integración real del código aparece como sistema o contenedor externo | revisión de código | alta |
-| `EQ-001.7` | El diagrama refleja los cambios estructurales recientes del código | revisión de código | media |
+| `EQ-006.1` | Existe `docs/arquitectura/c4-contexto.md` con un diagrama `C4Context` | automática | alta |
+| `EQ-006.2` | Existe `docs/arquitectura/c4-contenedores.md` con un diagrama `C4Container` | automática | alta |
+| `EQ-006.3` | Notación mínima: título, nombre y descripción en cada elemento, tecnología en cada contenedor, descripción y protocolo en cada relación, externos marcados | automática | media |
+| `EQ-006.4` | El diagrama es código Mermaid y no solo una imagen | automática | baja |
+| `EQ-006.5` | Los contenedores del diagrama existen en el código o la configuración | revisión de código | media |
+| `EQ-006.6` | Toda integración real del código aparece como sistema o contenedor externo | revisión de código | alta |
+| `EQ-006.7` | El diagrama refleja los cambios estructurales recientes del código | revisión de código | media |

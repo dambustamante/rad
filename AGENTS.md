@@ -95,7 +95,7 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, ca
 **Hallazgo:** todo `NO CUMPLE` genera un hallazgo con:
 
 - `nivel`: 1 a 4, según el orden de autoridad;
-- `fuente`: documento o regla que se incumple (por ejemplo `ADR-007`, `ADR-EQ-003`,
+- `fuente`: documento o regla que se incumple (por ejemplo `ADR-007`, `ADR-EQ-002`,
   `sonar:java:S2095`);
 - `categoria`: `incumplimiento`, `diseño`, `error`, `seguridad`, `deuda` o `documentacion`;
 - `severidad`: `bloqueante`, `alta`, `media` o `baja`;

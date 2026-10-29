@@ -30,7 +30,7 @@ class PruebaLenguaje(unittest.TestCase):
         texto = "\n".join([
             "El servicio ejecuta la evaluación y hace el registro.",          # "ejecuta" no es voseo
             "Se evita escribir \"robusto\" o «potenciar».",                    # ejemplos entre comillas
-            "El `HttpClient` usa timeout; ver ADR-EQ-003 y FRAUD-123.",        # código e identificadores
+            "El `HttpClient` usa timeout; ver ADR-EQ-002 y FRAUD-123.",        # código e identificadores
             "El p95 del SLA (acuerdo de nivel de servicio) es 800 ms; el SLA se mide por mes.",
             "Requisitos PCI DSS (estándar de seguridad de datos de tarjetas).",
             "Resultado: NO APLICA o NO DETERMINADO.",
@@ -43,8 +43,8 @@ class PruebaLenguaje(unittest.TestCase):
 
     def test_decisiones_sobre_la_forma_de_trabajar_no_se_evaluan_en_el_codigo(self) -> None:
         claves = {e["clave"] for e in revision.lista_de_control(RAIZ, "propio")}
-        self.assertFalse(any(c.startswith(("ADR-EQ-008", "ADR-EQ-009")) for c in claves))
-        self.assertTrue(any(c.startswith("ADR-EQ-003") for c in claves))
+        self.assertFalse(any(c.startswith(("ADR-EQ-009", "ADR-EQ-008")) for c in claves))
+        self.assertTrue(any(c.startswith("ADR-EQ-002") for c in claves))
 
 
 if __name__ == "__main__":

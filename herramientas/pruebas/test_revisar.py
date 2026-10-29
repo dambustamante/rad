@@ -159,14 +159,14 @@ class PruebaRevisar(unittest.TestCase):
     def test_linea_base_detecta_incumplimientos_y_sonar(self) -> None:
         resultado = self.revisar()
         core = self.abiertos("fraude-core")
-        for criterio in ("EQ-001.1", "EQ-001.2", "EQ-001.4", "EQ-002.1", "EQ-005.1", "EQ-005.2", "EQ-007.1"):
+        for criterio in ("EQ-006.1", "EQ-006.2", "EQ-006.4", "EQ-004.1", "EQ-007.1", "EQ-007.2", "EQ-003.1"):
             self.assertIn(criterio, core)
             self.assertEqual(core[criterio]["modo"], "propuesta", "los ADR-EQ en Propuesto no afectan el veredicto")
             self.assertTrue(core[criterio]["linea_base"])
-        self.assertEqual(core["EQ-007.1"]["evidencia"][0]["archivo"], "src/main/java/EvaluacionController.java",
+        self.assertEqual(core["EQ-003.1"]["evidencia"][0]["archivo"], "src/main/java/EvaluacionController.java",
                          "la salida a consola en pruebas no cuenta")
-        self.assertEqual(core["EQ-005.2"]["evidencia"][0]["linea"], 10)
-        self.assertIn("Contexto de negocio y responsables", core["EQ-005.1"]["detalle"])
+        self.assertEqual(core["EQ-007.2"]["evidencia"][0]["linea"], 10)
+        self.assertIn("Contexto de negocio y responsables", core["EQ-007.1"]["detalle"])
 
         self.assertEqual(core["sonar:quality-gate"]["severidad"], "alta")
         self.assertEqual(core["sonar:java:S2095"]["evidencia"], [{"archivo": "src/main/java/Evaluacion.java", "linea": 10}])
@@ -187,10 +187,10 @@ class PruebaRevisar(unittest.TestCase):
     def test_secretos_tambien_en_repos_de_configuracion(self) -> None:
         self.revisar()
         config = self.abiertos("fraude-config")
-        self.assertIn("EQ-004.1", config)
-        self.assertEqual(config["EQ-004.1"]["origen"], "gitleaks")
+        self.assertIn("EQ-001.1", config)
+        self.assertEqual(config["EQ-001.1"]["origen"], "gitleaks")
         self.assertNotIn(SECRETO_FALSO, json.dumps(self.registro()), "el valor del secreto nunca se guarda")
-        self.assertEqual(set(config), {"EQ-004.1"}, "a un repo de configuración solo se le aplican los secretos")
+        self.assertEqual(set(config), {"EQ-001.1"}, "a un repo de configuración solo se le aplican los secretos")
 
     def test_reconoce_corregidos_reaparecidos_y_conserva_la_revision(self) -> None:
         self.revisar()
@@ -208,15 +208,15 @@ class PruebaRevisar(unittest.TestCase):
         commit(self.core, "Agrega C4")
         self.revisar()
         core = self.abiertos("fraude-core")
-        self.assertNotIn("EQ-001.1", core)
-        self.assertNotIn("EQ-001.2", core)
-        problemas = [h["detalle"] for h in self.registro().values() if h["criterio"] == "EQ-001.3" and h["estado"] == "abierto"]
+        self.assertNotIn("EQ-006.1", core)
+        self.assertNotIn("EQ-006.2", core)
+        problemas = [h["detalle"] for h in self.registro().values() if h["criterio"] == "EQ-006.3" and h["estado"] == "abierto"]
         self.assertEqual(len(problemas), 2, "contenedor sin tecnología y relación sin protocolo")
 
         (self.core / "docs" / "arquitectura" / "c4-contexto.md").unlink()
         commit(self.core, "Borra el contexto")
         self.revisar()
-        reabierto = self.abiertos("fraude-core")["EQ-001.1"]
+        reabierto = self.abiertos("fraude-core")["EQ-006.1"]
         self.assertTrue(reabierto["reaparecido"])
 
     def test_sin_sonar_no_cierra_hallazgos_de_sonar(self) -> None:
@@ -228,11 +228,11 @@ class PruebaRevisar(unittest.TestCase):
 
     def test_criterio_suspendido_por_coherencia(self) -> None:
         (self.raiz / "equipo" / "estado").mkdir(parents=True, exist_ok=True)
-        (self.raiz / "equipo" / "estado" / "coherencia.json").write_text(json.dumps({"suspendidos": {"ADR-EQ-001": ["EQ-001.1"]}}), encoding="utf-8")
+        (self.raiz / "equipo" / "estado" / "coherencia.json").write_text(json.dumps({"suspendidos": {"ADR-EQ-006": ["EQ-006.1"]}}), encoding="utf-8")
         resultado = self.revisar()
-        self.assertNotIn("EQ-001.1", self.abiertos("fraude-core"))
+        self.assertNotIn("EQ-006.1", self.abiertos("fraude-core"))
         revision = next(r for r in resultado["resultados"] if r["repo"] == "fraude-core")
-        estado = next(v for v in revision["verificaciones"] if v["criterio"] == "EQ-001.1")
+        estado = next(v for v in revision["verificaciones"] if v["criterio"] == "EQ-006.1")
         self.assertEqual(estado["resultado"], "NO APLICA")
         self.assertIn("suspendido", estado["motivo"])
 

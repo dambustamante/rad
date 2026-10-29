@@ -90,18 +90,18 @@ class PruebaRevision(unittest.TestCase):
                              "--titulo", "Llamada sin timeout", "--detalle", "El cliente no define timeout.", *extra)
 
     def completar(self) -> None:
-        """Evalúa todo: NO CUMPLE en ADR-010 y EQ-003.1, NO APLICA en el resto."""
+        """Evalúa todo: NO CUMPLE en ADR-010 y EQ-002.1, NO APLICA en el resto."""
         codigo, salida = self.hallazgo("--fuente", "decisiones:ADR-010", "--evidencia", "src/main/java/EvaluacionController.java:4",
                                        "--fragmento", 'System.out.println("evaluando");',
                                        "--cita-documento", "Ninguna llamada externa sin timeout explícito")
         self.assertEqual(codigo, 0, salida)
-        codigo, salida = self.ejecutar("hallazgo", "motor-fraudes", "fraude-core", "--fuente", "ADR-EQ-003", "--criterio", "EQ-003.1",
+        codigo, salida = self.ejecutar("hallazgo", "motor-fraudes", "fraude-core", "--fuente", "ADR-EQ-002", "--criterio", "EQ-002.1",
                                        "--categoria", "diseño", "--severidad", "alta", "--titulo", "Cliente sin timeout",
                                        "--detalle", "Sin timeout.", "--evidencia", "src/main/java/EvaluacionController.java:3",
                                        "--fragmento", "public void evaluar()")
         self.assertEqual(codigo, 0, salida)
         for elemento in revision.lista_de_control(self.raiz, "propio"):
-            no_cumple = elemento["clave"] in ("decisiones:ADR-010", "ADR-EQ-003|EQ-003.1")
+            no_cumple = elemento["clave"] in ("decisiones:ADR-010", "ADR-EQ-002|EQ-002.1")
             argumentos = ["evaluar", "motor-fraudes", "fraude-core", "--fuente", elemento["fuente"],
                           "--resultado", "NO CUMPLE" if no_cumple else "NO APLICA", "--motivo", "motivo de prueba"]
             if elemento["criterio"]:
@@ -122,8 +122,8 @@ class PruebaRevision(unittest.TestCase):
         paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
         self.assertIn("`decisiones:ADR-010`", paquete)
         self.assertIn("Ninguna llamada externa sin timeout explícito.", paquete)
-        self.assertIn("| `ADR-EQ-003` | EQ-003.1 |", paquete)
-        self.assertNotIn("EQ-001.1", paquete.split("## Qué evaluar")[1], "los criterios automáticos no se piden de nuevo")
+        self.assertIn("| `ADR-EQ-002` | EQ-002.1 |", paquete)
+        self.assertNotIn("EQ-006.1", paquete.split("## Qué evaluar")[1], "los criterios automáticos no se piden de nuevo")
         self.assertIn("`src/main/java/EvaluacionController.java:1`", paquete, "señal de API expuesta")
         self.assertIn("Hallazgos automáticos ya registrados", paquete)
 
@@ -142,8 +142,8 @@ class PruebaRevision(unittest.TestCase):
             (("--fuente", "decisiones:ADR-010", "--evidencia", "src/main/java/EvaluacionController.java:4",
               "--fragmento", 'System.out.println("evaluando");', "--cita-documento", "Los timeouts son opcionales en todos los casos"),
              "no aparece textualmente"),
-            (("--fuente", "ADR-EQ-003", "--evidencia", "README.md:1", "--fragmento", "fraude-core"), "indicar --criterio"),
-            (("--fuente", "ADR-EQ-001", "--criterio", "EQ-001.1", "--evidencia", "README.md:1", "--fragmento", "fraude-core"),
+            (("--fuente", "ADR-EQ-002", "--evidencia", "README.md:1", "--fragmento", "fraude-core"), "indicar --criterio"),
+            (("--fuente", "ADR-EQ-006", "--criterio", "EQ-006.1", "--evidencia", "README.md:1", "--fragmento", "fraude-core"),
              "no es una fuente vigente ni un criterio de revisión de código"),
         ]
         for argumentos, mensaje in casos:
@@ -271,7 +271,7 @@ class PruebaRevision(unittest.TestCase):
         paquete = (self.raiz / salida.split("Paquete: ")[1].strip()).read_text(encoding="utf-8")
         evaluar = paquete.split("## Qué evaluar")[1].split("### Heredados")[0]
         self.assertIn("`decisiones:ADR-010`", evaluar)
-        self.assertIn("EQ-003.1", evaluar)
+        self.assertIn("EQ-002.1", evaluar)
         codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
         self.assertEqual(codigo, 1)
         self.assertIn("decisiones:ADR-010", salida)

@@ -28,8 +28,8 @@ CARPETAS_PRUEBA = {"test", "tests", "__tests__", "spec", "e2e", "testing"}
 EXTENSIONES_CODIGO = {".java", ".kt", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".py", ".go", ".cs"}
 TAMANO_MAXIMO = 1_000_000
 
-CATEGORIAS = {"ADR-EQ-001": "documentacion", "ADR-EQ-002": "documentacion", "ADR-EQ-004": "seguridad",
-              "ADR-EQ-005": "documentacion", "ADR-EQ-007": "diseño"}
+CATEGORIAS = {"ADR-EQ-001": "seguridad", "ADR-EQ-003": "diseño", "ADR-EQ-004": "documentacion",
+              "ADR-EQ-006": "documentacion", "ADR-EQ-007": "documentacion"}
 # Decisiones cuyos criterios automáticos verifican el código de un repositorio. Las demás (por ejemplo,
 # ADR-EQ-008 y ADR-EQ-009, sobre historias y MR) no se evalúan en la revisión de un repositorio.
 DECISIONES_DE_CODIGO = set(CATEGORIAS)
@@ -197,8 +197,8 @@ class Verificador:
 def verificar_c4(v: Verificador) -> None:
     carpeta = v.repo / "docs" / "arquitectura"
     diagramas = {}
-    for id_criterio, nombre, tipo in (("EQ-001.1", "c4-contexto.md", "C4Context"),
-                                      ("EQ-001.2", "c4-contenedores.md", "C4Container")):
+    for id_criterio, nombre, tipo in (("EQ-006.1", "c4-contexto.md", "C4Context"),
+                                      ("EQ-006.2", "c4-contenedores.md", "C4Container")):
         if not v.criterio(id_criterio):
             continue
         archivo = carpeta / nombre
@@ -217,9 +217,9 @@ def verificar_c4(v: Verificador) -> None:
         diagramas[ruta] = bloque
         v.registrar(id_criterio, CUMPLE, f"{ruta} contiene un diagrama {tipo}", [{"archivo": ruta, "linea": bloque[0]}])
 
-    if v.criterio("EQ-001.3"):
+    if v.criterio("EQ-006.3"):
         if not diagramas:
-            v.registrar("EQ-001.3", NO_APLICA, "no hay diagramas C4 que evaluar")
+            v.registrar("EQ-006.3", NO_APLICA, "no hay diagramas C4 que evaluar")
         else:
             problemas = []
             for ruta, (inicio, lineas) in diagramas.items():
@@ -238,24 +238,24 @@ def verificar_c4(v: Verificador) -> None:
                         if len(args) < 4 or not all(args[2:4]):
                             problemas.append({"archivo": ruta, "linea": numero, "problema": f"relación sin descripción o protocolo: `{linea.strip()}`"})
             if problemas:
-                v.registrar("EQ-001.3", NO_CUMPLE, f"{len(problemas)} problema(s) de notación", problemas)
+                v.registrar("EQ-006.3", NO_CUMPLE, f"{len(problemas)} problema(s) de notación", problemas)
                 for p in problemas:
-                    v.hallazgo("EQ-001.3", f"Notación C4 incompleta en {p['archivo']}", p["problema"], [p], fragmento=p["problema"])
+                    v.hallazgo("EQ-006.3", f"Notación C4 incompleta en {p['archivo']}", p["problema"], [p], fragmento=p["problema"])
             else:
-                v.registrar("EQ-001.3", CUMPLE, "la notación mínima está completa")
+                v.registrar("EQ-006.3", CUMPLE, "la notación mínima está completa")
 
-    if v.criterio("EQ-001.4"):
+    if v.criterio("EQ-006.4"):
         imagenes = sorted(p.relative_to(v.repo).as_posix() for p in (v.repo / "docs").rglob("*")
                           if p.is_file() and PATRON_IMAGEN.search(p.name)) if (v.repo / "docs").exists() else []
         if diagramas:
-            v.registrar("EQ-001.4", CUMPLE, "los diagramas están como código Mermaid")
+            v.registrar("EQ-006.4", CUMPLE, "los diagramas están como código Mermaid")
         elif imagenes:
-            v.registrar("EQ-001.4", NO_CUMPLE, "hay diagramas como imagen pero no como código", [{"archivo": i} for i in imagenes[:5]])
-            v.hallazgo("EQ-001.4", "Diagramas de arquitectura solo como imagen",
+            v.registrar("EQ-006.4", NO_CUMPLE, "hay diagramas como imagen pero no como código", [{"archivo": i} for i in imagenes[:5]])
+            v.hallazgo("EQ-006.4", "Diagramas de arquitectura solo como imagen",
                        f"Se encontraron {len(imagenes)} imagen(es) en docs/ y ningún diagrama Mermaid C4.",
                        [{"archivo": i} for i in imagenes[:5]])
         else:
-            v.registrar("EQ-001.4", NO_APLICA, "no hay diagramas, ni como imagen ni como código")
+            v.registrar("EQ-006.4", NO_APLICA, "no hay diagramas, ni como imagen ni como código")
 
 
 def cargar_contrato(archivo: Path) -> dict | None:
@@ -276,8 +276,8 @@ def verificar_contratos(v: Verificador) -> None:
                    if p.is_file() and PATRON_CONTRATO.search(p.name) and not set(p.relative_to(v.repo).parts) & CARPETAS_EXCLUIDAS
                    and not p.is_relative_to(carpeta))
 
-    for id_criterio, encontrados, senales, que in (("EQ-002.1", openapi, SENALES_API, "APIs HTTP"),
-                                                    ("EQ-002.2", asyncapi, SENALES_EVENTOS, "eventos")):
+    for id_criterio, encontrados, senales, que in (("EQ-004.1", openapi, SENALES_API, "APIs HTTP"),
+                                                    ("EQ-004.2", asyncapi, SENALES_EVENTOS, "eventos")):
         if not v.criterio(id_criterio):
             continue
         if encontrados:
@@ -297,9 +297,9 @@ def verificar_contratos(v: Verificador) -> None:
             v.registrar(id_criterio, NO_DETERMINADO, "no se detectaron señales de APIs HTTP; confirmar en la revisión de código",
                         pendiente_revision=True)
 
-    if v.criterio("EQ-002.3"):
+    if v.criterio("EQ-004.3"):
         if not openapi:
-            v.registrar("EQ-002.3", NO_APLICA, "no hay contratos OpenAPI que evaluar")
+            v.registrar("EQ-004.3", NO_APLICA, "no hay contratos OpenAPI que evaluar")
         else:
             problemas = []
             for contrato in openapi:
@@ -321,11 +321,11 @@ def verificar_contratos(v: Verificador) -> None:
                 if operaciones and not re.search(r"\bexamples?\b", json.dumps(datos)):
                     problemas.append((ruta, "no tiene ejemplos de solicitud o respuesta"))
             if problemas:
-                v.registrar("EQ-002.3", NO_CUMPLE, f"{len(problemas)} carencia(s) de contenido", [{"archivo": r, "problema": p} for r, p in problemas])
+                v.registrar("EQ-004.3", NO_CUMPLE, f"{len(problemas)} carencia(s) de contenido", [{"archivo": r, "problema": p} for r, p in problemas])
                 for ruta, problema in problemas:
-                    v.hallazgo("EQ-002.3", f"Contrato incompleto: {ruta}", problema, [{"archivo": ruta}], fragmento=problema)
+                    v.hallazgo("EQ-004.3", f"Contrato incompleto: {ruta}", problema, [{"archivo": ruta}], fragmento=problema)
             else:
-                v.registrar("EQ-002.3", CUMPLE, "los contratos tienen el contenido mínimo")
+                v.registrar("EQ-004.3", CUMPLE, "los contratos tienen el contenido mínimo")
 
 
 def ejecutar_gitleaks(repo: Path) -> list[dict] | None:
@@ -345,20 +345,20 @@ def ejecutar_gitleaks(repo: Path) -> list[dict] | None:
 
 
 def verificar_secretos(v: Verificador, gitleaks: list[dict] | None) -> None:
-    if not v.criterio("EQ-004.1"):
+    if not v.criterio("EQ-001.1"):
         return
     if gitleaks is None:
-        v.registrar("EQ-004.1", NO_DETERMINADO, "gitleaks no está instalado o no pudo ejecutarse")
+        v.registrar("EQ-001.1", NO_DETERMINADO, "gitleaks no está instalado o no pudo ejecutarse")
         return
     if not gitleaks:
-        v.registrar("EQ-004.1", CUMPLE, "gitleaks no encontró secretos en el repositorio ni en su historial")
+        v.registrar("EQ-001.1", CUMPLE, "gitleaks no encontró secretos en el repositorio ni en su historial")
         return
-    v.registrar("EQ-004.1", NO_CUMPLE, f"gitleaks encontró {len(gitleaks)} posible(s) secreto(s)", gitleaks)
+    v.registrar("EQ-001.1", NO_CUMPLE, f"gitleaks encontró {len(gitleaks)} posible(s) secreto(s)", gitleaks)
     vistos: dict[tuple[str, str], int] = {}
     for secreto in gitleaks:
         clave = (secreto["regla"], secreto["archivo"])
         vistos[clave] = vistos.get(clave, 0) + 1
-        v.hallazgo("EQ-004.1", f"Posible secreto ({secreto['regla']}) en {secreto['archivo']}",
+        v.hallazgo("EQ-001.1", f"Posible secreto ({secreto['regla']}) en {secreto['archivo']}",
                    f"Detectado por gitleaks en el commit {secreto['commit']}. El valor no se muestra. "
                    "Si el secreto es real, rotarlo: borrarlo del código no lo invalida.",
                    [secreto], fragmento=f"{secreto['regla']}#{vistos[clave]}", origen="gitleaks")
@@ -366,25 +366,25 @@ def verificar_secretos(v: Verificador, gitleaks: list[dict] | None) -> None:
 
 def verificar_readme(v: Verificador) -> None:
     readme = next((p for p in v.repo.iterdir() if p.is_file() and p.name.lower() == "readme.md"), None)
-    if v.criterio("EQ-005.1"):
+    if v.criterio("EQ-007.1"):
         if readme is None:
-            v.registrar("EQ-005.1", NO_CUMPLE, "no existe README.md")
-            v.hallazgo("EQ-005.1", "Falta README.md", "El repositorio no tiene README.md en la raíz.", [{"archivo": "README.md"}])
+            v.registrar("EQ-007.1", NO_CUMPLE, "no existe README.md")
+            v.hallazgo("EQ-007.1", "Falta README.md", "El repositorio no tiene README.md en la raíz.", [{"archivo": "README.md"}])
         else:
             encabezados = [normalizar(re.sub(r"^#+\s*(\d+(\.\d+)*\.?\s*)?", "", l)) for l in
                            readme.read_text(encoding="utf-8", errors="replace").splitlines() if l.startswith("#")]
             faltantes = [nombre for nombre, claves in SECCIONES_README
                          if not any(clave in encabezado for encabezado in encabezados for clave in claves)]
             if faltantes:
-                v.registrar("EQ-005.1", NO_CUMPLE, f"faltan {len(faltantes)} sección(es): {', '.join(faltantes)}", [{"archivo": readme.name}])
-                v.hallazgo("EQ-005.1", f"README sin {len(faltantes)} sección(es) obligatoria(s)",
+                v.registrar("EQ-007.1", NO_CUMPLE, f"faltan {len(faltantes)} sección(es): {', '.join(faltantes)}", [{"archivo": readme.name}])
+                v.hallazgo("EQ-007.1", f"README sin {len(faltantes)} sección(es) obligatoria(s)",
                            f"Faltan: {', '.join(faltantes)}.", [{"archivo": readme.name}])
             else:
-                v.registrar("EQ-005.1", CUMPLE, "el README tiene las secciones obligatorias", [{"archivo": readme.name}])
+                v.registrar("EQ-007.1", CUMPLE, "el README tiene las secciones obligatorias", [{"archivo": readme.name}])
 
-    if v.criterio("EQ-005.2"):
+    if v.criterio("EQ-007.2"):
         if readme is None:
-            v.registrar("EQ-005.2", NO_APLICA, "no existe README.md")
+            v.registrar("EQ-007.2", NO_APLICA, "no existe README.md")
             return
         comandos = []
         en_bloque = False
@@ -418,29 +418,29 @@ def verificar_readme(v: Verificador) -> None:
                     inexistentes.append((numero, comando, f"no existe el wrapper {m.group(1)}"))
         if inexistentes:
             evidencia = [{"archivo": readme.name, "linea": n, "problema": p} for n, _, p in inexistentes]
-            v.registrar("EQ-005.2", NO_CUMPLE, f"{len(inexistentes)} comando(s) del README no existen", evidencia)
+            v.registrar("EQ-007.2", NO_CUMPLE, f"{len(inexistentes)} comando(s) del README no existen", evidencia)
             for numero, comando, problema in inexistentes:
-                v.hallazgo("EQ-005.2", f"Comando del README inexistente: `{comando}`", problema,
+                v.hallazgo("EQ-007.2", f"Comando del README inexistente: `{comando}`", problema,
                            [{"archivo": readme.name, "linea": numero}], fragmento=comando)
         elif revisados:
-            v.registrar("EQ-005.2", CUMPLE, f"los {revisados} comando(s) verificables del README existen")
+            v.registrar("EQ-007.2", CUMPLE, f"los {revisados} comando(s) verificables del README existen")
         else:
-            v.registrar("EQ-005.2", NO_DETERMINADO, "el README no tiene comandos verificables automáticamente", pendiente_revision=True)
+            v.registrar("EQ-007.2", NO_DETERMINADO, "el README no tiene comandos verificables automáticamente", pendiente_revision=True)
 
 
 def verificar_logs(v: Verificador) -> None:
-    if not v.criterio("EQ-007.1"):
+    if not v.criterio("EQ-003.1"):
         return
     coincidencias = buscar(v.repo, SALIDA_DIRECTA, limite=30)
     if not coincidencias:
-        v.registrar("EQ-007.1", CUMPLE, "no se encontró salida directa a consola fuera de las pruebas", pendiente_revision=True)
+        v.registrar("EQ-003.1", CUMPLE, "no se encontró salida directa a consola fuera de las pruebas", pendiente_revision=True)
         return
-    v.registrar("EQ-007.1", NO_CUMPLE, f"{len(coincidencias)} uso(s) de salida directa a consola fuera de las pruebas", coincidencias)
+    v.registrar("EQ-003.1", NO_CUMPLE, f"{len(coincidencias)} uso(s) de salida directa a consola fuera de las pruebas", coincidencias)
     por_archivo: dict[str, list[dict]] = {}
     for c in coincidencias:
         por_archivo.setdefault(c["archivo"], []).append(c)
     for archivo, lista in por_archivo.items():
-        v.hallazgo("EQ-007.1", f"Salida directa a consola en {archivo}",
+        v.hallazgo("EQ-003.1", f"Salida directa a consola en {archivo}",
                    f"{len(lista)} uso(s) de print/console en lugar del logger del framework.", lista[:5])
 
 
@@ -452,7 +452,7 @@ def verificar_repo(repo: Path, id_repo: str, rama: str, tipo: str, decisiones: d
     """Devuelve (resultados por criterio, hallazgos)."""
     v = Verificador(repo, id_repo, rama, decisiones, suspendidos, exceptuados)
     if tipo != "propio":
-        # En repositorios de configuración solo se buscan secretos (ADR-EQ-004); el resto aplica a repositorios propios.
+        # En repositorios de configuración solo se buscan secretos (ADR-EQ-001); el resto aplica a repositorios propios.
         if tipo == "config":
             verificar_secretos(v, gitleaks)
         evaluados = {r["criterio"] for r in v.resultados}

@@ -7,7 +7,7 @@ Hay dos tipos de ámbito:
 Uso:
   python herramientas/coherencia.py preparar [--ambito equipo|<producto>] [--json]
   python herramientas/coherencia.py extracto <ID> [--ambito <producto>]
-        ID: ADR-EQ-003, equipo:ADR-EQ-003, ADR-MF-001 o fuente:ID (por ejemplo decision-records:ADR-007)
+        ID: ADR-EQ-002, equipo:ADR-EQ-002, ADR-MF-001 o fuente:ID (por ejemplo decision-records:ADR-007)
   python herramientas/coherencia.py registrar [--ambito equipo|<producto>] --decision ADR-XX-NNN --doc CLAVE
         --relacion RELACION [--cita-documento TEXTO --cita-decision TEXTO] [--criterios XX-NNN.N,...]
         [--explicacion TEXTO] [--manual MOTIVO]
@@ -308,7 +308,7 @@ def registrar(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, c
             raise ErrorRadiografia(f"La relación '{relacion}' exige --explicacion.")
     if relacion == "choca":
         if not criterios:
-            raise ErrorRadiografia("La relación 'choca' exige --criterios con los criterios afectados (por ejemplo EQ-003.2).")
+            raise ErrorRadiografia("La relación 'choca' exige --criterios con los criterios afectados (por ejemplo EQ-002.2).")
         desconocidos = [c for c in criterios if c not in decision["criterios"]]
         if desconocidos:
             raise ErrorRadiografia(f"Criterios que no existen en {id_decision}: {', '.join(desconocidos)}.")

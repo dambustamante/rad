@@ -105,7 +105,7 @@ class PruebaAdrProducto(unittest.TestCase):
 
     def test_validar(self) -> None:
         self.decision()
-        self.excepcion("EQ-001.1, EQ-099.9", "")
+        self.excepcion("EQ-006.1, EQ-099.9", "")
         codigo, salida = self.ejecutar("validar", "motor-fraudes")
         self.assertEqual(codigo, 1)
         self.assertIn("ADR-MF-001: válido", salida)
@@ -114,7 +114,7 @@ class PruebaAdrProducto(unittest.TestCase):
 
     def test_excepciones_en_la_revision(self) -> None:
         self.decision()
-        self.excepcion("EQ-001.1, EQ-003.1", FUTURO)
+        self.excepcion("EQ-006.1, EQ-002.1", FUTURO)
         self.excepcion("decisiones:ADR-010", FUTURO)  # sin referencia de arquitectura: inactiva
 
         filas = {f["id"]: f for f in adr.listar(self.raiz, "motor-fraudes")}
@@ -126,35 +126,35 @@ class PruebaAdrProducto(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             resultado = revisar.revisar(self.raiz, "motor-fraudes", usar_sonar=False)
         verificaciones = {v["criterio"]: v for v in resultado["resultados"][0]["verificaciones"]}
-        self.assertEqual(verificaciones["EQ-001.1"]["resultado"], "NO APLICA")
-        self.assertIn("excepción ADR-MF-002 vigente hasta", verificaciones["EQ-001.1"]["motivo"])
-        self.assertEqual(verificaciones["EQ-001.2"]["resultado"], "NO CUMPLE", "solo se exceptúa lo declarado")
+        self.assertEqual(verificaciones["EQ-006.1"]["resultado"], "NO APLICA")
+        self.assertIn("excepción ADR-MF-002 vigente hasta", verificaciones["EQ-006.1"]["motivo"])
+        self.assertEqual(verificaciones["EQ-006.2"]["resultado"], "NO CUMPLE", "solo se exceptúa lo declarado")
 
         control = {e["clave"]: e for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")}
         self.assertIn("ADR-MF-001|MF-001.1", control, "los criterios del producto se evalúan en el nivel 3")
-        self.assertIn("excepción ADR-MF-002", control["ADR-EQ-003|EQ-003.1"]["exceptuado"])
+        self.assertIn("excepción ADR-MF-002", control["ADR-EQ-002|EQ-002.1"]["exceptuado"])
         self.assertNotIn("exceptuado", control["decisiones:ADR-010"], "la excepción a arquitectura sin aprobación no surte efecto")
         self.assertIn("decisiones:ADR-010", adr.excepciones_pendientes(self.raiz, "motor-fraudes", "fraude-core"))
 
         salida = io.StringIO()
         with contextlib.redirect_stdout(salida):
-            codigo = revision.main(["--raiz", str(self.raiz), "evaluar", "motor-fraudes", "fraude-core", "--fuente", "ADR-EQ-003",
-                                    "--criterio", "EQ-003.1", "--resultado", "CUMPLE", "--motivo", "x"])
+            codigo = revision.main(["--raiz", str(self.raiz), "evaluar", "motor-fraudes", "fraude-core", "--fuente", "ADR-EQ-002",
+                                    "--criterio", "EQ-002.1", "--resultado", "CUMPLE", "--motivo", "x"])
         self.assertEqual(codigo, 1)
         self.assertIn("no se evalúa: excepción ADR-MF-002", salida.getvalue())
 
     def test_excepcion_vencida_no_surte_efecto(self) -> None:
-        self.excepcion("EQ-001.1", PASADO)
+        self.excepcion("EQ-006.1", PASADO)
         self.assertEqual(adr.excepciones_activas(self.raiz, "motor-fraudes", "fraude-core"), {})
         self.assertEqual(adr.listar(self.raiz, "motor-fraudes")[0]["efecto"], "vencida")
 
     def test_coherencia_del_producto_con_arquitectura_y_equipo(self) -> None:
         self.decision()
-        self.excepcion("EQ-001.1", FUTURO)
+        self.excepcion("EQ-006.1", FUTURO)
         ambito = coherencia.ambito_producto(self.raiz, "motor-fraudes")
         self.assertEqual(set(ambito.sujetos), {"ADR-MF-001"}, "las excepciones no se verifican por coherencia")
         self.assertIn("decisiones:ADR-010", ambito.referencias)
-        self.assertIn("equipo:ADR-EQ-003", ambito.referencias)
+        self.assertIn("equipo:ADR-EQ-002", ambito.referencias)
         self.assertEqual(coherencia.preparar(ambito)["total_pares"], len(ambito.referencias))
 
         salida = io.StringIO()
@@ -178,7 +178,7 @@ class PruebaAdrProducto(unittest.TestCase):
         self.decision()
         indices.regenerar(self.raiz)
         equipo = (self.raiz / "equipo" / "INDICE.md").read_text(encoding="utf-8")
-        self.assertIn("| [ADR-EQ-001](decisiones/ADR-EQ-001-documentacion-c4.md) |", equipo)
+        self.assertIn("| [ADR-EQ-006](decisiones/ADR-EQ-006-documentacion-c4.md) |", equipo)
         producto = (self.raiz / "productos" / "motor-fraudes" / "INDICE.md").read_text(encoding="utf-8")
         self.assertIn("- **Sigla de sus ADR:** MF", producto)
         self.assertIn("| fraude-core | propio | activo | — | pendiente | 0 | — |", producto)

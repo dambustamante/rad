@@ -90,13 +90,13 @@ costo.
 
 ```yaml
 evaluaciones:
-  - fuente: decision-records:ADR-010          # o ADR-EQ-003 / ADR-MF-001 con su criterio
-    criterio: null                             # EQ-003.1, MF-001.1…; null para documentos de arquitectura
+  - fuente: decision-records:ADR-010          # o ADR-EQ-002 / ADR-MF-001 con su criterio
+    criterio: null                             # EQ-002.1, MF-001.1…; null para documentos de arquitectura
     resultado: NO CUMPLE
     motivo: El cliente del buró no define timeout.
     evidencia: [src/main/java/BuroClient.java:41]
-  - fuente: ADR-EQ-007
-    criterio: EQ-007.3
+  - fuente: ADR-EQ-003
+    criterio: EQ-003.3
     resultado: NO APLICA
     motivo: El repositorio no hace llamadas salientes ni consume mensajes.
 hallazgos:

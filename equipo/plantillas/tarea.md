@@ -38,4 +38,4 @@ jira: null
 
 ## Definición de terminado
 
-Según ADR-EQ-009 (Definición de terminado) del equipo Back.
+Según ADR-EQ-008 (Definición de terminado) del equipo Back.

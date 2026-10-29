@@ -1,6 +1,6 @@
 # <nombre-del-repositorio>
 
-> Plantilla de ADR-EQ-005. Reemplazar cada `<…>` y eliminar las notas entre corchetes.
+> Plantilla de ADR-EQ-007. Reemplazar cada `<…>` y eliminar las notas entre corchetes.
 
 ## 1. Resumen y propósito
 
@@ -71,7 +71,7 @@ Nunca se documentan valores reales de secretos.
 
 ## 10. Observabilidad
 
-- **Logs:** <dónde se consultan; formato según ADR-EQ-007 (JSON con `trace_id`)>
+- **Logs:** <dónde se consultan; formato según ADR-EQ-003 (JSON con `trace_id`)>
 - **Métricas:** <principales métricas y dónde se ven>
 - **Trazas:** <herramienta y cómo se correlacionan>
 - **Alertas:** <qué alertas existen>

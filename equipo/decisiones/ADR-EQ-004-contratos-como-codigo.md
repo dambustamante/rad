@@ -1,4 +1,4 @@
-# ADR-EQ-002: Contratos como código, versionados en el repositorio
+# ADR-EQ-004: Contratos como código, versionados en el repositorio
 
 ## 2. Estado
 
@@ -50,7 +50,7 @@ Propuesto
 
 ### Riesgos
 
-- Contrato y código que divergen. Se mitiga con el criterio `EQ-002.4`.
+- Contrato y código que divergen. Se mitiga con el criterio `EQ-004.4`.
 
 ## 8. Impacto
 
@@ -99,9 +99,9 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-002.1` | Si el repositorio expone APIs HTTP, existe su OpenAPI en `docs/contratos/` | automática + revisión de código | alta |
-| `EQ-002.2` | Si el repositorio publica o consume eventos, existe su AsyncAPI en `docs/contratos/` | automática + revisión de código | alta |
-| `EQ-002.3` | El contrato tiene el contenido mínimo: versión, autenticación, errores y ejemplos | automática | media |
-| `EQ-002.4` | Las operaciones, campos y códigos del contrato coinciden con el código | revisión de código | alta |
-| `EQ-002.5` | Las APIs consumidas están referenciadas con su versión en `docs/contratos/consumidos.md` | revisión de código | media |
-| `EQ-002.6` | Un cambio incompatible viene con versión mayor (solo al revisar una rama) | revisión de código | alta |
+| `EQ-004.1` | Si el repositorio expone APIs HTTP, existe su OpenAPI en `docs/contratos/` | automática + revisión de código | alta |
+| `EQ-004.2` | Si el repositorio publica o consume eventos, existe su AsyncAPI en `docs/contratos/` | automática + revisión de código | alta |
+| `EQ-004.3` | El contrato tiene el contenido mínimo: versión, autenticación, errores y ejemplos | automática | media |
+| `EQ-004.4` | Las operaciones, campos y códigos del contrato coinciden con el código | revisión de código | alta |
+| `EQ-004.5` | Las APIs consumidas están referenciadas con su versión en `docs/contratos/consumidos.md` | revisión de código | media |
+| `EQ-004.6` | Un cambio incompatible viene con versión mayor (solo al revisar una rama) | revisión de código | alta |

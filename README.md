@@ -45,7 +45,7 @@ El orden habitual es:
 | 3 | `/producto <nombre>` | pide los repositorios del producto, los inspecciona y los registra; también registra el producto comprado y las integraciones (`terceros/`) |
 | 4 | `/revisar <producto>` | revisa **un repositorio por conversación**: parte automática, AS IS, comparación con lo decidido y C4 inferido. Abrir un chat nuevo para cada repositorio |
 | 5 | `/triar <producto>` | genera un archivo para marcar la decisión sobre cada hallazgo y muestra la calibración |
-| 6 | `/crear <producto>` | crea un ADR del producto, una excepción con vencimiento, o una Tarea, un Spike o un Bug (ADR-EQ-008), por ejemplo a partir de la deuda aceptada; en Jira solo con confirmación |
+| 6 | `/crear <producto>` | crea un ADR del producto, una excepción con vencimiento, o una Tarea, un Spike o un Bug (ADR-EQ-009), por ejemplo a partir de la deuda aceptada; en Jira solo con confirmación |
 
 Cuando todos los repositorios de un producto tienen su revisión, `/revisar` consolida el producto en
 `productos/<producto>/as-is/PRODUCTO.md`.

@@ -46,7 +46,7 @@ descripcion: ""
 # Sigla para numerar los ADR del producto (ADR-{sigla}-001). Se cambia con `productos.py sigla` mientras no haya ADR.
 sigla: {sigla}
 
-# Ubicación del C4 del producto (ADR-EQ-001), en formato <id-repo>:<ruta>. null si aún no existe.
+# Ubicación del C4 del producto (ADR-EQ-006), en formato <id-repo>:<ruta>. null si aún no existe.
 c4: null
 
 # Repositorios del producto.

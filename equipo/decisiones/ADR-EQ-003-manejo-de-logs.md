@@ -1,4 +1,4 @@
-# ADR-EQ-007: Manejo de logs estructurados y correlacionados
+# ADR-EQ-003: Manejo de logs estructurados y correlacionados
 
 ## 2. Estado
 
@@ -17,7 +17,7 @@ Propuesto
   almacenamiento y oculta lo importante.
 - **Alcance:** repositorios de tipo `propio`.
 - **Restricciones:** los logs se consultan con herramientas de observabilidad que requieren
-  formato estructurado. Los datos sensibles se rigen por ADR-EQ-004.
+  formato estructurado. Los datos sensibles se rigen por ADR-EQ-001.
 
 ## 5. Decisión
 
@@ -34,7 +34,7 @@ Propuesto
    - `DEBUG`: detalle para diagnóstico; desactivado por defecto en producción.
 5. **Excepciones:** una excepción se registra una sola vez, con su traza, en el punto donde se
    maneja. No se registra y se relanza en cada capa.
-6. **Datos sensibles:** se aplica ADR-EQ-004 sin excepciones.
+6. **Datos sensibles:** se aplica ADR-EQ-001 sin excepciones.
 7. **Logs técnicos y auditoría son cosas distintas:** los logs sirven para operar y diagnosticar.
    Los registros que exige negocio o auditoría (por ejemplo, la decisión tomada sobre una
    transacción) se guardan en un mecanismo propio y no dependen de los logs.
@@ -97,7 +97,7 @@ health checks y no se registran cuerpos completos de solicitudes o respuestas.
 
 - W3C Trace Context: <https://www.w3.org/TR/trace-context/>
 - OpenTelemetry Logs: <https://opentelemetry.io/docs/specs/otel/logs/>
-- ADR-EQ-003 (fallas de integración visibles), ADR-EQ-004 (datos sensibles)
+- ADR-EQ-001 (datos sensibles), ADR-EQ-002 (fallas de integración visibles)
 
 ## 11. Regla rápida
 
@@ -112,10 +112,10 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
-| `EQ-007.1` | Los logs se emiten en JSON con el logger del framework; no hay `print`, `System.out`, `console.log` o equivalentes | automática + revisión de código | media |
-| `EQ-007.2` | Los logs incluyen los campos obligatorios | revisión de código | media |
-| `EQ-007.3` | El identificador de correlación se registra y se propaga a llamadas y mensajes salientes | revisión de código | media |
-| `EQ-007.4` | Los niveles se usan según su significado y `DEBUG` está desactivado por defecto en producción | revisión de código | baja |
-| `EQ-007.5` | Cada excepción se registra una sola vez, con su traza, donde se maneja | revisión de código | media |
-| `EQ-007.6` | No hay logs de alto volumen innecesarios: ciclos por elemento, health checks o cuerpos completos | revisión de código | baja |
-| `EQ-007.7` | Las decisiones sobre transacciones (aprobación, rechazo, revisión manual) y sus motivos se registran en un almacenamiento de auditoría propio, no solo en logs técnicos. `NO APLICA` si otro sistema (por ejemplo, el motor del proveedor) las guarda y está documentado dónde y por cuánto tiempo | revisión de código | alta |
+| `EQ-003.1` | Los logs se emiten en JSON con el logger del framework; no hay `print`, `System.out`, `console.log` o equivalentes | automática + revisión de código | media |
+| `EQ-003.2` | Los logs incluyen los campos obligatorios | revisión de código | media |
+| `EQ-003.3` | El identificador de correlación se registra y se propaga a llamadas y mensajes salientes | revisión de código | media |
+| `EQ-003.4` | Los niveles se usan según su significado y `DEBUG` está desactivado por defecto en producción | revisión de código | baja |
+| `EQ-003.5` | Cada excepción se registra una sola vez, con su traza, donde se maneja | revisión de código | media |
+| `EQ-003.6` | No hay logs de alto volumen innecesarios: ciclos por elemento, health checks o cuerpos completos | revisión de código | baja |
+| `EQ-003.7` | Las decisiones sobre transacciones (aprobación, rechazo, revisión manual) y sus motivos se registran en un almacenamiento de auditoría propio, no solo en logs técnicos. `NO APLICA` si otro sistema (por ejemplo, el motor del proveedor) las guarda y está documentado dónde y por cuánto tiempo | revisión de código | alta |

@@ -20,7 +20,7 @@ import triaje  # noqa: E402
 
 def hallazgo(numero: int, **cambios) -> dict:
     datos = {"id": f"H-{numero:04d}", "huella": f"h{numero}", "repo": "fraude-core", "rama": "main", "estado": "abierto",
-             "origen": "verificacion", "nivel": 3, "fuente": "ADR-EQ-007", "criterio": "EQ-007.1", "severidad": "alta",
+             "origen": "verificacion", "nivel": 3, "fuente": "ADR-EQ-003", "criterio": "EQ-003.1", "severidad": "alta",
              "modo": "vigente", "titulo": f"Hallazgo {numero}", "evidencia": [{"archivo": "App.java", "linea": numero}],
              "revisiones": [], "triaje": None, "reaparecido": False, "ultima_vez": "2026-10-01"}
     datos.update(cambios)
@@ -36,7 +36,7 @@ class PruebaTriaje(unittest.TestCase):
         producto.mkdir(parents=True)
         (producto / "producto.yaml").write_text("nombre: motor-fraudes\nrepos: []\n", encoding="utf-8")
         (self.raiz / "harness.yaml").write_text("version: 1\ncalibracion:\n  minimo_triados: 2\n  maximo_falsos_positivos: 0.2\n"
-                                                "publicacion:\n  publicables: [EQ-002.1]\n", encoding="utf-8")
+                                                "publicacion:\n  publicables: [EQ-004.1]\n", encoding="utf-8")
         vencida = (date.today() - timedelta(days=1)).isoformat()
         registro = {"version": 1, "siguiente_id": 10, "hallazgos": {
             "h1": hallazgo(1),
@@ -150,18 +150,18 @@ class PruebaTriaje(unittest.TestCase):
         self.ejecutar("grupo", "motor-fraudes", "--decision", "falso-positivo", "--fuente", "sonar:", "--motivo", "regla ruidosa")
         codigo, salida = self.ejecutar("calibracion")
         self.assertIn("| sonar:java:S1128 | 2 | 2 | 100% | ruidosa: ajustar | no |", salida)
-        self.assertIn("| EQ-007.1 | 3 | 0 | 0% | lista para publicar | no |", salida, "H-0004, H-0005 y H-0007 tienen decisión")
+        self.assertIn("| EQ-003.1 | 3 | 0 | 0% | lista para publicar | no |", salida, "H-0004, H-0005 y H-0007 tienen decisión")
 
     def test_publicables_conserva_comentarios(self) -> None:
         (self.raiz / "harness.yaml").write_text("# cabecera\nversion: 1\npublicacion:\n  # comentario\n  publicables: []\n",
                                                 encoding="utf-8")
-        codigo, salida = self.ejecutar("publicables", "--agregar", "EQ-002.1")
+        codigo, salida = self.ejecutar("publicables", "--agregar", "EQ-004.1")
         self.assertEqual(codigo, 0, salida)
         texto = (self.raiz / "harness.yaml").read_text(encoding="utf-8")
-        self.assertIn("publicables: [EQ-002.1]", texto)
+        self.assertIn("publicables: [EQ-004.1]", texto)
         self.assertIn("# comentario", texto)
-        self.assertEqual(self.ejecutar("publicables", "--agregar", "EQ-002.1")[0], 1)
-        self.ejecutar("publicables", "--quitar", "EQ-002.1")
+        self.assertEqual(self.ejecutar("publicables", "--agregar", "EQ-004.1")[0], 1)
+        self.ejecutar("publicables", "--quitar", "EQ-004.1")
         self.assertIn("publicables: []", (self.raiz / "harness.yaml").read_text(encoding="utf-8"))
 
 

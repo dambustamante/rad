@@ -7,7 +7,7 @@ Lectura (insumo para proponer ADR de producto):
   python herramientas/jira.py propuestas <producto>
   python herramientas/jira.py confirmar <producto> --adr ADR-XX-NNN
 
-Creación (ADR-EQ-008):
+Creación (ADR-EQ-009):
   python herramientas/jira.py nueva <producto> --tipo tarea|spike|bug --titulo TEXTO
                                     [--categoria "Deuda Técnica"|"Deuda Operativa"]
                                     [--desde H-0001,H-0002] [--repos a,b] [--tema "palabras clave"]
@@ -653,7 +653,7 @@ def contexto(raiz: Path, producto: str, tipo: str, categoria: str, titulo: str, 
     lineas = [f"# Contexto para: {titulo}", "",
               f"- Tipo de incidencia: {tipo} · Tipo: {categoria} · Producto: {producto}",
               f"- Repositorios: {', '.join(repos) or 'NO DETERMINADO'}",
-              "- Estructura obligatoria: ADR-EQ-008 · Definición de terminado: ADR-EQ-009 · Lenguaje: equipo/lenguaje.yaml",
+              "- Definición de terminado: ADR-EQ-008 · Estructura obligatoria: ADR-EQ-009 · Lenguaje: equipo/lenguaje.yaml",
               "", "## Hallazgos de origen", ""]
     for h in origen:
         evidencia = ", ".join(f"`{e['archivo']}:{e['linea']}`" if e.get("linea") else f"`{e['archivo']}`" for e in h["evidencia"][:5])
@@ -773,16 +773,16 @@ def campo_encabezado(cuerpo: str, nombre: str) -> str | None:
 
 
 def validar(raiz: Path, producto: str, archivo: Path) -> list[str]:
-    """Errores según ADR-EQ-008 y la regla de lenguaje. Lista vacía si el borrador está listo."""
+    """Errores según ADR-EQ-009 y la regla de lenguaje. Lista vacía si el borrador está listo."""
     datos, cuerpo = leer_borrador(archivo)
     errores = []
     tipo, categoria = datos.get("tipo_incidencia"), datos.get("tipo")
     if tipo not in TIPOS:
         return [f"tipo_incidencia '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}"]
     if categoria not in COMBINACIONES[tipo]:
-        errores.append(f"{NOMBRES[tipo].lower()} solo admite Tipo {', '.join(COMBINACIONES[tipo])} (EQ-008.1)")
+        errores.append(f"{NOMBRES[tipo].lower()} solo admite Tipo {', '.join(COMBINACIONES[tipo])} (EQ-009.1)")
     if datos.get("equipos") != config_jira(raiz)["equipos"]:
-        errores.append(f"Equipos debe ser {config_jira(raiz)['equipos']} (EQ-008.1)")
+        errores.append(f"Equipos debe ser {config_jira(raiz)['equipos']} (EQ-009.1)")
     if datos.get("producto") != producto:
         errores.append(f"el borrador es del producto '{datos.get('producto')}'")
 
@@ -794,40 +794,40 @@ def validar(raiz: Path, producto: str, archivo: Path) -> list[str]:
 
     como, quiero, para = (campo_encabezado(cuerpo, n) for n in ("Como", "Quiero", "Para"))
     if not (como and quiero and para):
-        errores.append("faltan Como, Quiero o Para (EQ-008.2)")
+        errores.append("faltan Como, Quiero o Para (EQ-009.2)")
     else:
         if re.match(r"^(el |un )?sistema\b", normalizar(como)):
-            errores.append("«Como» debe ser un rol real (desarrollador, operador, analista…), no «sistema» (EQ-008.2)")
+            errores.append("«Como» debe ser un rol real (desarrollador, operador, analista…), no «sistema» (EQ-009.2)")
         palabras_quiero, palabras_para = palabras_clave(quiero), palabras_clave(para)
         if palabras_para and len(palabras_para & palabras_quiero) / len(palabras_para) > 0.6:
-            errores.append("el «Para» repite el «Quiero»: debe expresar el valor (EQ-008.2)")
+            errores.append("el «Para» repite el «Quiero»: debe expresar el valor (EQ-009.2)")
 
     _, contenido = secciones(cuerpo.splitlines())
     for seccion in SECCIONES[tipo]:
         if not "\n".join(contenido.get(seccion, [])).strip():
-            errores.append(f"falta la sección «{seccion}» o está vacía (EQ-008.4)")
+            errores.append(f"falta la sección «{seccion}» o está vacía (EQ-009.4)")
     criterios = [l.strip() for l in contenido.get("criterios de aceptacion", []) if l.strip().startswith(("-", "*")) or
                  re.match(r"^\s*(dado|cuando|entonces|y)\b", normalizar(l))]
     fijos = CRITERIOS_FIJOS.get(categoria, ())
     for fijo in fijos:
         if not any(fijo in normalizar(c) for c in criterios):
-            errores.append(f"falta el criterio fijo de {categoria}: «…{fijo}…» (ADR-EQ-008)")
+            errores.append(f"falta el criterio fijo de {categoria}: «…{fijo}…» (ADR-EQ-009)")
     propios = [c for c in criterios if not any(f in normalizar(c) for f in fijos)]
     if tipo != "spike" and not any(PATRON_MEDIBLE.search(normalizar(c)) for c in propios):
-        errores.append("se necesita al menos un criterio de aceptación propio y medible (EQ-008.3)")
+        errores.append("se necesita al menos un criterio de aceptación propio y medible (EQ-009.3)")
 
     if tipo == "spike":
         pregunta = "\n".join(contenido.get("pregunta", []))
         if pregunta.count("?") > 1:
-            errores.append("un Spike responde una sola pregunta (EQ-008.5)")
+            errores.append("un Spike responde una sola pregunta (EQ-009.5)")
         duracion = "\n".join(contenido.get("duracion maxima", []))
         dias = re.search(r"(\d+)\s*d[ií]as?", duracion)
         if not dias:
-            errores.append("la duración máxima se indica en días (EQ-008.5)")
+            errores.append("la duración máxima se indica en días (EQ-009.5)")
         elif int(dias.group(1)) > DURACION_MAXIMA_SPIKE and "justific" not in normalizar(duracion):
-            errores.append(f"la duración máxima de un Spike es {DURACION_MAXIMA_SPIKE} días, salvo justificación (EQ-008.5)")
+            errores.append(f"la duración máxima de un Spike es {DURACION_MAXIMA_SPIKE} días, salvo justificación (EQ-009.5)")
         if "adr" not in normalizar("\n".join(contenido.get("entregable", []))):
-            errores.append("el entregable de un Spike incluye un ADR de producto en estado Propuesto (EQ-008.5)")
+            errores.append("el entregable de un Spike incluye un ADR de producto en estado Propuesto (EQ-009.5)")
 
     if re.search(r"<[a-záéíóúñ][^>\n]{2,}>", cuerpo, re.IGNORECASE):
         errores.append("quedan textos de la plantilla sin completar (<…>)")
@@ -1058,7 +1058,7 @@ def _main_creacion(o, raiz: Path, sesion) -> int:
         elif o.accion == "validar":
             errores = validar(raiz, o.producto, resolver_borrador(raiz, o.producto, o.borrador))
             if not errores:
-                print("El borrador cumple ADR-EQ-008 y la regla de lenguaje.")
+                print("El borrador cumple ADR-EQ-009 y la regla de lenguaje.")
             for error in errores:
                 print(f"  ERROR: {error}")
             return 1 if errores else 0
