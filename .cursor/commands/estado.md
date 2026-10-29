@@ -30,7 +30,7 @@ que cambió desde el reporte anterior: commits y ramas activas, MR o PR (si la p
 configurada), ramas revisadas con su veredicto, hallazgos nuevos, corregidos y reaparecidos, y deuda
 vencida. Mide repositorios, ramas y MR, no personas.
 
-Mostrar el resumen y sugerir los siguientes pasos: `/revisar <producto> <repo> --rama <rama>` para las
+Mostrar el resumen y sugerir los siguientes pasos: `/revisar mr` para los MR de las
 ramas sin revisar, `/triar` para lo nuevo y lo reaparecido. No publica nada.
 
 ## Reglas

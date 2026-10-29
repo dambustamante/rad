@@ -9,7 +9,7 @@ Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver
 | 2 | [Conceptos](02-conceptos.md) | — | orden de autoridad, evidencia, hallazgos, veredicto y estructura de carpetas |
 | 3 | [Arquitectura y coherencia](03-arquitectura.md) | `/actualizar` | registrar fuentes, sincronizar y verificar la coherencia de las decisiones |
 | 4 | [Productos y terceros](04-productos.md) | `/producto` | registrar un producto, sus repositorios, el producto comprado y las integraciones |
-| 5 | [Revisión de repositorios y ramas](05-revisar.md) | `/revisar` | parte automática, paquete, AS IS, C4, registro en lote, cierre, y revisión de ramas con comentario en el MR |
+| 5 | [Revisión de repositorios y MR](05-revisar.md) | `/revisar` | parte automática, paquete, AS IS, C4, lote, cierre, y bandeja y revisión de MR con cambios sensibles y contraste con /listo |
 | 6 | [Triaje](06-triar.md) | `/triar` | decidir qué hacer con cada hallazgo y calibrar las fuentes |
 | 7 | [Crear ADR, Tareas, Spikes, Errores y Hotfix](07-crear.md) | `/crear` | decisiones del producto, excepciones, historias de usuario y Jira |
 | 8 | [Mantenimiento](08-mantenimiento.md) | `/estado`, `make` | el reporte semanal, el ciclo de uso habitual, los objetivos de `make` y las pruebas |

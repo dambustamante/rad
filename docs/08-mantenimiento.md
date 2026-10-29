@@ -39,14 +39,14 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 
 - Mide repositorios y ramas, no personas.
 - Usa solo git y el registro de radiografia: no consulta la API de la plataforma ni necesita token.
-- No publica nada ni crea incidencias: lo que surja se hace con `/revisar --rama`, `/triar` y `/crear`.
+- No publica nada ni crea incidencias: lo que surja se hace con `/revisar mr`, `/triar` y `/crear`.
 - Nada se ejecuta solo: el reporte se pide. `/estado` recuerda pedirlo cuando pasan más de 7 días.
 
 ## Ciclo semanal sugerido
 
 1. `/estado semanal` para ver qué cambió.
 2. `/actualizar` para trabajar con la última versión de arquitectura y de los repositorios.
-3. `/revisar <producto> <repo> --rama <rama>` para las ramas activas sin revisar, y
+3. `/revisar mr` para los MR abiertos (una o dos veces al día), y
    `/revisar <producto>` (un chat por repositorio) para la rama principal de los que cambiaron.
 4. `/triar <producto>` con los hallazgos nuevos.
 5. `/crear <producto> tarea --desde …` para la deuda que se lleva a Jira.

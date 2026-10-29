@@ -6,7 +6,7 @@ decisiones del equipo y del producto, y Sonar.
 Uso: `/revisar <producto> [repo]`. **Un repositorio por conversación**: al terminar, sugerir un chat
 nuevo para el siguiente.
 
-- Con `--rama <rama>`: leer y seguir `.cursor/partes/revisar-rama.md` (no seguir este archivo).
+- Con `mr` (bandeja y revisión de MR): leer y seguir `.cursor/partes/revisar-mr.md` (no seguir este archivo).
 - Si todos los repositorios están al día: leer y seguir `.cursor/partes/revisar-producto.md`.
 
 ## 1. Elegir y preparar

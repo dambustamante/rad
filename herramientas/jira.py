@@ -731,12 +731,26 @@ def contexto(raiz: Path, producto: str, tipo: str, categoria: str, titulo: str, 
     return "\n".join(lineas) + "\n"
 
 
+def deuda_declarada(raiz: Path, producto: str, clave: str) -> list[dict]:
+    """Deuda que declaró una historia en /listo (registrada al revisar sus MR)."""
+    registro = registro_hallazgos.cargar(raiz, producto).get("deuda_declarada", {})
+    return [d for d in registro.values() if d["clave"] == clave]
+
+
 def nueva(raiz: Path, producto: str, tipo: str, categoria: str | None, titulo: str, desde: list[str],
-          repos: list[str], tema: str | None, hotfix: str | None = None) -> tuple[Path, Path]:
+          repos: list[str], tema: str | None, hotfix: str | None = None, deuda: str | None = None) -> tuple[Path, Path]:
     if tipo not in TIPOS:
         raise ErrorRadiografia(f"Tipo de incidencia '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}.")
     if hotfix and tipo != "error":
         raise ErrorRadiografia("--hotfix solo se usa al crear el Error de seguimiento de un Hotfix.")
+    declarada = deuda_declarada(raiz, producto, deuda) if deuda else []
+    if deuda and tipo != "tarea":
+        raise ErrorRadiografia("--deuda solo se usa al crear una Tarea de deuda.")
+    if deuda and not declarada:
+        raise ErrorRadiografia(f"No hay deuda declarada para {deuda}: se registra al revisar sus MR (mr.py revisar).")
+    if declarada and not categoria:
+        tipos = {i["tipo"] for d in declarada for i in d["items"]}
+        categoria = "Deuda Operativa" if tipos == {"operativa"} else "Deuda Técnica"
     categoria = categoria or COMBINACIONES[tipo][0]
     if categoria not in COMBINACIONES[tipo]:
         raise ErrorRadiografia(f"{NOMBRES[tipo]} solo admite Tipo {', '.join(COMBINACIONES[tipo])}.")
@@ -763,6 +777,11 @@ def nueva(raiz: Path, producto: str, tipo: str, categoria: str | None, titulo: s
                   "hallazgos": desde, "estado": "borrador", "jira": None})
     if hotfix:
         datos["historias_relacionadas"] = [hotfix]
+    if declarada:
+        datos["historias_relacionadas"] = [deuda]
+        datos["deuda_de"] = deuda
+        repos = sorted(set(repos) | {d["repo"] for d in declarada})
+        datos["repos"] = sorted(set(datos["repos"]) | set(repos))
     cuerpo = re.sub(r"^# .*$", f"# {titulo}", cuerpo, count=1, flags=re.MULTILINE)
     if hotfix:
         cuerpo = cuerpo.replace("si es el seguimiento de un Hotfix, su clave>", f"seguimiento del Hotfix {hotfix}>", 1)
@@ -774,7 +793,12 @@ def nueva(raiz: Path, producto: str, tipo: str, categoria: str | None, titulo: s
     archivo = carpeta / f"{base}.md"
     escribir_borrador(archivo, datos, cuerpo)
     archivo_contexto = carpeta / f"{base}-contexto.md"
-    archivo_contexto.write_text(contexto(raiz, producto, tipo, categoria, titulo, desde, repos, tema), encoding="utf-8")
+    texto_contexto = contexto(raiz, producto, tipo, categoria, titulo, desde, repos, tema)
+    if declarada:
+        texto_contexto += "\n## Deuda declarada por " + deuda + " (en /listo)\n\n" + "\n".join(
+            f"- {d['repo']} ([MR]({d['mr']})) · {'Técnica' if i['tipo'] == 'tecnica' else 'Operativa'}: {i['descripcion']}"
+            + (f" (`{i['evidencia']}`)" if i.get("evidencia") else "") for d in declarada for i in d["items"]) + "\n"
+    archivo_contexto.write_text(texto_contexto, encoding="utf-8")
     return archivo, archivo_contexto
 
 
@@ -999,6 +1023,12 @@ def crear(raiz: Path, producto: str, archivo: Path, confirmar: bool, sesion=None
     datos_actuales, cuerpo = leer_borrador(archivo)
     datos_actuales.update({"estado": "creada", "jira": clave, "creada": date.today().isoformat()})
     escribir_borrador(archivo, datos_actuales, cuerpo)
+    if datos_actuales.get("deuda_de"):
+        registro = registro_hallazgos.cargar(raiz, producto)
+        for d in registro.get("deuda_declarada", {}).values():
+            if d["clave"] == datos_actuales["deuda_de"]:
+                d["tarea"] = clave
+        registro_hallazgos.guardar(raiz, producto, registro)
     if datos_actuales.get("hallazgos"):
         registro = registro_hallazgos.cargar(raiz, producto)
         for h in registro["hallazgos"].values():
@@ -1036,6 +1066,7 @@ def main(argumentos: list[str] | None = None, sesion=None) -> int:
     p.add_argument("--repos", default="")
     p.add_argument("--tema")
     p.add_argument("--hotfix", help="clave del Hotfix del que este Error es el seguimiento")
+    p.add_argument("--deuda", help="clave de la historia cuya deuda declarada (en /listo) origina esta Tarea")
     p = sub.add_parser("validar")
     p.add_argument("producto")
     p.add_argument("borrador")
@@ -1107,7 +1138,7 @@ def _main_creacion(o, raiz: Path, sesion) -> int:
     try:
         if o.accion == "nueva":
             borrador, archivo_contexto = nueva(raiz, o.producto, o.tipo, o.categoria, o.titulo, separar(o.desde),
-                                               separar(o.repos), o.tema, o.hotfix)
+                                               separar(o.repos), o.tema, o.hotfix, o.deuda)
             print(f"Borrador: {borrador.relative_to(raiz)}\nContexto: {archivo_contexto.relative_to(raiz)}")
         elif o.accion == "validar":
             errores = validar(raiz, o.producto, resolver_borrador(raiz, o.producto, o.borrador))

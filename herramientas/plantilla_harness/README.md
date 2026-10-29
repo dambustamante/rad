@@ -22,6 +22,8 @@ repositorio.
   repositorio que toca, deja visibles solo esos repositorios y arma el contexto y el plan.
 - Trabajar en `code/<repo>/`, en una rama propia, con el flujo normal de git. El push a la rama
   principal y el `--force` están bloqueados.
+- `/listo <CLAVE>` antes de abrir el MR: verifica el cambio, registra la prueba de cada criterio y la
+  deuda que deja la historia, y escribe la descripción del MR (`trabajo/<CLAVE>/mr-<repo>.md`).
 - `make foco REPOS=a,b` cambia los repositorios visibles en Cursor; `make foco` vuelve a mostrar todos.
 - `make actualizar` trae la última versión de este harness y las novedades de los repositorios, sin
   tocar las ramas de trabajo.

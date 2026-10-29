@@ -1,4 +1,4 @@
-# 5. Revisión de repositorios y ramas (`/revisar`)
+# 5. Revisión de repositorios y MR (`/revisar`)
 
 ```
 /revisar motor-fraudes [fraude-core]
@@ -172,94 +172,79 @@ producto**, generado desde esos componentes. Además muestra tres cruces:
 - fichas de `terceros/` que ningún repositorio usa (pueden estar desactualizadas);
 - mensajería que solo se produce o solo se consume dentro del producto (puede venir de otro producto).
 
-## Revisión de una rama (`--rama`)
+## Revisión de MR (`/revisar mr`)
 
-```
-/revisar motor-fraudes fraude-core --rama feature/consulta-buro
-```
+Solo se revisan MR. radiografia revisa cada MR **por su cuenta**: lo que el dev declaró en `/listo` se
+contrasta, nunca se da por cierto.
 
-Revisa **solo lo que la rama cambia** y publica el resultado en su MR o PR. Es mucho más barata que
-una revisión completa: no hay AS IS ni C4, y no se evalúa cada elemento.
-
-### Paso 1: preparar (sin IA)
+### Paso 1: bandeja (sin IA)
 
 ```sh
-make revisar P=motor-fraudes R=fraude-core RAMA=feature/consulta-buro
+.venv/bin/python herramientas/mr.py bandeja [--producto motor-fraudes] [--mios]
 ```
 
-1. Trae las novedades del repositorio y busca el MR o PR abierto de la rama (si la plataforma git
-   está configurada).
-2. Calcula el punto común con la rama de destino: la del MR, o la rama principal si no hay MR. Desde
-   ahí obtiene los commits y los archivos que la rama cambia.
-3. Deja la rama en una copia de solo lectura, `.cache/ramas/<producto>/<repo>/<rama>/`, sin tocar la
-   copia de la rama principal.
-4. Ejecuta las verificaciones automáticas y gitleaks, y conserva **solo** los hallazgos en archivos
-   que la rama cambia y los secretos de sus propios commits. Lo que ya estaba en la rama principal no
-   se atribuye a la rama.
-5. Escribe el paquete, `revisiones/<fecha>-rama-<repo>-<rama>/paquete.md`, con:
-   - commit, base, cantidad de commits y archivos cambiados;
-   - el MR: título, destino, descripción y si ya lo aprobó otra persona (EQ-008.2);
-   - secretos en los commits de la rama (EQ-008.4);
-   - el diff completo (hasta 1500 líneas);
-   - hallazgos automáticos en los archivos cambiados;
-   - terceros del repositorio;
-   - contra qué comparar: la regla rápida de cada documento de arquitectura vigente y los criterios de
-     revisión de código agrupados por decisión (el texto de cada criterio está en su ADR).
+Lista los MR abiertos de los repositorios de cada producto y de su harness, con el estado de su registro
+de `/listo`:
 
-Sonar no se consulta en ramas, porque SonarQube Community no las analiza: EQ-008.3 queda
-`NO DETERMINADO`.
+| Estado | Qué significa |
+|---|---|
+| ADR del producto | MR del harness: revisar su coherencia antes de aprobarlo (paso 5) |
+| sin /listo | el dev no cerró la historia con `/listo` |
+| registro de /listo ilegible | el registro al final de la descripción está alterado |
+| desactualizado | hay commits después de `/listo` |
+| al día | `/listo` se ejecutó sobre el commit de cabeza |
 
-### Paso 2: revisar
+`--mios` muestra solo los MR donde eres revisor (necesita `GITLAB_USUARIO` en `.env`).
 
-Cursor lee el diff (y la copia de la rama solo si hace falta) y escribe en `lote.yaml` los hallazgos
-que la rama **introduce o empeora**, con el mismo formato del paso 4. La evidencia debe estar en un
-archivo que la rama cambia.
+### Paso 2: preparar la revisión (sin IA)
 
-### Paso 3: registrar, elegir qué publicar y ver la vista previa
+```sh
+.venv/bin/python herramientas/mr.py revisar motor-fraudes fraude-core 41
+```
+
+1. Hace lo mismo que una revisión de rama: trae la rama del MR a `.cache/ramas/`, calcula el diff con su
+   destino y corre las verificaciones y gitleaks **con el código de radiografia**, no con el del dev.
+2. Detecta los **cambios sensibles**, la señal típica de que se debilitó el control:
+
+   | Señal | Ejemplos |
+   |---|---|
+   | Pruebas debilitadas o borradas | `@Disabled`, `skip`, `assert true`, archivos de prueba borrados |
+   | Aserciones quitadas | una prueba con menos aserciones que antes |
+   | Controles apagados | `// NOSONAR`, exclusiones de Sonar, `eslint-disable`, `# noqa` |
+   | Umbral de cobertura | cambios en el mínimo de cobertura de la build |
+   | Cambios al propio control | CI, `.cursor/`, `AGENTS.md`, `sonar-project.properties`, configuración de gitleaks |
+   | Datos de prueba sospechosos | números de tarjeta válidos o RUT (rol único tributario) en pruebas |
+
+3. Contrasta el registro de `/listo` con lo que verifica radiografia: el commit, los secretos, la salida a
+   consola, que la prueba de cada criterio exista en el cambio y no esté deshabilitada, la versión del
+   harness y que `listo.py` sea el de la rama principal del harness.
+4. Registra la **deuda que declaró la historia**, para llevarla a Jira con
+   `/crear motor-fraudes tarea --deuda FRAUD-123`. `/estado` la recuerda mientras no tenga Tarea.
+
+### Paso 3: revisar
+
+Cursor lee el paquete empezando por los cambios sensibles y el contraste, que son el foco, y revisa el
+diff completo contra lo decidido. Escribe en `lote.yaml` solo los hallazgos que el MR introduce o
+empeora, con evidencia en archivos del cambio. Un cambio sensible sin motivo claro es un hallazgo.
+
+### Paso 4: registrar, elegir y publicar
 
 ```sh
 .venv/bin/python herramientas/rama.py publicar motor-fraudes fraude-core feature/consulta-buro [--incluir H-0041]
 ```
 
-Un solo comando registra el lote (con las validaciones habituales; si hay errores no se registra
-nada), muestra el veredicto de la rama y arma el comentario. Se publican:
+Registra el lote, muestra el veredicto y la vista previa del comentario. Se publican los hallazgos
+marcados Resolver y los que se eligen con `--incluir`. Con `--confirmar` se publica un solo comentario en
+el MR, que las publicaciones siguientes editan (lo corregido aparece como ✅). Nunca se incluyen fragmentos
+de código ni valores de secretos, y la regla de lenguaje bloquea la publicación si encuentra avisos.
 
-- los hallazgos de la rama marcados **Resolver** en el triaje;
-- los que el usuario elija en ese momento, con `--incluir` (quedan triados como Resolver al publicar).
+### Paso 5: ADR propuesto en el harness
 
-Si ninguno está elegido, el comando lista los hallazgos abiertos de la rama para elegir.
-
-Sin `--confirmar` solo muestra el destino y el comentario completo:
-
-```markdown
-## Revisión de la rama `feature/consulta-buro`
-
-Commit `3f2a9c1d8e7b` · 1 hallazgo(s) por resolver.
-
-| Estado | Severidad | Hallazgo | Ubicación | Regla |
-|---|---|---|---|---|
-| ⏳ pendiente | alta | Llamada al buró sin timeout | [src/main/java/BuroClient.java:41](…) | decision-records:ADR-010 |
-
-<details>
-<summary>Detalle</summary>
-…
-</details>
+```sh
+.venv/bin/python herramientas/mr.py adr motor-fraudes 3
 ```
 
-- Los hallazgos de seguridad van primero; después, por severidad.
-- Cada ubicación enlaza a la línea en ese commit exacto.
-- Nunca se incluyen fragmentos de código ni valores de secretos: solo título, detalle y ubicación.
-- La regla de lenguaje **bloquea** la publicación si encuentra avisos: se corrige el título o el
-  detalle en el lote y se registra de nuevo.
-
-### Paso 4: publicar
-
-Solo si el usuario lo confirma explícitamente sobre la vista previa, se repite con `--confirmar`.
-
-- Se publica un comentario en el MR o PR. Las publicaciones siguientes **editan el mismo
-  comentario**, y lo que se corrigió aparece como ✅.
-- **Solo se comentan MR o PR.** Si la rama no tiene uno abierto, no se publica: la revisión queda
-  registrada y la vista previa queda en `revisiones/<id>/comentario.md`. Se publica cuando exista el MR.
-
-Para seguir la rama después de nuevos commits, se repiten los pasos: preparar, actualizar el lote y
-publicar. Los hallazgos que ya no aparecen quedan corregidos.
+Trae la rama del MR del harness a una copia de solo lectura, valida los ADR que cambia y prepara su
+coherencia con arquitectura y con el equipo. Los pares se evalúan en un lote, como en `/actualizar`, con
+`coherencia.py --decisiones <carpeta> lote <archivo>`. El ADR se puede aprobar (un par dev y el TL, en
+GitLab) solo sin choques ni pares pendientes.

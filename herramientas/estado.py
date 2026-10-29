@@ -89,6 +89,7 @@ def revisar_estado(raiz: Path) -> dict:
             "dias_semanal": dias_desde(leer_json(archivo_semanal(raiz, nombre)).get("ultima")),
             "harness": harness.estado(raiz, nombre) if harness.existe(raiz, nombre) else None,
             "con_revision": len(al_dia),
+            "deuda_sin_tarea": sorted({d["clave"] for d in registro.get("deuda_declarada", {}).values() if not d.get("tarea")}),
         })
     env = cargar_env(raiz)
     return {"fuentes": len(fuentes), "edad_arquitectura": edad_arquitectura, "sincronizada": bool(lock),
@@ -139,6 +140,8 @@ def que_sigue(estado: dict) -> list[str]:
             elif t["criterio"] == "EQ-008.8" and not t["cumple"] and t["vencido"]:
                 pasos.append(f"{p['nombre']}: el Spike {t['clave']} superó su duración y no tiene un ADR de producto propuesto "
                              f"(EQ-008.8): `/crear {p['nombre']} adr` con {t['clave']} en Historias de origen.")
+        for clave in p["deuda_sin_tarea"]:
+            pasos.append(f"{p['nombre']}: {clave} declaró deuda en /listo y no tiene Tarea: `/crear {p['nombre']} tarea --deuda {clave}`.")
         if p["harness"] is None and p["con_revision"]:
             pasos.append(f"{p['nombre']}: sin harness para el equipo: `/producto {p['nombre']} harness`.")
         elif p["harness"] and p["harness"]["sin_subir"]:
@@ -244,7 +247,7 @@ def semanal(raiz: Path, producto: str, hoy: date | None = None) -> Path:
             principal = registro.get("repos", {}).get(h["repo"], {}).get("rama", h["rama"])
             donde = h["repo"] if h["rama"] == principal else f"{h['repo']} @{h['rama']}"
             lineas.append(f"- {h['id']} · {donde} · {h['criterio'] or h['fuente']} · {h['titulo']}")
-    lineas += ["", "Qué hacer con esto: `/triar` para lo nuevo y lo reaparecido, `/revisar --rama` para las ramas sin revisar "
+    lineas += ["", "Qué hacer con esto: `/triar` para lo nuevo y lo reaparecido, `/revisar mr` para los MR abiertos "
                "y `/crear tarea --desde` para la deuda que se lleva a Jira."]
 
     archivo = raiz / "productos" / producto / "semanal" / f"{anio}-W{semana:02d}.md"

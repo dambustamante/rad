@@ -85,11 +85,12 @@ Después, abrir la carpeta en Cursor y escribir `/estado`: indica qué hacer a c
 | `/estado [semanal]` | ver qué hay pendiente y qué sigue; con `semanal`, qué cambió desde el reporte anterior |
 | `/actualizar [fuentes]` | registrar y descargar arquitectura, verificar la coherencia de las decisiones y mantener los harness |
 | `/producto <nombre> [harness]` | registrar un producto, sus repositorios y sus terceros; con `harness`, crear su harness |
-| `/revisar <producto> [repo] [--rama <rama>]` | revisar un repositorio (un chat por repositorio), o solo lo que cambia un MR y comentarlo |
+| `/revisar <producto> [repo]` | revisar un repositorio (un chat por repositorio) |
+| `/revisar mr` | bandeja de MR abiertos; revisar uno (cambios sensibles, contraste con `/listo`, hallazgos y comentario) o la coherencia de un ADR propuesto en el harness |
 | `/triar <producto>` | decidir qué hacer con cada hallazgo |
 | `/crear <producto>` | crear un ADR, una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira |
 
-En el harness, el dev usa `/hdu <CLAVE>` para tomar una historia.
+En el harness, el dev usa `/hdu <CLAVE>` para tomar una historia y `/listo <CLAVE>` antes de abrir el MR.
 
 ## Documentación
 
@@ -99,7 +100,7 @@ La guía paso a paso está en [docs/](docs/README.md):
 2. [Conceptos](docs/02-conceptos.md): orden de autoridad, evidencia, hallazgos y veredicto
 3. [Arquitectura y coherencia](docs/03-arquitectura.md)
 4. [Productos y terceros](docs/04-productos.md)
-5. [Revisión de repositorios y ramas](docs/05-revisar.md)
+5. [Revisión de repositorios y MR](docs/05-revisar.md)
 6. [Triaje](docs/06-triar.md)
 7. [Crear ADR, Tareas, Spikes, Errores y Hotfix](docs/07-crear.md)
 8. [Mantenimiento](docs/08-mantenimiento.md)
@@ -111,6 +112,6 @@ contrato de trabajo para Cursor en [AGENTS.md](AGENTS.md) y las decisiones del e
 
 ## Estado
 
-- **Disponible:** los seis comandos de radiografia y el harness de producto con `/hdu`.
-- **Próximo:** `/listo` en el harness, la deuda que deja cada historia y la bandeja de MR en radiografia.
-- **Después:** medición de las historias en radiografia, y pruebas de integración y de carga.
+- **Disponible:** los seis comandos de radiografia, la bandeja y la revisión de MR, y el harness de producto con
+  `/hdu` y `/listo`.
+- **Próximo:** medición de las historias en radiografia, y pruebas de integración y de carga.

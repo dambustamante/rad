@@ -151,19 +151,10 @@ class PruebaRama(unittest.TestCase):
         self.assertEqual(list(cliente.comentarios), [100], "se edita el mismo comentario")
         self.assertIn("| ✅ corregido | alta | Llamada al buró sin timeout |", cliente.comentarios[100])
 
-    def test_sin_mr_no_se_publica(self) -> None:
-        cliente = ClienteFalso(None)
-        self.preparar(cliente)
-        self.lote(LOTE)
-        rama.registrar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro")
-        id_timeout = self.de_la_rama()["decisiones:ADR-010"]["id"]
-        vista = rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", [id_timeout], cliente=cliente)
-        self.assertIn("no se puede publicar", vista["destino"])
+    def test_solo_se_revisan_mr(self) -> None:
         with self.assertRaises(ErrorRadiografia) as error:
-            rama.publicar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro", [id_timeout], confirmar=True, cliente=cliente)
-        self.assertIn("solo se comentan MR o PR", str(error.exception))
-        self.assertEqual(cliente.comentarios, {})
-        self.assertIsNone(self.de_la_rama()["decisiones:ADR-010"]["triaje"], "si no se publica, no se marca nada")
+            self.preparar(ClienteFalso(None))
+        self.assertIn("Solo se revisan MR", str(error.exception))
 
     def test_el_lenguaje_bloquea_la_publicacion(self) -> None:
         cliente = ClienteFalso(MR)

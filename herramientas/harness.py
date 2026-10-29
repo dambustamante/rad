@@ -37,7 +37,7 @@ from comun import RAIZ, ErrorRadiografia, git, leer_json, normalizar
 from revisar import decisiones_con_criterios
 
 PLANTILLA = Path(__file__).resolve().parent / "plantilla_harness"
-GENERADOS = ("repos.json", "config.json", "contexto.json", "GENERADO.json", ".cursor/rules/generado/")
+GENERADOS = ("repos.json", "config.json", "contexto.json", "lenguaje.json", "GENERADO.json", ".cursor/rules/generado/")
 MAXIMO_HALLAZGOS = 15
 LARGO_RESUMEN = 700
 ORDEN_SEVERIDAD = {"bloqueante": 0, "alta": 1, "media": 2, "baja": 3}
@@ -164,6 +164,10 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
         "producto": producto, "sigla": sigla_de(raiz, producto),
         "jira": {"campo_medicion": jira["campo_medicion"], "medicion_aceptada": jira["medicion_aceptada"],
                  "campo_tipo": jira["campo_tipo"]}}, indent=2, ensure_ascii=False) + "\n"
+    import lenguaje
+    reglas = lenguaje.cargar_reglas(raiz)
+    archivos["lenguaje.json"] = json.dumps({"voseo": reglas["voseo"], "expresiones": [e["texto"] for e in reglas["expresiones"]]},
+                                           indent=2, ensure_ascii=False) + "\n"
     archivos["contexto.json"] = json.dumps(contexto_estructurado(raiz, producto, activos, registro), indent=2,
                                            ensure_ascii=False, sort_keys=True) + "\n"
     return archivos

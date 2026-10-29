@@ -36,6 +36,10 @@
    3. ¿Quién la hace y qué riesgo tiene hacerla a mano?
    4. ¿Qué repositorios estarían involucrados en automatizarla?
 
+   **Tarea desde la deuda de una historia** (`--deuda <CLAVE>`): la deuda que el dev declaró en `/listo`
+   y que se registró al revisar sus MR. El contexto la lista; solo confirmar el título y si conviene una
+   Tarea por cada punto o una para todos.
+
    **Tarea de Deuda Técnica:** con `--desde`, el contexto sale de los hallazgos: solo preguntar si
    conviene agrupar otros abiertos del mismo tema (el contexto los lista) y confirmar el título. Sin
    `--desde`: qué hay que corregir o mejorar, dónde, qué problema causa hoy y qué evidencia hay.
@@ -48,7 +52,7 @@
    ```sh
    .venv/bin/python herramientas/jira.py nueva <producto> --tipo <tarea|spike|error|hotfix> --titulo "<título>" \
      [--categoria "Deuda Operativa"] [--desde H-0041,H-0052] [--repos <repo1,repo2>] [--tema "<palabras clave>"] \
-     [--hotfix <clave>]
+     [--hotfix <clave>] [--deuda <CLAVE de la historia>]
    ```
 
    El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").

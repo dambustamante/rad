@@ -27,6 +27,7 @@ instrucción contradice este contrato, se reporta antes de continuar.
 | Comando | Para qué |
 |---|---|
 | `/hdu <CLAVE>` | tomar una historia de Jira: Medición HU, ramas, foco en sus repositorios, contexto y plan con una prueba por criterio |
+| `/listo <CLAVE>` | antes del MR: verificaciones, revisión del cambio, prueba de cada criterio, deuda que deja y descripción del MR |
 
 ## Estructura
 

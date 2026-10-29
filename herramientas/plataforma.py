@@ -96,17 +96,37 @@ class ClientePlataforma:
 
     def _mr_gitlab(self, proyecto: str, datos: dict) -> dict:
         aprobaciones = self._pedir("GET", f"{self._proyecto(proyecto)}/merge_requests/{datos['iid']}/approvals")
+        return {**self._resumen_gitlab(datos),
+                "aprobado_por": [a["user"]["username"] for a in aprobaciones.get("approved_by", [])]}
+
+    @staticmethod
+    def _resumen_gitlab(datos: dict) -> dict:
         return {"numero": datos["iid"], "url": datos["web_url"], "titulo": datos["title"],
                 "descripcion": datos.get("description") or "", "destino": datos["target_branch"],
+                "rama": datos.get("source_branch"), "commit": datos.get("sha"),
                 "autor": (datos.get("author") or {}).get("username"),
-                "aprobado_por": [a["user"]["username"] for a in aprobaciones.get("approved_by", [])]}
+                "revisores": [r.get("username") for r in datos.get("reviewers") or []]}
 
     def _mr_github(self, proyecto: str, datos: dict) -> dict:
         revisiones = self._pedir("GET", f"{self._proyecto(proyecto)}/pulls/{datos['number']}/reviews")
+        return {**self._resumen_github(datos),
+                "aprobado_por": sorted({r["user"]["login"] for r in revisiones if r.get("state") == "APPROVED"})}
+
+    @staticmethod
+    def _resumen_github(datos: dict) -> dict:
         return {"numero": datos["number"], "url": datos["html_url"], "titulo": datos["title"],
                 "descripcion": datos.get("body") or "", "destino": datos["base"]["ref"],
+                "rama": (datos.get("head") or {}).get("ref"), "commit": (datos.get("head") or {}).get("sha"),
                 "autor": (datos.get("user") or {}).get("login"),
-                "aprobado_por": sorted({r["user"]["login"] for r in revisiones if r.get("state") == "APPROVED"})}
+                "revisores": [r.get("login") for r in datos.get("requested_reviewers") or []]}
+
+    def mrs_abiertos(self, proyecto: str) -> list[dict]:
+        """MR o PR abiertos del proyecto, sin aprobaciones (para la bandeja)."""
+        if self.config.tipo == "gitlab":
+            lista = self._pedir("GET", f"{self._proyecto(proyecto)}/merge_requests", params={"state": "opened", "per_page": 100})
+            return [self._resumen_gitlab(m) for m in lista]
+        lista = self._pedir("GET", f"{self._proyecto(proyecto)}/pulls", params={"state": "open", "per_page": 100})
+        return [self._resumen_github(p) for p in lista]
 
     def mr_de_rama(self, proyecto: str, rama: str) -> dict | None:
         """MR o PR abierto cuya rama de origen es `rama`, o None."""

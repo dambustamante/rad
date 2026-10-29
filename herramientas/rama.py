@@ -123,7 +123,10 @@ def preparar(raiz: Path, producto: str, repo: str, rama: str, cliente: ClientePl
             mr = cliente.mr_de_rama(proyecto_de(str(datos_repo["url"])), rama)
         except ErrorRadiografia as error:
             aviso_mr = str(error)
-    destino_rama = mr["destino"] if mr else str(datos_repo["rama"])
+    if mr is None:
+        raise ErrorRadiografia(f"Solo se revisan MR: la rama '{rama}' de '{repo}' no tiene un MR abierto"
+                               + (f" ({aviso_mr})." if aviso_mr else "."))
+    destino_rama = mr["destino"]
     base = git("merge-base", resolver_commit(clon, destino_rama), commit, cwd=clon)
     cambiados = sorted(git("diff", "--name-only", "--diff-filter=ACMR", base, commit, cwd=clon).splitlines())
     commits = git("rev-list", f"{base}..{commit}", cwd=clon).splitlines()

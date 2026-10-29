@@ -25,10 +25,10 @@ harness-motor-fraudes/
 │   ├── rules/00-general.mdc              remite a AGENTS.md
 │   ├── rules/generado/decisiones.mdc     lo que el código debe cumplir (generado; se aplica siempre)
 │   ├── rules/generado/repo-<id>.mdc      contexto de cada repositorio (generado; se aplica al trabajar en code/<id>/)
-│   ├── commands/hdu.md                   comando /hdu
+│   ├── commands/hdu.md · listo.md        comandos /hdu y /listo
 │   └── hooks.json                        guardia de comandos del dev
 ├── decisiones/                           ADR del producto, plantilla, INDICE.md y COHERENCIA.md (estos dos, generados)
-├── herramientas/                         harness.py (code, doctor, foco, adr), hdu.py y guardia.py
+├── herramientas/                         harness.py (code, doctor, foco, adr), hdu.py, listo.py y guardia.py
 ├── code/                                 repositorios del producto (fuera de git del harness)
 └── trabajo/<CLAVE>/                      contexto de cada historia tomada (local, fuera de git)
 ```
@@ -128,7 +128,41 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 número libre, lo deja en Propuesto con la historia de origen, y se completa y se propone por MR al
 harness.
 
-## Próximas fases
+## `/listo <CLAVE>`: antes del MR
 
-- `/listo`: verificar el cambio, proponer la deuda que deja y armar la descripción del MR. Restaura el foco.
-- Bandeja de MR en radiografia, con la coherencia de los ADR que se proponen en el harness.
+1. **Preparar** (sin IA): `python3 herramientas/listo.py preparar FRAUD-123`. Exige todo en commits y, por
+   cada repositorio de la historia, compara la rama con su rama principal:
+
+   | Verificación | Qué busca |
+   |---|---|
+   | Secretos | gitleaks sobre los commits de la rama |
+   | Consola | `System.out`, `console.log`, `print(` fuera de las pruebas |
+   | Pendientes | `TODO`, `FIXME` o `XXX` agregados |
+   | Contrato | la API cambió y `docs/contratos/` no (EQ-004) |
+   | Integraciones | clientes HTTP nuevos: revisar timeout, ficha del tercero y C4 |
+   | Pruebas debilitadas | `@Disabled`, `skip`, `assert true` o pruebas borradas |
+
+   Escribe `trabajo/FRAUD-123/listo-paquete.md` con el diff y los resultados.
+2. **Revisar:** Cursor contrasta el diff con las decisiones de `.cursor/rules/generado/`; lo que no
+   cumple se corrige antes del MR (y se vuelve al paso 1).
+3. **Registrar con el dev** `trabajo/FRAUD-123/listo.json`: la prueba de cada criterio de aceptación
+   (`<repo>:<archivo>:<línea>`), la **deuda que deja la historia** (técnica u operativa: la propone el
+   harness y la confirma el dev), las decisiones que aplican y, si apareció, una decisión propuesta para el
+   TL. En una HU sin medir, decidir la deuda es obligatorio (`"sin_deuda": true` si no hay).
+4. **Cerrar:** `python3 herramientas/listo.py cerrar FRAUD-123`. Rechaza un criterio sin prueba, una prueba
+   que no es parte del cambio o está deshabilitada, una evidencia inexistente y los avisos de lenguaje.
+   Escribe `trabajo/FRAUD-123/mr-<repo>.md` con la descripción del MR y restaura el foco.
+
+La descripción del MR trae los criterios con su prueba, la deuda que deja la historia, la definición de
+terminado como lista y, al final, un **registro** (comentario HTML) para la revisión del TL: commit, versión
+del harness, resultados de las verificaciones, criterios y deuda.
+
+**Dónde queda la deuda:** en la descripción del MR, no en un archivo del harness. Así no hace falta un MR al
+harness (con su aprobación) por cada historia. radiografia la toma de ahí al revisar el MR y la lleva a Jira
+con `/crear <producto> tarea --deuda <CLAVE>`.
+
+## Lo que el TL ve de cada MR
+
+La bandeja de radiografia (`/revisar mr`) muestra si el MR tiene `/listo` al día. La revisión vuelve a
+verificar todo con el código de radiografia, detecta los cambios sensibles y contrasta lo que declaró
+`/listo` (ver [Revisión de MR](05-revisar.md#revisión-de-mr-revisar-mr)).

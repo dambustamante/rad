@@ -240,6 +240,58 @@ class PruebaHarness(unittest.TestCase):
         doctor = subprocess.run([sys.executable, herramienta, "doctor"], capture_output=True, text=True)
         self.assertIn("code/ fuera de git del harness", doctor.stdout)
 
+    def test_listo_verifica_registra_criterios_y_deuda(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
+        self.hdu("Completa").tomar("FRAUD-123", None, True)
+        codigo_repo = self.destino / "code" / "fraude-core"
+        (codigo_repo / "src/main/java/BuroClient.java").write_text(
+            "class BuroClient {\n  String consultar() {\n    // TODO timeout\n    System.out.println(\"x\");\n    return null;\n  }\n}\n",
+            encoding="utf-8")
+        (codigo_repo / "src/test/java").mkdir(parents=True)
+        (codigo_repo / "src/test/java/BuroClientTest.java").write_text(
+            "class BuroClientTest {\n  @Test\n  void respondeEnMenosDe800ms() {}\n  @Test\n  void quedaEnRevision() {}\n}\n", encoding="utf-8")
+        git("add", "-A", cwd=codigo_repo)
+        git("commit", "--quiet", "-m", "Cliente del buró", cwd=codigo_repo)
+        listo = cargar(self.destino / "herramientas" / "listo.py", "listo_prueba")
+        paquete = listo.preparar("FRAUD-123").read_text(encoding="utf-8")
+        self.assertIn("- Consola: `src/main/java/BuroClient.java:4`", paquete)
+        self.assertIn("- Pendientes: `src/main/java/BuroClient.java:3`", paquete)
+        self.assertIn("1. La consulta responde en menos de 800 ms.", paquete)
+
+        registro = self.destino / "trabajo" / "FRAUD-123" / "listo.json"
+        registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3"}, "deuda": [],
+                                        "decisiones_aplicadas": ["ADR-EQ-002"]}), encoding="utf-8")
+        with self.assertRaises(listo.ErrorListo) as error:
+            listo.cerrar("FRAUD-123")
+        self.assertIn("el criterio 2 no tiene prueba", str(error.exception))
+        registro.write_text(json.dumps({
+            "criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3", "2": "fraude-core:src/test/java/BuroClientTest.java:5"},
+            "deuda": [{"tipo": "tecnica", "descripcion": "El timeout del buró queda fijo en el código; falta llevarlo a configuración.",
+                       "evidencia": "fraude-core:src/main/java/BuroClient.java:3"}],
+            "decisiones_aplicadas": ["ADR-EQ-002", "decisiones:ADR-010"]}), encoding="utf-8")
+        archivos = listo.cerrar("FRAUD-123")
+        descripcion = archivos[0].read_text(encoding="utf-8")
+        self.assertIn("| 1 | La consulta responde en menos de 800 ms. | `src/test/java/BuroClientTest.java:3` |", descripcion)
+        self.assertIn("- **Técnica:** El timeout del buró queda fijo en el código", descripcion)
+        self.assertIn("<!-- radiografia:listo ", descripcion)
+        import mr
+        datos = mr.registro_listo(descripcion)
+        self.assertEqual((datos["clave"], datos["repo"], datos["commit"]), ("FRAUD-123", "fraude-core", git("rev-parse", "HEAD", cwd=codigo_repo)))
+        self.assertEqual(datos["senales"]["consola"], 1)
+
+        (codigo_repo / "src/test/java/BuroClientTest.java").write_text(
+            "class BuroClientTest {\n  @Disabled\n  @Test\n  void respondeEnMenosDe800ms() {}\n  @Test\n  void quedaEnRevision() {}\n}\n",
+            encoding="utf-8")
+        git("commit", "--quiet", "-am", "Deshabilita", cwd=codigo_repo)
+        listo.preparar("FRAUD-123")
+        registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:4",
+                                                      "2": "fraude-core:src/test/java/BuroClientTest.java:6"}, "sin_deuda": True}),
+                            encoding="utf-8")
+        with self.assertRaises(listo.ErrorListo) as error:
+            listo.cerrar("FRAUD-123")
+        self.assertIn("está deshabilitada", str(error.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

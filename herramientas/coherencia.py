@@ -162,21 +162,27 @@ def ambito_equipo(raiz: Path) -> Ambito:
                   raiz / "equipo" / "estado" / "coherencia.json")
 
 
-def ambito_producto(raiz: Path, producto: str) -> Ambito:
+def ambito_producto(raiz: Path, producto: str, carpeta: Path | None = None) -> Ambito:
+    """Ámbito de un producto. Con `carpeta`, los ADR se leen de ahí (por ejemplo, la rama de un MR del harness)."""
     if not (raiz / "productos" / producto / "producto.yaml").exists():
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
     referencias = leer_arquitectura_vigente(raiz)
     for id_eq, eq in leer_decisiones_equipo(raiz).items():
         if eq["evaluado"]:
             referencias[f"{EQUIPO}:{id_eq}"] = {**eq, "tipo": "decision-equipo"}
-    sujetos = {k: v for k, v in leer_decisiones_producto(raiz, producto).items() if v["tipo"] == "decision"}
+    decisiones = (leer_decisiones(raiz, carpeta, sigla_de(raiz, producto)) if carpeta
+                  else leer_decisiones_producto(raiz, producto))
+    sujetos = {k: v for k, v in decisiones.items() if v["tipo"] == "decision"}
     return Ambito(producto, f"Coherencia de las decisiones de {producto} con arquitectura y con el equipo",
-                  sujetos, referencias, carpeta_decisiones_producto(raiz, producto),
+                  sujetos, referencias, carpeta or carpeta_decisiones_producto(raiz, producto),
                   raiz / "productos" / producto / "estado" / "coherencia.json")
 
 
+CARPETA_DECISIONES: Path | None = None   # --decisiones: ADR del producto desde otra carpeta (rama de un MR del harness)
+
+
 def obtener_ambito(raiz: Path, nombre: str) -> Ambito:
-    return ambito_equipo(raiz) if nombre == EQUIPO else ambito_producto(raiz, nombre)
+    return ambito_equipo(raiz) if nombre == EQUIPO else ambito_producto(raiz, nombre, CARPETA_DECISIONES)
 
 
 def todos_los_ambitos(raiz: Path) -> list[Ambito]:
@@ -272,7 +278,8 @@ def extracto(raiz: Path, identificador: str, producto: str | None = None) -> str
     elif re.match(r"^ADR-[A-Z]{2,5}-\d{3}$", identificador):
         if not producto:
             raise ErrorRadiografia("Para un ADR de producto, indicar --ambito <producto>.")
-        documentos = leer_decisiones_producto(raiz, producto)
+        documentos = (leer_decisiones(raiz, CARPETA_DECISIONES, sigla_de(raiz, producto)) if CARPETA_DECISIONES
+                      else leer_decisiones_producto(raiz, producto))
     else:
         documentos = leer_arquitectura_vigente(raiz)
     if identificador not in documentos:
@@ -457,6 +464,7 @@ def generar(raiz: Path, ambito: Ambito) -> dict:
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Coherencia de las decisiones del equipo y de los productos.")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
+    parser.add_argument("--decisiones", type=Path, help="carpeta con los ADR del producto (por ejemplo, la rama de un MR)")
     sub = parser.add_subparsers(dest="accion", required=True)
     p = sub.add_parser("preparar", help="lista los pares que hay que evaluar")
     p.add_argument("--ambito")
@@ -480,6 +488,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--ambito")
     o = parser.parse_args(argumentos)
     raiz = o.raiz.resolve()
+    global CARPETA_DECISIONES
+    CARPETA_DECISIONES = o.decisiones.resolve() if o.decisiones else None
 
     try:
         if o.accion in ("preparar", "generar"):
