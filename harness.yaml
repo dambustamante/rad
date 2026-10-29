@@ -5,11 +5,11 @@ version: 1
 
 arquitectura:
   # Repositorios git donde arquitectura publica sus documentos (GitLab, GitHub o una carpeta local).
-  # Se administran con el comando /arquitectura. /actualizar los copia en arquitectura/<id>/ y
-  # registra el commit en arquitectura/fuentes.lock.
+  # Se administran con /actualizar fuentes. /actualizar los copia en arquitectura/decisiones/<id>/ o
+  # arquitectura/estandares/<id>/ y registra el commit en arquitectura/estado/fuentes.lock.
   #
   # Campos de cada fuente:
-  #   id: decision-records          nombre de la carpeta en arquitectura/
+  #   id: decision-records          nombre de la carpeta dentro de arquitectura/decisiones/ o estandares/
   #   url: git@gitlab.com:grupo/proyecto.git   URL de git o ruta local
   #   ref: main                     rama o tag a seguir
   #   ruta: docs/adrs               carpeta dentro del repositorio
