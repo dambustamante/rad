@@ -28,7 +28,7 @@ de arriba y con el de abajo, y cada dato vive en un solo nivel:
 
 | Nivel | Qué contiene | Dónde vive | Para quién |
 |---|---|---|---|
-| 1. Producto | Visión y capacidades, C4 del producto, repositorios, terceros, decisiones del producto y operación | Confluence: una página por producto, con sus páginas hijas | PO, negocio, arquitectura, personas nuevas |
+| 1. Producto | Visión y capacidades, C4 del producto, repositorios, terceros, decisiones del producto y operación | Confluence: una página por producto, con sus páginas hijas | dueño del producto (PO), negocio, arquitectura, personas nuevas |
 | 2. Repositorio | README (ADR-EQ-007) y C4 de contexto y de contenedores del repositorio | el repositorio | desarrollo y arquitectura |
 | 3. Detalle técnico | `docs/`: operación, despliegue, configuración y resolución de problemas | el repositorio | desarrollo y operación |
 | 4. Contratos | OpenAPI y AsyncAPI, con ejemplos (ADR-EQ-004) | el repositorio | quien integra |
@@ -53,7 +53,7 @@ de arriba y con el de abajo, y cada dato vive en un solo nivel:
 | Todo en Confluence | Un solo lugar para leer | Se desactualiza respecto del código; el cambio no se revisa en el MR | La documentación técnica se separa del código que describe |
 | Todo en los repositorios | Siempre junto al código | Sin punto de entrada para quien no lee repositorios (PO, negocio, personas nuevas) | Sin vista de producto |
 | Confluence para lo macro, repositorio para lo micro, enlazados | Cada público entra por su nivel; el detalle se revisa en el MR | Exige mantener los enlaces | **Elegida** |
-| Structurizr DSL o C4-PlantUML para los diagramas | Notación más completa | GitLab, GitHub y Confluence no los muestran sin configuración | Mayor costo de adopción |
+| Structurizr DSL (lenguaje propio de Structurizr) o C4-PlantUML para los diagramas | Notación más completa | GitLab, GitHub y Confluence no los muestran sin configuración | Mayor costo de adopción |
 | Diagramas como imagen (PNG, draw.io) | Libertad visual | No se pueden verificar ni comparar entre versiones | No es verificable |
 | Mermaid C4 como código | Se lee en GitLab y GitHub; texto simple y fácil de revisar | Soporte de C4 menos completo | **Elegida** para los diagramas |
 

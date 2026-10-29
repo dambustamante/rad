@@ -54,8 +54,8 @@ Propuesto
 
 ### Riesgos
 
-- Falsos positivos en la revisión automática. Por eso los hallazgos de este ADR no se publican
-  en MR hasta calibrarlos (`publicables` en `harness.yaml`).
+- Falsos positivos en la revisión. Se mitiga calibrando los criterios con el triaje (tasa de falsos
+  positivos por criterio) antes de aprobar este ADR.
 
 ## 8. Impacto
 
