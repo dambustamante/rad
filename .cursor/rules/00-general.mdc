@@ -3,11 +3,6 @@ description: Reglas generales de radiografia
 alwaysApply: true
 ---
 
-- El contrato completo está en `AGENTS.md`. Ante una contradicción, manda `AGENTS.md` y se reporta.
-- `productos/*/repos/` y `arquitectura/` son de solo lectura. Nunca commit, push, merge, MR ni PR en los repositorios de los productos.
-- Toda afirmación sobre un repositorio lleva evidencia: `[hecho] ruta:línea`, `[doc] ruta`, `[inferencia]`, `[recomendación]` o `NO DETERMINADO - <motivo>`. No se inventa.
-- Orden de autoridad: ADR de arquitectura > estándares de arquitectura > decisiones del equipo (ADR-EQ) > Sonar. Un problema se reporta una vez, en el nivel más alto.
-- Ninguna escritura hacia la plataforma git (GitLab o GitHub), Sonar o Jira sin vista previa y confirmación explícita.
-- Las URLs, la organización y los tokens se leen de `.env`; nunca se escriben en otros archivos. Nunca se escriben valores de tokens, secretos ni datos personales.
-- Todo se escribe en español neutro y técnico, comprensible para un desarrollador junior y para un arquitecto: componente, tecnología y dato concreto; frases cortas y voz activa; siglas explicadas la primera vez; sin voseo, sin adornos ("robusto", "potenciar", "integral") y sin muletillas ("Es importante destacar", "En resumen"). Lista completa en `equipo/lenguaje.yaml`; verificación con `herramientas/lenguaje.py`.
-- Lo determinista se hace con `make` y los scripts de `herramientas/`; el agente aporta el criterio, no reemplaza a los scripts.
+- Leer y seguir `AGENTS.md`: es el contrato único (autoridad, evidencia, lenguaje y reglas no negociables). Ante una contradicción, manda `AGENTS.md` y se reporta.
+- Nunca commit, push, merge, MR ni PR en `productos/*/repos/`, y nada hacia la plataforma git, Sonar o Jira sin vista previa y confirmación explícita.
+- Lo determinista lo hacen `make` y los scripts de `herramientas/`; el agente aporta el criterio.

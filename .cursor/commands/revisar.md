@@ -188,7 +188,6 @@ Cuando todos los repositorios están al día:
 
 ## Reglas generales
 
-- Nunca modificar `productos/*/repos/`, `productos/*/estado/` ni las secciones generadas de las fichas.
+- No modificar las secciones generadas de las fichas.
 - Los hallazgos en modo `propuesta` (decisiones del equipo no aprobadas) se informan, pero no
   afectan el veredicto.
-- Todo en español neutro y técnico.

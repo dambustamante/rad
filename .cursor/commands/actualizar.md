@@ -3,6 +3,9 @@
 Deja `radiografia` al día: herramientas, documentos de arquitectura, su índice y la coherencia
 de las decisiones del equipo (ADR-EQ) con arquitectura.
 
+Uso: `/actualizar`, o `/actualizar fuentes` para agregar o retirar repositorios de arquitectura (ver
+"Fuentes de arquitectura"). Si `harness.yaml` no tiene fuentes, empezar por esa sección.
+
 ## Pasos
 
 1. **Parte automática.** Ejecutar:
@@ -87,6 +90,41 @@ de las decisiones del equipo (ADR-EQ) con arquitectura.
    lista que corresponda en `arquitectura.estados` de `harness.yaml`. No modificar `harness.yaml`
    sin confirmación del usuario.
 
+## Fuentes de arquitectura
+
+Los repositorios de donde se descargan los ADR, estándares y referencias. Nunca editar
+`harness.yaml` a mano: siempre con `herramientas/fuentes_arquitectura.py`.
+
+1. **Mostrar** `.venv/bin/python herramientas/fuentes_arquitectura.py listar` (`id`, `url`, `ref`,
+   `ruta`, `tipo`) y preguntar: agregar, retirar o nada.
+2. **Agregar.** Pedir los repositorios, uno por línea (URL SSH o HTTPS de GitLab o GitHub, o ruta de
+   una carpeta local con un repositorio git), e inspeccionar cada uno:
+
+   ```sh
+   .venv/bin/python herramientas/fuentes_arquitectura.py inspeccionar "<url>"
+   ```
+
+   Si falla por acceso, informar y seguir con los demás. Proponer las fuentes en una tabla
+   (`#`, `id`, `url`, `ref`, `ruta`, `tipo`, documentos, motivo); un repositorio puede dar varias:
+   - `ref`: la `rama_por_defecto` informada.
+   - `tipo: adr` con la `ruta_adr_sugerida`, si existe.
+   - `tipo: estandar` o `referencia`: carpetas con documentos que no son ADR (`adr: 0`); no la raíz
+     si solo tiene un README.
+   - `estado_por_defecto: vigente`: solo para estándares o referencias sin sección Estado
+     (`con_estado: 0`), explicando que eso los considera vigentes.
+   - `id`: minúsculas y guiones (`decision-records`, `estandares-desarrollo`).
+
+   Con la confirmación del usuario, agregar cada fila:
+
+   ```sh
+   .venv/bin/python herramientas/fuentes_arquitectura.py agregar --id <id> --url "<url>" --ref <ref> --ruta <ruta> --tipo <tipo> [--estado-por-defecto vigente]
+   ```
+
+3. **Retirar**, con confirmación: `.venv/bin/python herramientas/fuentes_arquitectura.py retirar --id <id>`.
+4. Mostrar la tabla final y seguir con los pasos de arriba para descargar los documentos.
+
+No inventar repositorios, rutas ni refs: solo los que el usuario indica y la inspección confirma.
+
 ## Correcciones del usuario
 
 Si el usuario indica que un resultado es incorrecto, registrar de nuevo el par con la relación que
@@ -98,4 +136,3 @@ o con una corrección manual justificada.
 - No editar nada en `arquitectura/`, ni los `COHERENCIA.md`, `INDICE.md` o carpetas `estado/`.
 - No proponer cambios a los documentos de arquitectura: arquitectura prevalece. Las
   recomendaciones son siempre sobre los ADR-EQ.
-- Si `harness.yaml` no tiene fuentes, sugerir ejecutar `/arquitectura`.

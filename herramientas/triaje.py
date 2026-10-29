@@ -223,7 +223,7 @@ def escribir_agenda(raiz: Path, producto: str, registro: dict) -> Path | None:
             temas[h["criterio"] or h["fuente"]].append(h)
     if not temas:
         return None
-    archivo = raiz / "productos" / producto / "agendas" / f"agenda-{hoy().isoformat()}.md"
+    archivo = raiz / "productos" / producto / "triaje" / f"agenda-{hoy().isoformat()}.md"
     archivo.parent.mkdir(parents=True, exist_ok=True)
     lineas = [f"# Agenda para conversar con el equipo · {producto} · {hoy().isoformat()}", "",
               "> Hallazgos marcados como \"Conversar\", agrupados por tema. Después de la reunión, registrar la "

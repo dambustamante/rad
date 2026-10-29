@@ -117,5 +117,4 @@ del tercero y política ante falla declarada frente a la implementada.
 
 - No inventar repositorios, ramas ni claves de Sonar: solo lo que el usuario indica y la
   inspección confirma.
-- Los repositorios descargados (`productos/<producto>/repos/`) son de solo lectura.
-- No mostrar tokens ni credenciales; el acceso usa la configuración de git del usuario.
+- El acceso a los repositorios usa la configuración de git del usuario.

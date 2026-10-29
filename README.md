@@ -40,13 +40,12 @@ El orden habitual es:
 
 | Paso | Comando | Qué pasa |
 |---|---|---|
-| 1 | `/arquitectura` | pide los repositorios de arquitectura, los inspecciona y propone las fuentes |
+| 1 | `/actualizar fuentes` | pide los repositorios de arquitectura, los inspecciona y propone las fuentes |
 | 2 | `/actualizar` | descarga los documentos, genera `arquitectura/INDICE.md` y verifica que las decisiones del equipo no choquen con arquitectura (`equipo/COHERENCIA.md`) |
-| 3 | `/producto <nombre>` | pide los repositorios del producto, los inspecciona y los registra |
-| 3b | `/adr <producto>` | opcional: reglas propias del producto, mejoras a partir de hallazgos, excepciones con vencimiento y ADR propuestos desde las historias de Jira (`--desde-historias`) |
+| 3 | `/producto <nombre>` | pide los repositorios del producto, los inspecciona y los registra; también registra el producto comprado y las integraciones (`terceros/`) |
 | 4 | `/revisar <producto>` | revisa **un repositorio por conversación**: parte automática, AS IS, comparación con lo decidido y C4 inferido. Abrir un chat nuevo para cada repositorio |
 | 5 | `/triar <producto>` | genera un archivo para marcar la decisión sobre cada hallazgo y muestra la calibración |
-| 6 | `/historia <producto>` | crea Tareas, Spikes y Bugs (ADR-EQ-008), por ejemplo a partir de la deuda aceptada; en Jira solo con confirmación |
+| 6 | `/crear <producto>` | crea un ADR del producto, una excepción con vencimiento, o una Tarea, un Spike o un Bug (ADR-EQ-008), por ejemplo a partir de la deuda aceptada; en Jira solo con confirmación |
 
 Cuando todos los repositorios de un producto tienen su revisión, `/revisar` consolida el producto en
 `productos/<producto>/as-is/PRODUCTO.md`.
@@ -70,7 +69,7 @@ representativos, triar sus hallazgos y medir el consumo de Cursor antes de revis
 | `productos/<p>/as-is/PRODUCTO.md` | matriz de cumplimiento repositorio × documento, brechas y visión del producto |
 | `productos/<p>/INDICE.md` | punto de entrada del producto: repositorios, ADR, revisiones y triaje pendiente |
 | `productos/<p>/revisiones/<revisión>/` | reporte de cada revisión, paquetes de revisión y borradores C4 |
-| `productos/<p>/agendas/` | hallazgos para conversar con el equipo |
+| `productos/<p>/triaje/agenda-<fecha>.md` | hallazgos para conversar con el equipo |
 | `equipo/COHERENCIA.md` | coherencia de las decisiones del equipo con arquitectura |
 | `productos/<p>/decisiones/` | ADR del producto, su índice y su coherencia con arquitectura y con el equipo |
 | `productos/<p>/terceros/INDICE.md` | producto comprado e integraciones: estado de cada ficha, contratos y documentos sin indexar |
@@ -100,7 +99,7 @@ productos/<producto>/
 ├── historias/                historias de usuario (Jira o CSV): INDICE.md con cambios y candidatas a ADR
 ├── as-is/                    fichas por repositorio y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes y borradores de cada revisión
-├── triaje/ · agendas/
+├── triaje/                   planillas de triaje y agendas para conversar con el equipo
 ├── estado/                   hallazgos.json, coherencia.json
 └── repos/                    copias de los repositorios (fuera de git)
 herramientas/                 scripts deterministas y sus pruebas (make test)
@@ -111,7 +110,7 @@ El contrato de trabajo completo está en [AGENTS.md](AGENTS.md).
 
 ## Estado
 
-**MVP:** `/estado`, `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar`, `/triar` y `/historia`.
+**MVP:** `/estado`, `/actualizar`, `/producto`, `/revisar`, `/triar` y `/crear`.
 
 **Fase 2:** revisión de ramas (`--rama`, `--desde`) con publicación en el MR o PR (GitLab o GitHub) y
 reporte semanal.

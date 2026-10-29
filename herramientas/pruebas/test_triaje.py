@@ -103,7 +103,7 @@ class PruebaTriaje(unittest.TestCase):
                          "una deuda sin fecha vence a los 90 días")
         self.assertEqual(registro["H-0004"]["triaje"]["decision"], "deuda", "las filas sin marcar no cambian")
         self.assertNotIn("historial_triaje", registro["H-0004"])
-        agenda = next((self.raiz / "productos" / "motor-fraudes" / "agendas").glob("agenda-*.md")).read_text(encoding="utf-8")
+        agenda = next((self.raiz / "productos" / "motor-fraudes" / "triaje").glob("agenda-*.md")).read_text(encoding="utf-8")
         self.assertIn("## sonar:java:S1128 (1 hallazgo(s))", agenda)
         self.assertIn("> Aplicado el", archivo.read_text(encoding="utf-8"))
 

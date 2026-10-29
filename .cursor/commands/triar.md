@@ -50,7 +50,7 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
 
    Se aplica todo o nada. Si el script rechaza una fila, mostrar la línea y el motivo, y pedir la
    corrección. Si hay hallazgos para conversar, el script genera la agenda en
-   `productos/<producto>/agendas/`.
+   `productos/<producto>/triaje/agenda-<fecha>.md`.
 
 4. **Calibración.** Ejecutar y mostrar la tabla:
 
@@ -66,7 +66,7 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
      ```
 
    - Para los hallazgos marcados como Deuda, ofrecer crear una Tarea de Deuda Técnica con
-     `/historia <producto> --desde <ids>`, agrupando los del mismo tema en una sola Tarea.
+     `/crear <producto> tarea --desde <ids>`, agrupando los del mismo tema en una sola Tarea.
    - Para las fuentes "ruidosa: ajustar", revisar los motivos de sus falsos positivos y sugerir el
      ajuste concreto: precisar el texto del criterio en el ADR-EQ, cambiar su severidad o, si es una
      regla de Sonar, desactivarla en el perfil de calidad de Sonar.

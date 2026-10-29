@@ -1,9 +1,8 @@
-"""ADR de producto: decisiones propias, mejoras y excepciones (productos/<producto>/decisiones/).
+"""ADR de producto: decisiones propias y excepciones (productos/<producto>/decisiones/).
 
 Uso:
   python herramientas/adr.py listar <producto>
-  python herramientas/adr.py nuevo <producto> --tipo decision|mejora|excepcion --titulo TEXTO [--desde H-0001,H-0002]
-                                   [--historias CLAVE-1,CLAVE-2]
+  python herramientas/adr.py nuevo <producto> --tipo decision|excepcion --titulo TEXTO [--historias CLAVE-1,CLAVE-2]
   python herramientas/adr.py validar <producto> [--id ADR-XX-NNN]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
@@ -21,12 +20,11 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import hallazgos as registro_hallazgos
 import productos
 from coherencia import leer_arquitectura_vigente, leer_decisiones_equipo, leer_decisiones_producto, sigla_de
 from comun import RAIZ, ErrorRadiografia, normalizar, slug
 
-TIPOS = ("decision", "mejora", "excepcion")
+TIPOS = ("decision", "excepcion")
 ESTADOS = ("propuesto", "aprobado", "reemplazado", "rechazado")
 SIN_VALOR = {"", "—", "-", "ninguno", "ninguna", "n/a"}
 PATRON_CLAVE_ARQUITECTURA = re.compile(r"^[a-z0-9][a-z0-9-]*:.+$")
@@ -148,12 +146,6 @@ def validar_adr(raiz: Path, producto: str, adr: dict) -> tuple[list[str], list[s
         if any(PATRON_CLAVE_ARQUITECTURA.match(c) for c in exceptuados) and not valor(adr["campos"], "referencia de aprobacion de arquitectura"):
             avisos.append("exceptúa arquitectura sin referencia de aprobación: quedará inactiva aunque se apruebe")
 
-    if adr["tipo"] == "mejora":
-        origen = lista(adr["campos"].get("hallazgos de origen"))
-        existentes = {h["id"] for h in registro_hallazgos.cargar(raiz, producto)["hallazgos"].values()}
-        inexistentes = [h for h in origen if h not in existentes]
-        if inexistentes:
-            errores.append(f"hallazgos de origen que no existen: {', '.join(inexistentes)}")
     return errores, avisos
 
 
@@ -161,7 +153,7 @@ def validar_adr(raiz: Path, producto: str, adr: dict) -> tuple[list[str], list[s
 
 
 
-def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], historias: list[str] | None = None) -> Path:
+def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str] | None = None) -> Path:
     if tipo not in TIPOS:
         raise ErrorRadiografia(f"Tipo '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}.")
     if producto not in productos.leer_productos(raiz):
@@ -169,8 +161,6 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], h
     sigla = sigla_de(raiz, producto)
     if not sigla:
         raise ErrorRadiografia(f"El producto '{producto}' no tiene sigla. Asignarla con: productos.py sigla {producto} --asignar XX")
-    if desde and tipo != "mejora":
-        raise ErrorRadiografia("--desde solo se usa con el tipo mejora.")
     carpeta = raiz / "productos" / producto / "decisiones"
     carpeta.mkdir(parents=True, exist_ok=True)
     numeros = [int(m.group(1)) for a in carpeta.glob(f"ADR-{sigla}-*.md") if (m := re.match(rf"ADR-{sigla}-(\d{{3}})", a.name))]
@@ -182,22 +172,6 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, desde: list[str], h
     texto = texto.replace("<SIGLA>-NNN.1", f"{sigla}-{numero}.1")
     texto = texto.replace("Fecha de creación: `DD-MM-AAAA`", f"Fecha de creación: `{date.today().strftime('%d-%m-%Y')}`")
     texto = texto.replace("- **Tipo:** decision", f"- **Tipo:** {tipo}", 1)
-
-    if desde:
-        registro = {h["id"]: h for h in registro_hallazgos.cargar(raiz, producto)["hallazgos"].values()}
-        inexistentes = [h for h in desde if h not in registro]
-        if inexistentes:
-            raise ErrorRadiografia(f"Hallazgos que no existen: {', '.join(inexistentes)}.")
-        filas = ["| Hallazgo | Repositorio | Fuente | Severidad | Descripción | Evidencia |", "|---|---|---|---|---|---|"]
-        for id_hallazgo in desde:
-            h = registro[id_hallazgo]
-            evidencia = ", ".join(f"`{e['archivo']}:{e['linea']}`" if e.get("linea") else f"`{e['archivo']}`" for e in h["evidencia"][:3])
-            filas.append(f"| {h['id']} | {h['repo']} | {h['criterio'] or h['fuente']} | {h['severidad']} "
-                         f"| {h['titulo'].replace('|', '/')} | {evidencia or '—'} |")
-        texto = texto.replace("- **Problema o necesidad:** <qué pasa hoy y por qué es un problema>",
-                              "- **Problema o necesidad:** <qué pasa hoy y por qué es un problema>\n- **Hallazgos que la originan:**\n\n"
-                              + "\n".join(filas) + "\n", 1)
-        texto = texto.replace("- **Hallazgos de origen:** —", f"- **Hallazgos de origen:** {', '.join(desde)}", 1)
 
     if historias:
         import jira as modulo_historias
@@ -260,7 +234,6 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("producto")
     p.add_argument("--tipo", required=True, choices=TIPOS)
     p.add_argument("--titulo", required=True)
-    p.add_argument("--desde", default="")
     p.add_argument("--historias", default="")
     p = sub.add_parser("validar")
     p.add_argument("producto")
@@ -277,9 +250,8 @@ def main(argumentos: list[str] | None = None) -> int:
                 print(f"  {f['id']} [{f['tipo']}, {f['estado']}] {f['titulo']} · efecto: {f['efecto']}"
                       + (f" · vence {f['vence']}" if f["vence"] else ""))
         elif o.accion == "nuevo":
-            ids = [i.strip() for i in o.desde.split(",") if i.strip()]
             claves = [c.strip() for c in o.historias.split(",") if c.strip()]
-            print(f"Creado: {nuevo(raiz, o.producto, o.tipo, o.titulo, ids, claves).relative_to(raiz)}")
+            print(f"Creado: {nuevo(raiz, o.producto, o.tipo, o.titulo, claves).relative_to(raiz)}")
         if o.accion in ("listar", "nuevo"):
             import indices
             indices.indice_producto(raiz, o.producto)

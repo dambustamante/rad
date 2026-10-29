@@ -84,7 +84,7 @@ def revisar_estado(raiz: Path) -> dict:
 def que_sigue(estado: dict) -> list[str]:
     pasos = []
     if not estado["fuentes"]:
-        pasos.append("Registrar los repositorios de arquitectura: `/arquitectura`.")
+        pasos.append("Registrar los repositorios de arquitectura: `/actualizar fuentes`.")
     elif not estado["sincronizada"]:
         pasos.append("Descargar arquitectura por primera vez: `/actualizar`.")
     elif estado["edad_arquitectura"] is not None and estado["edad_arquitectura"] > DIAS_ARQUITECTURA:
@@ -110,19 +110,19 @@ def que_sigue(estado: dict) -> list[str]:
         if p["triaje"]:
             pasos.append(f"{p['nombre']}: {p['triaje']} hallazgo(s) esperando decisión: `/triar {p['nombre']}`.")
         if p["excepciones"]:
-            pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/adr {p['nombre']}`.")
+            pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/crear {p['nombre']} adr`.")
         if p["borradores"]:
             pasos.append(f"{p['nombre']}: {len(p['borradores'])} borrador(es) de Tarea, Spike o Bug sin crear en Jira: "
-                         f"`/historia {p['nombre']}`.")
+                         f"`/crear {p['nombre']}`.")
         if p["terceros_incompletos"]:
             pasos.append(f"{p['nombre']}: fichas de terceros por completar ({', '.join(p['terceros_incompletos'])}): "
                          f"`/producto {p['nombre']}` → terceros.")
         if p["historias_atencion"]:
             pasos.append(f"{p['nombre']}: ADR con historias de origen modificadas o retiradas ({', '.join(p['historias_atencion'])}): "
-                         f"`/adr {p['nombre']}`.")
+                         f"`/crear {p['nombre']} adr`.")
         if p["historias_pendientes"]:
             pasos.append(f"{p['nombre']}: {p['historias_pendientes']} historia(s) candidata(s) a ADR por analizar: "
-                         f"`/adr {p['nombre']} --desde-historias`.")
+                         f"`/crear {p['nombre']} adr --desde-historias`.")
         if p["sin_indexar"]:
             pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) de terceros sin indexar: ver "
                          f"`productos/{p['nombre']}/terceros/INDICE.md`.")

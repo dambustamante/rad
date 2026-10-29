@@ -1,4 +1,4 @@
-"""Pruebas de /historia: borrador, contexto del producto, validación según ADR-EQ-008 y creación en Jira."""
+"""Pruebas de /crear (Tareas, Spikes y Bugs): borrador, contexto del producto, validación según ADR-EQ-008 y creación en Jira."""
 
 from __future__ import annotations
 

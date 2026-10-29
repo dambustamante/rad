@@ -152,7 +152,7 @@ class PruebaHistorias(unittest.TestCase):
         self.assertEqual(historias.candidatas(self.raiz, "motor-fraudes"), [], "lo analizado no se vuelve a pedir")
         self.assertEqual(list(historias.propuestas(self.raiz, "motor-fraudes")), ["Latencia de evaluación"])
 
-        archivo = adr.nuevo(self.raiz, "motor-fraudes", "decision", "Latencia de evaluación", [], ["FRAUD-1"])
+        archivo = adr.nuevo(self.raiz, "motor-fraudes", "decision", "Latencia de evaluación", ["FRAUD-1"])
         texto_adr = archivo.read_text(encoding="utf-8")
         self.assertIn("| [FRAUD-1](https://ejemplo.atlassian.net/browse/FRAUD-1) | Producto |", texto_adr)
         self.assertIn("La evaluación responde en menos de 150 ms", texto_adr)
@@ -165,7 +165,7 @@ class PruebaHistorias(unittest.TestCase):
             historias:
               - {clave: FRAUD-1, clasificacion: candidata, tema: Latencia, cita: "responde en menos de 150 ms", explicacion: x}
             """)
-        adr.nuevo(self.raiz, "motor-fraudes", "decision", "Latencia", [], ["FRAUD-1"])
+        adr.nuevo(self.raiz, "motor-fraudes", "decision", "Latencia", ["FRAUD-1"])
 
         self.jira.historias[0] = historia("FRAUD-1", "Evaluar la compra en tiempo real", "Producto", descripcion_latencia(300))
         del self.jira.historias[2]

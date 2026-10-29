@@ -230,7 +230,7 @@ def preparar(ambito: Ambito) -> dict:
 def imprimir_preparacion(plan: dict) -> None:
     encabezado = f"[{plan['ambito']}]"
     if not plan["referencias_disponibles"]:
-        print(f"{encabezado} No hay documentos vigentes contra los cuales comparar (ejecutar /arquitectura y /actualizar).")
+        print(f"{encabezado} No hay documentos vigentes contra los cuales comparar (ejecutar /actualizar fuentes y /actualizar).")
         return
     if not plan["total_pares"]:
         print(f"{encabezado} Coherencia al día: no hay pares nuevos ni modificados que evaluar.")

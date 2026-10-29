@@ -83,10 +83,10 @@ def indice_producto(raiz: Path, producto: str) -> Path:
         lineas += ["", "Índice completo: [decisiones/INDICE.md](decisiones/INDICE.md) · "
                    "Coherencia: [decisiones/COHERENCIA.md](decisiones/COHERENCIA.md)"]
     else:
-        lineas.append("Sin ADR. Se crean con `/adr`.")
+        lineas.append("Sin ADR. Se crean con `/crear`.")
 
     revisiones = sorted(p.name for p in (carpeta / "revisiones").iterdir() if p.is_dir()) if (carpeta / "revisiones").exists() else []
-    agendas = sorted(p.name for p in (carpeta / "agendas").glob("*.md")) if (carpeta / "agendas").exists() else []
+    agendas = sorted(p.name for p in (carpeta / "triaje").glob("agenda-*.md")) if (carpeta / "triaje").exists() else []
     pendientes_triaje = len(triaje.pendientes(registro))
     lineas += ["", "## Accesos", ""]
     if (carpeta / "terceros").exists():
@@ -113,7 +113,7 @@ def indice_producto(raiz: Path, producto: str) -> Path:
         lineas.append(f"- Última revisión: [revisiones/{revisiones[-1]}/resumen.md](revisiones/{revisiones[-1]}/resumen.md)")
     lineas.append(f"- Hallazgos pendientes de triaje: {pendientes_triaje}" + (" (ejecutar `/triar`)" if pendientes_triaje else ""))
     if agendas:
-        lineas.append(f"- Última agenda: [agendas/{agendas[-1]}](agendas/{agendas[-1]})")
+        lineas.append(f"- Última agenda: [triaje/{agendas[-1]}](triaje/{agendas[-1]})")
 
     archivo = carpeta / "INDICE.md"
     archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")

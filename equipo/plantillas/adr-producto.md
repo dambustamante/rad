@@ -18,7 +18,7 @@ Propuesto
 ## 5. Decisión
 
 <Qué se decide, en términos verificables. En una excepción: qué se deja de cumplir, dónde y hasta
-cuándo. En una mejora: qué se propone cambiar.>
+cuándo.>
 
 ## 6. Alternativas evaluadas
 
@@ -79,19 +79,16 @@ renumera. En las decisiones del producto todos los criterios son de `revisión d
 - **Criterios exceptuados:** —
 - **Vence:** —
 - **Referencia de aprobación de arquitectura:** —
-- **Hallazgos de origen:** —
 - **Historias de origen:** —
 
 Valores:
 
-- **Tipo:** `decision` (regla propia del producto), `mejora` (propuesta que nace de hallazgos) o
-  `excepcion` (apartarse formalmente de una regla).
+- **Tipo:** `decision` (regla propia del producto) o `excepcion` (apartarse formalmente de una regla).
 - **Repositorios:** `todos` o una lista separada por comas con los `id` de `producto.yaml`.
 - **Criterios exceptuados** (solo `excepcion`): criterios de decisiones del equipo o del producto
   (`EQ-001.1`, `MF-002.1`) o documentos de arquitectura (`fuente:ID`).
 - **Vence** (solo `excepcion`): fecha `AAAA-MM-DD`. Al vencer, los criterios se vuelven a evaluar.
 - **Referencia de aprobación de arquitectura** (solo si exceptúa un documento de arquitectura):
   ticket, acta o correo. Sin ella, la excepción queda registrada pero inactiva.
-- **Hallazgos de origen** (solo `mejora`): `H-NNNN` separados por comas.
 - **Historias de origen**: claves de Jira (por ejemplo `FRAUD-123`) de las historias que originan la
   decisión. Si una de ellas cambia o se retira, el ADR queda marcado para revisión.

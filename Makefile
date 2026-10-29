@@ -6,7 +6,11 @@ ENTORNO := .venv/.instalado
 .PHONY: help venv estado doctor sync-arquitectura coherencia repos terceros historias indices actualizar revisar test
 
 help: ## Lista los comandos disponibles
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
+	@echo "Uso habitual:"
+	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | grep -v '^help:' | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-18s %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Pasos internos (los ejecuta make actualizar):"
+	@grep -E '^[a-zA-Z_-]+:.*?#- ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?#- "}; {printf "  make %-18s %s\n", $$1, $$2}'
 
 $(ENTORNO): requirements.txt
 	python3 -m venv .venv
@@ -19,26 +23,26 @@ venv: $(ENTORNO) ## Crea o actualiza el entorno de Python
 estado: $(ENTORNO) ## Muestra el estado general y qué sigue (sin red ni IA)
 	@$(PYTHON) herramientas/estado.py
 
-doctor: $(ENTORNO) ## Verifica herramientas, configuración y variables (sin mostrar valores)
+doctor: $(ENTORNO) #- Verifica herramientas, configuración y variables (sin mostrar valores)
 	@$(PYTHON) herramientas/doctor.py
 
-sync-arquitectura: $(ENTORNO) ## Descarga arquitectura y genera arquitectura/INDICE.md
+sync-arquitectura: $(ENTORNO) #- Descarga arquitectura y genera arquitectura/INDICE.md
 	@$(PYTHON) herramientas/sync_arquitectura.py
 
-coherencia: $(ENTORNO) ## Actualiza equipo/COHERENCIA.md y lista los pares por evaluar
+coherencia: $(ENTORNO) #- Actualiza equipo/COHERENCIA.md y lista los pares por evaluar
 	@$(PYTHON) herramientas/coherencia.py generar
 	@$(PYTHON) herramientas/coherencia.py preparar
 
-repos: $(ENTORNO) ## Descarga o actualiza los repositorios activos de todos los productos
+repos: $(ENTORNO) #- Descarga o actualiza los repositorios activos de todos los productos
 	@$(PYTHON) herramientas/productos.py sincronizar
 
-terceros: $(ENTORNO) ## Indexa la documentación de los terceros de todos los productos
+terceros: $(ENTORNO) #- Indexa la documentación de los terceros de todos los productos
 	@$(PYTHON) herramientas/terceros.py indexar
 
-historias: $(ENTORNO) ## Sincroniza las historias de usuario de los productos que las tienen configuradas
+historias: $(ENTORNO) #- Sincroniza las historias de usuario de los productos que las tienen configuradas
 	-@$(PYTHON) herramientas/jira.py sincronizar
 
-indices: $(ENTORNO) ## Regenera equipo/INDICE.md y los índices de los productos
+indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py
 
 actualizar: doctor sync-arquitectura coherencia repos terceros historias indices ## Ejecuta la parte automática de /actualizar

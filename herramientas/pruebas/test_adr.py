@@ -92,22 +92,11 @@ class PruebaAdrProducto(unittest.TestCase):
             "- **Referencia de aprobación de arquitectura:** —": f"- **Referencia de aprobación de arquitectura:** {referencia}",
         })
 
-    def test_sigla_numeracion_y_mejora_desde_hallazgos(self) -> None:
+    def test_sigla_y_numeracion(self) -> None:
         self.assertEqual(self.decision().name, "ADR-MF-001-latencia-de-evaluacion.md")
-        registro = hallazgos.cargar(self.raiz, "motor-fraudes")
-        registro["hallazgos"]["x"] = {"id": "H-0001", "repo": "fraude-core", "rama": "main", "estado": "abierto",
-                                      "origen": "revision", "nivel": 3, "modo": "propuesta", "triaje": None,
-                                      "fuente": "ADR-EQ-003", "criterio": "EQ-003.1", "severidad": "alta",
-                                      "titulo": "Cliente sin timeout", "evidencia": [{"archivo": "Buro.java", "linea": 4}]}
-        hallazgos.guardar(self.raiz, "motor-fraudes", registro)
-        archivo = self.crear("mejora", "Centralizar clientes", {}, "--desde", "H-0001")
-        texto = archivo.read_text(encoding="utf-8")
-        self.assertTrue(archivo.name.startswith("ADR-MF-002-"))
-        self.assertIn("| H-0001 | fraude-core | EQ-003.1 | alta | Cliente sin timeout | `Buro.java:4` |", texto)
-        self.assertIn("- **Hallazgos de origen:** H-0001", texto)
-        self.assertIn("- **Tipo:** mejora", texto)
-        codigo, salida = self.ejecutar("nuevo", "motor-fraudes", "--tipo", "decision", "--titulo", "x", "--desde", "H-0001")
-        self.assertIn("--desde solo se usa con el tipo mejora", salida)
+        self.assertTrue(self.crear("decision", "Centralizar clientes", {}).name.startswith("ADR-MF-002-"))
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            self.ejecutar("nuevo", "motor-fraudes", "--tipo", "mejora", "--titulo", "x")
 
     def test_validar(self) -> None:
         self.decision()

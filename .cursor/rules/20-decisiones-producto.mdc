@@ -1,5 +1,5 @@
 ---
-description: Cómo crear y modificar ADR de producto (decisiones, mejoras y excepciones)
+description: Cómo crear y modificar ADR de producto (decisiones y excepciones)
 globs: productos/*/decisiones/**
 alwaysApply: false
 ---
@@ -7,7 +7,7 @@ alwaysApply: false
 Al crear o modificar archivos en `productos/<producto>/decisiones/`:
 
 - Un ADR nuevo se crea con `herramientas/adr.py nuevo` (no a mano): asigna el número, el nombre de archivo y la plantilla `equipo/plantillas/adr-producto.md`.
-- Se conservan las secciones 2 a 14. La sección 14 (Tipo y alcance) define el tipo (`decision`, `mejora` o `excepcion`), los repositorios, los criterios exceptuados, el vencimiento, la referencia de aprobación de arquitectura y los hallazgos de origen.
+- Se conservan las secciones 2 a 14. La sección 14 (Tipo y alcance) define el tipo (`decision` o `excepcion`), los repositorios, los criterios exceptuados, el vencimiento, la referencia de aprobación de arquitectura y las historias de origen.
 - Los criterios de una `decision` usan identificadores `<SIGLA>-NNN.N` estables, todos de `revisión de código`.
 - Una `excepcion` siempre tiene vencimiento. Si exceptúa un documento de arquitectura (`fuente:ID`), necesita la referencia de aprobación de arquitectura para surtir efecto.
 - Un ADR `Aprobado` no se edita: se crea uno nuevo que lo reemplaza y el anterior pasa a `Reemplazado`.

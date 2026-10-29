@@ -41,12 +41,12 @@ herramientas (`.json`, `.lock`) viven siempre en una carpeta `estado/` y no se e
 arquitectura/        niveles 1 y 2: INDICE.md, decisiones/<fuente>/, estandares/<fuente>/, estado/
 equipo/              nivel 3: INDICE.md, COHERENCIA.md, decisiones/ (ADR-EQ), plantillas/, estado/
 productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), terceros/<id>/ (ficha y
-                     documentación del producto comprado y de cada integración), historias/ (índice de historias de usuario y
-                     exportaciones CSV), as-is/, revisiones/, triaje/, agendas/, estado/, repos/
+                     documentación del producto comprado y de cada integración), historias/ (historias
+                     de usuario y borradores para Jira), as-is/, revisiones/, triaje/ (planillas y
+                     agendas), estado/, repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
-.cursor/commands/    comandos de Cursor (/estado, /arquitectura, /actualizar, /producto, /adr, /revisar, /triar,
-                     /historia)
+.cursor/commands/    comandos de Cursor (/estado, /actualizar, /producto, /revisar, /triar, /crear)
 harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
@@ -109,13 +109,11 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | Comando | Qué hace |
 |---|---|
 | `/estado` | muestra el estado general y qué sigue; es el punto de entrada (sin red ni IA) |
-| `/arquitectura` | agrega o retira los repositorios de donde se descargan los documentos de arquitectura |
-| `/actualizar` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR-EQ y actualiza los repositorios |
-| `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
-| `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos, excepciones con vencimiento y propuestas a partir de historias de usuario de Jira |
-| `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
-| `/historia <producto>` | crea Tareas, Spikes y Bugs con la estructura de ADR-EQ-008 a partir de la información del producto; en Jira solo con confirmación |
+| `/actualizar [fuentes]` | verifica herramientas, sincroniza arquitectura, revisa la coherencia de los ADR y actualiza los repositorios; con `fuentes`, agrega o retira repositorios de arquitectura |
+| `/producto <nombre>` | crea un producto (con su sigla), le agrega o retira repositorios y registra sus terceros |
+| `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación; al final, consolidación del producto |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
+| `/crear <producto> [tipo]` | crea un ADR del producto o una excepción, o una Tarea, un Spike o un Bug para Jira (solo con confirmación) |
 
 Cada comando ejecuta primero su parte determinista (`make` o los scripts de `herramientas/`) y
 después hace la parte que requiere criterio. `harness.yaml` se modifica solo mediante esos
