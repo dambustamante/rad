@@ -854,6 +854,40 @@ def listar(raiz: Path, producto: str) -> list[dict]:
     return filas
 
 
+def terminado(raiz: Path, producto: str, hoy: date | None = None) -> list[dict]:
+    """Criterios de ADR-EQ-008 que se verifican solos sobre lo ya creado en Jira.
+
+    - EQ-008.5 (Tarea con hallazgos de origen): cumple cuando todos sus hallazgos están corregidos.
+    - EQ-008.8 (Spike): cumple cuando un ADR de producto en Propuesto o Aprobado lo cita en "Historias de
+      origen". Se informa como pendiente pasada la duración máxima del Spike.
+    """
+    import hallazgos as registro_hallazgos
+    from coherencia import leer_decisiones_producto
+
+    hoy = hoy or date.today()
+    por_id = {h["id"]: h for h in registro_hallazgos.cargar(raiz, producto)["hallazgos"].values()}
+    adrs = leer_decisiones_producto(raiz, producto)
+    resultado = []
+    carpeta = carpeta_borradores(raiz, producto)
+    for archivo in sorted(carpeta.glob("*.md")) if carpeta.exists() else []:
+        if archivo.name.endswith("-contexto.md"):
+            continue
+        datos, _ = leer_borrador(archivo)
+        if datos.get("estado") != "creada" or not datos.get("jira"):
+            continue
+        clave = str(datos["jira"])
+        if datos.get("tipo_incidencia") == "tarea" and datos.get("hallazgos"):
+            abiertos = [i for i in datos["hallazgos"] if por_id.get(i, {}).get("estado") == "abierto"]
+            resultado.append({"clave": clave, "criterio": "EQ-008.5", "cumple": not abiertos, "pendientes": abiertos})
+        elif datos.get("tipo_incidencia") == "spike":
+            con_adr = [i for i, d in adrs.items() if clave in (d["campos"].get("historias de origen") or "")
+                       and normalizar(d["estado"]) in ("propuesto", "aprobado")]
+            creada = date.fromisoformat(str(datos.get("creada") or hoy.isoformat()))
+            resultado.append({"clave": clave, "criterio": "EQ-008.8", "cumple": bool(con_adr), "adr": con_adr,
+                              "vencido": (hoy - creada).days > DURACION_MAXIMA_SPIKE})
+    return resultado
+
+
 # --- Jira --------------------------------------------------------------------------------------
 
 def _texto_con_marcas(texto: str) -> list[dict]:

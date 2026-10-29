@@ -275,6 +275,8 @@ def agregar(raiz: Path, producto: str, id_repo: str, url: str, rama: str, tipo: 
             sonar: str | None, descripcion: str | None) -> bool:
     """Registra un repositorio. Devuelve True si además se creó el producto."""
     validar_nombre(producto, "nombre de producto")
+    if producto == "equipo":
+        raise ErrorRadiografia("'equipo' está reservado para las decisiones del equipo; elegir otro nombre de producto.")
     validar_nombre(id_repo, "id de repositorio")
     if tipo not in TIPOS_REPO:
         raise ErrorRadiografia(f"Tipo '{tipo}' inválido; valores válidos: {', '.join(TIPOS_REPO)}.")

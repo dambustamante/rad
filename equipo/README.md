@@ -52,3 +52,16 @@ Cada ADR-EQ termina con sus criterios (`EQ-NNN.N`). La columna **Cómo** indica:
 - `automática + revisión de código`: una herramienta detecta candidatos y la revisión los confirma.
 - `revisión de la historia`, `revisión del MR` o `plataforma git`: criterios sobre la forma de
   trabajar (ADR-EQ-008 y ADR-EQ-009); no se evalúan en la revisión del código de un repositorio.
+
+Quién verifica la definición de terminado (ADR-EQ-008):
+
+| Criterio | Quién lo verifica |
+|---|---|
+| EQ-008.1 (pruebas de los criterios de aceptación), EQ-008.7 (prueba que reproduce el Bug) | la persona que aprueba el MR |
+| EQ-008.2 (MR aprobado por otra persona) | la plataforma git; la revisión de la rama lo informa |
+| EQ-008.3 (Sonar en verde) | Sonar, en la rama principal |
+| EQ-008.4 (sin secretos) | gitleaks, en la revisión de la rama |
+| EQ-008.5 (hallazgos de origen corregidos), EQ-008.8 (Spike con ADR propuesto) | `/estado`, sobre lo creado en Jira |
+| EQ-008.6 (ADR-EQ que aplican según lo que cambió) | la revisión de la rama |
+
+Un ADR-EQ nuevo se crea con `.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"`.

@@ -103,6 +103,41 @@ class PruebaAdrProducto(unittest.TestCase):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
             self.ejecutar("nuevo", "motor-fraudes", "--tipo", "mejora", "--titulo", "x")
 
+    def test_adr_del_equipo(self) -> None:
+        codigo, salida = self.ejecutar("nuevo", "equipo", "--tipo", "decision", "--titulo", "Versionado de APIs")
+        self.assertEqual(codigo, 0, salida)
+        archivo = self.raiz / salida.split("Creado: ")[1].strip().splitlines()[0]
+        self.assertEqual(archivo.name, "ADR-EQ-010-versionado-de-apis.md", "toma el siguiente número libre del equipo")
+        texto = archivo.read_text(encoding="utf-8")
+        self.assertTrue(texto.startswith("# ADR-EQ-010: Versionado de APIs"))
+        self.assertIn("| `EQ-010.1` | | `automática` \\| `revisión de código` |", texto)
+        self.assertNotIn("## 14.", texto, "la sección 14 es solo de los productos")
+        self.assertNotIn("ÁMBITO", texto)
+        self.assertEqual(self.ejecutar("nuevo", "equipo", "--tipo", "excepcion", "--titulo", "x")[0], 1)
+
+    def test_definicion_de_terminado_verificable(self) -> None:
+        import jira
+        self.decision()
+        registro = hallazgos.cargar(self.raiz, "motor-fraudes")
+        registro["hallazgos"]["x"] = {"id": "H-0001", "repo": "fraude-core", "rama": "main", "estado": "corregido"}
+        hallazgos.guardar(self.raiz, "motor-fraudes", registro)
+        borradores = self.raiz / "productos" / "motor-fraudes" / "historias" / "borradores"
+        borradores.mkdir(parents=True)
+        hace_5_dias = (date.today() - timedelta(days=5)).isoformat()
+        (borradores / "001-tarea.md").write_text(f"---\ntipo_incidencia: tarea\nestado: creada\njira: FRAUD-1\n"
+                                                 f"hallazgos: [H-0001]\ncreada: '{hace_5_dias}'\n---\n# Agregar timeout\n", encoding="utf-8")
+        (borradores / "002-spike.md").write_text(f"---\ntipo_incidencia: spike\nestado: creada\njira: FRAUD-2\n"
+                                                 f"creada: '{hace_5_dias}'\n---\n# Evaluar colas\n", encoding="utf-8")
+        resultado = {t["criterio"]: t for t in jira.terminado(self.raiz, "motor-fraudes")}
+        self.assertTrue(resultado["EQ-008.5"]["cumple"], "todos los hallazgos de origen están corregidos")
+        self.assertFalse(resultado["EQ-008.8"]["cumple"])
+        self.assertTrue(resultado["EQ-008.8"]["vencido"])
+        archivo = next((self.raiz / "productos" / "motor-fraudes" / "decisiones").glob("ADR-MF-001-*.md"))
+        archivo.write_text(archivo.read_text(encoding="utf-8").replace("- **Historias de origen:** —", "- **Historias de origen:** FRAUD-2"),
+                           encoding="utf-8")
+        resultado = {t["criterio"]: t for t in jira.terminado(self.raiz, "motor-fraudes")}
+        self.assertTrue(resultado["EQ-008.8"]["cumple"], "un ADR de producto propuesto cita el Spike")
+
     def test_validar(self) -> None:
         self.decision()
         self.excepcion("EQ-006.1, EQ-099.9", "")

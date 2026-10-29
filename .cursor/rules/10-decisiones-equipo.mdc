@@ -6,7 +6,7 @@ alwaysApply: false
 
 Al crear o modificar archivos en `equipo/`:
 
-- Un ADR-EQ nuevo se crea en `equipo/decisiones/` desde `equipo/plantillas/adr.md` (con `EQ` como ámbito y sin la sección 14), con el siguiente número libre (`ADR-EQ-NNN`), nombre de archivo `ADR-EQ-NNN-<titulo-en-kebab-case>.md` y estado `Propuesto`.
+- Un ADR-EQ nuevo se crea con `herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"` (no a mano): toma el siguiente número libre, usa la plantilla común `equipo/plantillas/adr.md` sin la sección 14 y queda en estado `Propuesto`.
 - Se conservan las secciones y la numeración de la plantilla (2 a 13), que replica el formato de los ADR de arquitectura.
 - La sección 11 (Regla rápida) es obligatoria: una o dos frases verificables.
 - La sección 12 (Relación con arquitectura) no se completa a mano: remite a `equipo/COHERENCIA.md`, que se genera con `/actualizar`.

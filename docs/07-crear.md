@@ -15,6 +15,17 @@ usuario no sepa queda `NO DETERMINADO`.
 | `spike` | investigar para decidir (2 días como máximo) | `productos/<p>/historias/borradores/` y Jira |
 | `bug` | algo que falla en producción | `productos/<p>/historias/borradores/` y Jira |
 
+## Decisión del equipo (ADR-EQ)
+
+```sh
+.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "Versionado de APIs"
+```
+
+Crea `equipo/decisiones/ADR-EQ-010-versionado-de-apis.md` con el siguiente número libre, desde la
+misma plantilla y sin la sección 14 (que es solo de los productos). Se completa igual que una
+decisión del producto; sus criterios pueden ser `automática` o `revisión de código`. Después,
+`/actualizar` verifica su coherencia con arquitectura.
+
 ## ADR del producto
 
 ### Paso 1: ver lo que hay

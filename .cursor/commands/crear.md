@@ -11,6 +11,10 @@ Uso:
 - `/crear <producto> tarea --desde H-0041,H-0052`: una Tarea de Deuda Técnica a partir de hallazgos
   (por ejemplo, los marcados como Deuda en `/triar`).
 - `/crear <producto> adr --desde-historias`: proponer ADR a partir de las historias de usuario.
+- `/crear equipo adr`: una decisión del equipo (ADR-EQ), con
+  `.venv/bin/python herramientas/adr.py nuevo equipo --tipo decision --titulo "<título>"`. Se completa
+  igual que una decisión del producto, pero sus criterios pueden ser `automática` o
+  `revisión de código`; después, `/actualizar` verifica su coherencia con arquitectura.
 
 | Qué | Cuándo |
 |---|---|

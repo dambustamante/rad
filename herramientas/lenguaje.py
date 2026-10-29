@@ -76,6 +76,8 @@ def revisar(texto: str, reglas: dict | None = None) -> list[dict]:
                 continue
             if re.match(r"^[A-Z]+-\d", linea[coincidencia.start():]) or base.isdigit():
                 continue  # identificadores como ADR-EQ-002, EQ-006.1 o FRAUD-123
+            if re.match(r"\.[a-z]{1,5}\b", linea[coincidencia.end():]) or linea[:coincidencia.start()].endswith("/"):
+                continue  # nombres de archivo o rutas, como INDICE.md o docs/README
             # Una sigla de varias palabras ("PCI DSS (…)") se explica una sola vez, al final.
             resto = re.sub(r"^(\s+[A-Z][A-Z0-9]{1,5})+", "", linea[coincidencia.end():])
             siguiente = resto[:3]

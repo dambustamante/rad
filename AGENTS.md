@@ -47,6 +47,7 @@ productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), tercer
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
 .cursor/commands/    comandos de Cursor (/estado, /actualizar, /producto, /revisar, /triar, /crear)
+.cursor/hooks.json   guardia de los comandos de terminal (herramientas/guardia.py)
 .cache/ramas/        copias de solo lectura de las ramas en revisión (fuera de git)
 harness.yaml         configuración global (fuentes de arquitectura, estados, calibración y Jira)
 .env                 conexiones y tokens (no versionado; ver .env.example)
@@ -59,6 +60,9 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, ca
    escribe en la plataforma git es el comentario de una revisión de rama en su MR o PR.
 2. **Nada sale sin confirmación.** Ninguna escritura hacia la plataforma git, Sonar o Jira ocurre sin
    una vista previa y la confirmación explícita del usuario.
+   Los comandos de terminal pasan por la guardia de `.cursor/hooks.json` (`herramientas/guardia.py`):
+   bloquea las escrituras de git en las copias, las acciones sobre MR con `glab` o `gh` y las escrituras
+   HTTP directas, y pide aprobación para todo comando con `--confirmar`.
 3. **Nada se ejecuta solo.** Sin cron, tareas programadas ni procesos en segundo plano.
 4. **Sin secretos.** Las conexiones (URLs, organización) y los tokens viven solo en `.env`, que
    no se versiona; `.env.example` lista las variables. Nunca se escriben valores de tokens,

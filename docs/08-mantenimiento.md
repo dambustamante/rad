@@ -15,8 +15,10 @@ Muestra un resumen y la lista "Qué sigue", en orden de prioridad:
 - Sonar sin configurar;
 - por producto: repositorios por revisar, consolidación pendiente, hallazgos sin triar, excepciones
   vencidas o inactivas, borradores sin crear en Jira, fichas de terceros incompletas, ADR con
-  historias de origen modificadas, historias candidatas por analizar, documentos sin indexar y
-  reporte semanal pendiente (más de 7 días).
+  historias de origen modificadas, historias candidatas por analizar, documentos sin indexar,
+  reporte semanal pendiente (más de 7 días) y la definición de terminado que se verifica sola: Tareas
+  de Jira cuyos hallazgos de origen ya están corregidos (EQ-008.5, se pueden cerrar) y Spikes que
+  superaron los 2 días sin un ADR de producto propuesto (EQ-008.8).
 
 ## Reporte semanal (`/estado semanal`)
 
@@ -92,6 +94,18 @@ comentarios.
   plataforma git solo se escribe el comentario de la revisión de una rama.
 - Nada se ejecuta solo: sin tareas programadas ni procesos en segundo plano.
 - Los tokens viven solo en `.env`; ningún archivo, reporte ni mensaje muestra su valor.
+
+Las dos primeras reglas también las aplica Cursor antes de ejecutar cada comando de terminal, con el
+hook de `.cursor/hooks.json` (`herramientas/guardia.py`):
+
+| Comando | Qué pasa |
+|---|---|
+| commit, push, merge, rebase, reset, tag o cambio de rama en `productos/*/repos/` o `.cache/ramas/` | se bloquea |
+| acciones sobre MR o PR con `glab` o `gh` (merge, approve, comment…) | se bloquea |
+| escrituras HTTP directas (`curl` o `wget` con POST, PUT, PATCH, DELETE o datos) | se bloquea |
+| cualquier comando con `--confirmar` (publicar en un MR o crear en Jira) | Cursor pide la aprobación del usuario |
+
+Los comandos de lectura (`git log`, `git diff`, consultas a Sonar) y los de `make` funcionan normalmente.
 
 El contrato completo está en [AGENTS.md](../AGENTS.md).
 

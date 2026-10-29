@@ -3,6 +3,7 @@
 Uso:
   python herramientas/adr.py listar <producto>
   python herramientas/adr.py nuevo <producto> --tipo decision|excepcion --titulo TEXTO [--historias CLAVE-1,CLAVE-2]
+  python herramientas/adr.py nuevo equipo --tipo decision --titulo TEXTO      (ADR-EQ del equipo)
   python herramientas/adr.py validar <producto> [--id ADR-XX-NNN]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
@@ -153,6 +154,28 @@ def validar_adr(raiz: Path, producto: str, adr: dict) -> tuple[list[str], list[s
 
 
 
+def desde_plantilla(raiz: Path, ambito: str, numero: str, titulo: str) -> str:
+    """Plantilla común de ADR (equipo/plantillas/adr.md) con el ámbito (EQ o sigla), el número, el título y la fecha."""
+    texto = (raiz / "equipo" / "plantillas" / "adr.md").read_text(encoding="utf-8")
+    texto = texto.replace("ADR-<ÁMBITO>-NNN: <Título de la decisión>", f"ADR-{ambito}-{numero}: {titulo}")
+    texto = re.sub(r"\n> `<ÁMBITO>`:.*\n", "", texto, count=1)
+    texto = texto.replace("`<ÁMBITO>-NNN.1`", f"`{ambito}-{numero}.1`").replace("(`<ÁMBITO>-NNN.N`)", f"(`{ambito}-NNN.N`)")
+    return texto.replace("Fecha de creación: `DD-MM-AAAA`", f"Fecha de creación: `{date.today().strftime('%d-%m-%Y')}`")
+
+
+def nuevo_equipo(raiz: Path, titulo: str) -> Path:
+    """ADR-EQ nuevo en equipo/decisiones/, en estado Propuesto y sin la sección 14 (exclusiva de los productos)."""
+    carpeta = raiz / "equipo" / "decisiones"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    numeros = [int(m.group(1)) for a in carpeta.glob("ADR-EQ-*.md") if (m := re.match(r"ADR-EQ-(\d{3})", a.name))]
+    numero = f"{max(numeros, default=0) + 1:03d}"
+    texto = desde_plantilla(raiz, "EQ", numero, titulo)
+    texto = texto[:texto.index("## 14. Tipo y alcance")].rstrip() + "\n"
+    archivo = carpeta / f"ADR-EQ-{numero}-{slug(titulo)}.md"
+    archivo.write_text(texto, encoding="utf-8")
+    return archivo
+
+
 def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str] | None = None) -> Path:
     if tipo not in TIPOS:
         raise ErrorRadiografia(f"Tipo '{tipo}' inválido; valores válidos: {', '.join(TIPOS)}.")
@@ -167,13 +190,10 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str
     numero = f"{max(numeros, default=0) + 1:03d}"
     id_adr = f"ADR-{sigla}-{numero}"
 
-    texto = (raiz / "equipo" / "plantillas" / "adr.md").read_text(encoding="utf-8")
-    texto = texto.replace("ADR-<ÁMBITO>-NNN: <Título de la decisión>", f"{id_adr}: {titulo}")
-    texto = re.sub(r"\n> `<ÁMBITO>`:.*\n", "", texto, count=1)
-    texto = texto.replace("| `<ÁMBITO>-NNN.1` | | `automática` \\| `revisión de código` |", f"| `{sigla}-{numero}.1` | | revisión de código |")
-    texto = texto.replace("(`<ÁMBITO>-NNN.N`)", f"(`{sigla}-NNN.N`)")
+    texto = desde_plantilla(raiz, sigla, numero, titulo)
+    texto = texto.replace("| `{0}-{1}.1` | | `automática` \\| `revisión de código` |".format(sigla, numero),
+                          f"| `{sigla}-{numero}.1` | | revisión de código |")
     texto = texto.replace(" (solo ADR de producto; en un ADR-EQ se elimina)", "", 1)
-    texto = texto.replace("Fecha de creación: `DD-MM-AAAA`", f"Fecha de creación: `{date.today().strftime('%d-%m-%Y')}`")
     texto = texto.replace("- **Tipo:** decision", f"- **Tipo:** {tipo}", 1)
 
     if historias:
@@ -254,6 +274,13 @@ def main(argumentos: list[str] | None = None) -> int:
                       + (f" · vence {f['vence']}" if f["vence"] else ""))
         elif o.accion == "nuevo":
             claves = [c.strip() for c in o.historias.split(",") if c.strip()]
+            if o.producto == "equipo":
+                if o.tipo != "decision" or claves:
+                    raise ErrorRadiografia("Un ADR-EQ es siempre de tipo decision y no tiene historias de origen.")
+                print(f"Creado: {nuevo_equipo(raiz, o.titulo).relative_to(raiz)}")
+                import indices
+                indices.indice_equipo(raiz)
+                return 0
             print(f"Creado: {nuevo(raiz, o.producto, o.tipo, o.titulo, claves).relative_to(raiz)}")
         if o.accion in ("listar", "nuevo"):
             import indices

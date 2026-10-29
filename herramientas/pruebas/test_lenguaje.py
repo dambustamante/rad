@@ -34,6 +34,7 @@ class PruebaLenguaje(unittest.TestCase):
             "El p95 del SLA (acuerdo de nivel de servicio) es 800 ms; el SLA se mide por mes.",
             "Requisitos PCI DSS (estándar de seguridad de datos de tarjetas).",
             "Resultado: NO APLICA o NO DETERMINADO.",
+            "Ver [INDICE.md](INDICE.md) y docs/README del repositorio.",   # nombres de archivo y rutas
             "```",
             "es importante destacar dentro de un bloque de código",
             "```",
