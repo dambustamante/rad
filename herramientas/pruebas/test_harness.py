@@ -110,7 +110,7 @@ class PruebaHarness(unittest.TestCase):
         hallazgos.guardar(self.raiz, "motor-fraudes", registro)
         r = harness.generar(self.raiz, "motor-fraudes")
         self.assertTrue(r["commit"])
-        self.assertEqual(r["cambiados"], [".cursor/rules/generado/repo-fraude-core.mdc"])
+        self.assertEqual(r["cambiados"], [".cursor/rules/generado/repo-fraude-core.mdc", "contexto.json"])
         self.assertEqual(r["version"], 2)
         self.assertNotIn("Llamada sin timeout", (self.destino / ".cursor/rules/generado/repo-fraude-core.mdc").read_text(encoding="utf-8"))
 
@@ -145,6 +145,100 @@ class PruebaHarness(unittest.TestCase):
         self.assertEqual(guardia.evaluar("git -C productos/motor-fraudes/harness push origin main")[0], "ask",
                          "en radiografia, el push del harness pide aprobación")
         self.assertEqual(guardia.evaluar("git -C productos/motor-fraudes/harness commit -m x")[0], "allow")
+
+    def test_plantilla_agrega_lo_nuevo_y_avisa_sin_pisar(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        (self.destino / "herramientas" / "hdu.py").unlink()
+        agents = self.destino / "AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8") + "\nRegla propia del equipo.\n", encoding="utf-8")
+        generado = json.loads((self.destino / "GENERADO.json").read_text(encoding="utf-8"))
+        generado["plantilla"]["README.md"] = "huella-de-una-plantilla-anterior"
+        del generado["plantilla"]["herramientas/hdu.py"]
+        (self.destino / "GENERADO.json").write_text(json.dumps(generado), encoding="utf-8")
+        r = harness.generar(self.raiz, "motor-fraudes")
+        self.assertIn("herramientas/hdu.py", r["cambiados"], "un archivo nuevo de la plantilla se agrega")
+        self.assertTrue((self.destino / "herramientas" / "hdu.py").exists())
+        self.assertEqual(r["avisos"], ["README.md"], "la plantilla cambió el README: se avisa, no se pisa")
+        self.assertIn("Regla propia del equipo.", agents.read_text(encoding="utf-8"), "lo que cambió el equipo se conserva")
+        self.assertEqual(harness.generar(self.raiz, "motor-fraudes")["avisos"], [], "el aviso se da una vez")
+        config = json.loads((self.destino / "config.json").read_text(encoding="utf-8"))
+        self.assertEqual((config["sigla"], config["jira"]["medicion_aceptada"]), ("MF", ["Óptima", "Completa", "Adecuada"]))
+        contexto = json.loads((self.destino / "contexto.json").read_text(encoding="utf-8"))
+        self.assertIn("decisiones:ADR-010", [h["criterio"] for h in contexto["fraude-core"]["hallazgos"]])
+        self.assertTrue((self.destino / ".env.example").exists())
+
+    def historia(self, medicion: str | None, tipo: str = "Historia") -> dict:
+        descripcion = {"type": "doc", "content": [
+            {"type": "paragraph", "content": [{"type": "text", "text": "Como analista quiero que la evaluación consulte el buró."}]},
+            {"type": "heading", "content": [{"type": "text", "text": "Criterios de aceptación"}]},
+            {"type": "bulletList", "content": [
+                {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "La consulta responde en menos de 800 ms."}]}]},
+                {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Si el buró falla, la transacción queda en revisión."}]}]}]}]}
+        campos = {"summary": "Consultar el buró en la evaluación", "description": descripcion, "issuetype": {"name": tipo},
+                  "status": {"name": "Por hacer"}, "labels": [], "components": [{"name": "fraude-core"}],
+                  "customfield_1": {"value": medicion} if medicion else None, "customfield_2": {"value": "Producto"}}
+        return {"fields": campos}
+
+    def hdu(self, medicion: str | None, tipo: str = "Historia"):
+        modulo = cargar(self.destino / "herramientas" / "hdu.py", "hdu_prueba")
+        def pedir(env, ruta, parametros=None):
+            if ruta.endswith("/field"):
+                return [{"id": "customfield_1", "name": "Medición HU"}, {"id": "customfield_2", "name": "Tipo"}]
+            return self.historia(medicion, tipo)
+        modulo.pedir = pedir
+        modulo.cargar_env = lambda: {"JIRA_URL": "https://jira.example", "JIRA_EMAIL": "e", "JIRA_TOKEN": "t"}
+        return modulo
+
+    def test_hdu_toma_segun_medicion_y_prepara_el_trabajo(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
+        r = self.hdu("Completa").tomar("FRAUD-123", None, True)
+        self.assertTrue(r["tomada"])
+        self.assertEqual(r["repos"], ["fraude-core"], "el repositorio sale del componente de Jira")
+        self.assertEqual(r["historia"]["criterios"], ["La consulta responde en menos de 800 ms.",
+                                                      "Si el buró falla, la transacción queda en revisión."])
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"),
+                         "feature/FRAUD-123-consultar-el-buro-en-la-evaluacion")
+        contexto = r["contexto"].read_text(encoding="utf-8")
+        self.assertIn("1. La consulta responde en menos de 800 ms.", contexto)
+        self.assertIn("decisiones:ADR-010 · alta: Llamada sin timeout", contexto, "los hallazgos altos del repo siempre se muestran")
+
+        self.assertFalse(self.hdu("Incompleta").tomar("FRAUD-124", None, False)["tomada"], "una medición no aceptada no se toma")
+        sin_medir = self.hdu(None).tomar("FRAUD-125", None, False)
+        self.assertEqual(sin_medir["medicion"], "sin medir")
+        self.assertIn("`/listo` exige revisar la deuda", sin_medir["contexto"].read_text(encoding="utf-8"))
+        spike = self.hdu("Óptima", "Spike").tomar("FRAUD-126", None, False)
+        self.assertIn("## Entregable del Spike", spike["contexto"].read_text(encoding="utf-8"))
+        self.assertEqual(git("status", "--porcelain", cwd=self.destino), "", "trabajo/ y .cursorignore quedan fuera de git")
+
+        modulo = self.hdu("Completa")
+        modulo.foco(["fraude-core"], ["fraude-core", "fraude-backoffice"])
+        self.assertIn("code/fraude-backoffice/", (self.destino / ".cursorignore").read_text(encoding="utf-8"))
+        modulo.foco(None, ["fraude-core", "fraude-backoffice"])
+        self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
+
+    def test_adr_desde_el_harness_y_enlazar_clones(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        herramienta = str(self.destino / "herramientas" / "harness.py")
+        salida = subprocess.run([sys.executable, herramienta, "adr", "--titulo", "Cola para eventos de evaluación",
+                                 "--historia", "FRAUD-126"], capture_output=True, text=True)
+        self.assertEqual(salida.returncode, 0, salida.stderr)
+        nuevo = next((self.destino / "decisiones").glob("ADR-MF-002-*.md")).read_text(encoding="utf-8")
+        self.assertTrue(nuevo.startswith("# ADR-MF-002: Cola para eventos de evaluación"))
+        self.assertIn("- **Historias de origen:** FRAUD-126", nuevo)
+        self.assertIn("| `MF-002.1` | | revisión de código |", nuevo)
+        self.assertNotIn("ÁMBITO", nuevo)
+        errores, _ = adr.validar_adr(self.raiz, "motor-fraudes", adr.leer_decisiones_producto(self.raiz, "motor-fraudes")["ADR-MF-002"])
+        self.assertEqual(errores, ["falta la regla rápida"], "radiografia lo lee como ADR del producto; solo falta completarlo")
+
+        clones = Path(self.temporal.name) / "mis-repos"
+        clones.mkdir()
+        subprocess.run(["git", "clone", "--quiet", str(self.core), str(clones / "fraude-core")], check=True)
+        salida = subprocess.run([sys.executable, herramienta, "code", "--enlazar", str(clones)], capture_output=True, text=True)
+        self.assertIn("fraude-core: enlazado a", salida.stdout)
+        self.assertTrue((self.destino / "code" / "fraude-core").is_symlink())
+        doctor = subprocess.run([sys.executable, herramienta, "doctor"], capture_output=True, text=True)
+        self.assertIn("code/ fuera de git del harness", doctor.stdout)
 
 
 if __name__ == "__main__":

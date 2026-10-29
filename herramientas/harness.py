@@ -37,7 +37,7 @@ from comun import RAIZ, ErrorRadiografia, git, leer_json, normalizar
 from revisar import decisiones_con_criterios
 
 PLANTILLA = Path(__file__).resolve().parent / "plantilla_harness"
-GENERADOS = ("repos.json", "GENERADO.json", ".cursor/rules/generado/")
+GENERADOS = ("repos.json", "config.json", "contexto.json", "GENERADO.json", ".cursor/rules/generado/")
 MAXIMO_HALLAZGOS = 15
 LARGO_RESUMEN = 700
 ORDEN_SEVERIDAD = {"bloqueante": 0, "alta": 1, "media": 2, "baja": 3}
@@ -158,18 +158,52 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
     }
     for repo in activos:
         archivos[f".cursor/rules/generado/repo-{repo['id']}.mdc"] = texto_repo(raiz, producto, repo, registro)
+    from jira import config_jira
+    jira = config_jira(raiz)
+    archivos["config.json"] = json.dumps({
+        "producto": producto, "sigla": sigla_de(raiz, producto),
+        "jira": {"campo_medicion": jira["campo_medicion"], "medicion_aceptada": jira["medicion_aceptada"],
+                 "campo_tipo": jira["campo_tipo"]}}, indent=2, ensure_ascii=False) + "\n"
+    archivos["contexto.json"] = json.dumps(contexto_estructurado(raiz, producto, activos, registro), indent=2,
+                                           ensure_ascii=False, sort_keys=True) + "\n"
     return archivos
+
+
+def contexto_estructurado(raiz: Path, producto: str, activos: list[dict], registro: dict) -> dict:
+    """Lo que /hdu cruza con la historia, sin IA: hallazgos abiertos, componentes y terceros de cada repositorio."""
+    import revision
+    resultado = {}
+    for repo in activos:
+        id_repo = str(repo["id"])
+        codigo = (registro.get("repos", {}).get(id_repo) or {}).get("codigo")
+        componentes = revision.leer_trabajo(raiz, producto, codigo["id"], id_repo).get("componentes", []) if codigo else []
+        resultado[id_repo] = {
+            "hallazgos": [{"id": h["id"], "criterio": h["criterio"] or h["fuente"], "severidad": h["severidad"], "titulo": h["titulo"],
+                           "evidencia": [f"{e['archivo']}:{e['linea']}" if e.get("linea") else e["archivo"] for e in h["evidencia"][:2]]}
+                          for h in sorted(registro["hallazgos"].values(), key=lambda h: h["id"])
+                          if h["repo"] == id_repo and h["rama"] == repo["rama"] and h["estado"] == "abierto"
+                          and not h.get("absorbido_por") and (h.get("triaje") or {}).get("decision") != "falso-positivo"],
+            "componentes": [{"nombre": c["nombre"], "tipo": c["tipo"], "tecnologia": c["tecnologia"], "tercero": c["tercero"]}
+                            for c in componentes],
+            "terceros": [{"id": f["id"], "nombre": f.get("nombre"), "p95_ms": (f.get("sla") or {}).get("p95_ms"),
+                          "politica_ante_falla": f.get("politica_ante_falla")} for f in terceros.para_repo(raiz, producto, id_repo)],
+        }
+    return resultado
 
 
 def huella(texto: str) -> str:
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()
 
 
-def escribir_generados(raiz: Path, producto: str) -> list[str]:
-    """Escribe lo generado; devuelve las rutas que cambiaron (incluidas las que se borraron)."""
+def escribir_generados(raiz: Path, producto: str, plantilla: dict[str, str] | None = None) -> list[str]:
+    """Escribe lo generado; devuelve las rutas que cambiaron (incluidas las que se borraron).
+
+    `plantilla` son las huellas de los archivos del equipo tal como los entregó la plantilla.
+    """
     destino = ruta(raiz, producto)
     archivos = contenido_generado(raiz, producto)
-    previo = leer_json(destino / "GENERADO.json", {"version": 0, "archivos": {}})
+    previo = leer_json(destino / "GENERADO.json", {"version": 0, "archivos": {}, "plantilla": {}})
+    plantilla = previo.get("plantilla", {}) if plantilla is None else plantilla
     cambiados = sorted(r for r, t in archivos.items() if previo["archivos"].get(r) != huella(t))
     sobrantes = sorted(set(previo["archivos"]) - set(archivos))
     for relativa in sobrantes:
@@ -177,14 +211,15 @@ def escribir_generados(raiz: Path, producto: str) -> list[str]:
     for relativa, texto in archivos.items():
         (destino / relativa).parent.mkdir(parents=True, exist_ok=True)
         (destino / relativa).write_text(texto, encoding="utf-8")
-    if cambiados or sobrantes or not (destino / "GENERADO.json").exists():
+    if cambiados or sobrantes or plantilla != previo.get("plantilla", {}) or not (destino / "GENERADO.json").exists():
         try:
             origen = git("rev-parse", "--short", "HEAD", cwd=raiz)
         except ErrorRadiografia:
             origen = "NO DETERMINADO"
         (destino / "GENERADO.json").write_text(json.dumps({
             "version": previo["version"] + 1, "fecha": date.today().isoformat(), "radiografia": origen,
-            "archivos": {r: huella(t) for r, t in sorted(archivos.items())}}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            "archivos": {r: huella(t) for r, t in sorted(archivos.items())},
+            "plantilla": dict(sorted(plantilla.items()))}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return cambiados + sobrantes
 
 
@@ -194,6 +229,52 @@ def indices_decisiones(raiz: Path, producto: str) -> None:
     import coherencia
     adr.listar(raiz, producto)
     coherencia.generar(raiz, coherencia.ambito_producto(raiz, producto))
+
+
+# --- Plantilla (archivos del equipo) -----------------------------------------------------------
+
+def plantilla_adr(raiz: Path, sigla: str) -> str:
+    """Plantilla de ADR del producto, con la sigla y sin las notas que solo sirven para elegir el ámbito."""
+    texto = (raiz / "equipo" / "plantillas" / "adr.md").read_text(encoding="utf-8")
+    texto = re.sub(r"\n> `<ÁMBITO>`:.*\n", "\n", texto, count=1).replace("<ÁMBITO>", sigla)
+    texto = texto.replace(f"| `{sigla}-NNN.1` | | `automática` \\| `revisión de código` |", f"| `{sigla}-NNN.1` | | revisión de código |")
+    return texto.replace(" (solo ADR de producto; en un ADR-EQ se elimina)", "")
+
+
+def plantilla_renderizada(raiz: Path, producto: str) -> dict[str, str]:
+    """Archivos del equipo tal como los entrega la plantilla (ruta relativa -> contenido)."""
+    sigla = sigla_de(raiz, producto) or "XX"
+    archivos = {}
+    for origen in sorted(PLANTILLA.rglob("*")):
+        if origen.is_dir() or "__pycache__" in origen.parts:
+            continue
+        relativa = origen.relative_to(PLANTILLA).as_posix()
+        if origen.name in ("gitignore", "env.example"):  # en la plantilla no llevan punto: no los aplica radiografia
+            relativa = relativa[: -len(origen.name)] + "." + origen.name
+        archivos[relativa] = origen.read_text(encoding="utf-8").replace("{{producto}}", producto).replace("{{sigla}}", sigla)
+    archivos["decisiones/plantilla.md"] = plantilla_adr(raiz, sigla)
+    return archivos
+
+
+def sincronizar_plantilla(raiz: Path, producto: str) -> tuple[dict[str, str], list[str], list[str]]:
+    """Agrega los archivos nuevos de la plantilla y detecta los que cambiaron en la plantilla.
+
+    Nunca pisa un archivo del equipo: si la plantilla cambió un archivo que el harness ya tiene, solo avisa
+    (una vez) para llevar el cambio por MR. Devuelve (huellas de la plantilla, agregados, avisos).
+    """
+    destino = ruta(raiz, producto)
+    previas = leer_json(destino / "GENERADO.json").get("plantilla", {})
+    huellas, agregados, avisos = dict(previas), [], []
+    for relativa, texto in plantilla_renderizada(raiz, producto).items():
+        archivo = destino / relativa
+        if not archivo.exists():
+            archivo.parent.mkdir(parents=True, exist_ok=True)
+            archivo.write_text(texto, encoding="utf-8")
+            agregados.append(relativa)
+        elif relativa in previas and previas[relativa] != huella(texto):
+            avisos.append(relativa)
+        huellas[relativa] = huella(texto)
+    return huellas, agregados, avisos
 
 
 # --- Acciones ----------------------------------------------------------------------------------
@@ -220,21 +301,10 @@ def crear(raiz: Path, producto: str) -> dict:
     if existe(raiz, producto):
         raise ErrorRadiografia(f"El harness de '{producto}' ya existe en {destino.relative_to(raiz)}.")
     anteriores = raiz / "productos" / producto / "decisiones"
-    for origen in sorted(PLANTILLA.rglob("*")):
-        if origen.is_dir() or "__pycache__" in origen.parts:
-            continue
-        relativa = origen.relative_to(PLANTILLA).as_posix()
-        if origen.name == "gitignore":  # en la plantilla no lleva punto, para que no la aplique el git de radiografia
-            relativa = relativa[: -len("gitignore")] + ".gitignore"
-        archivo = destino / relativa
-        archivo.parent.mkdir(parents=True, exist_ok=True)
-        if origen.suffix in (".md", ".mdc", ".json", "") or origen.name == "Makefile":
-            archivo.write_text(origen.read_text(encoding="utf-8").replace("{{producto}}", producto).replace("{{sigla}}", sigla),
-                               encoding="utf-8")
-        else:
-            shutil.copy2(origen, archivo)
-    plantilla_adr = (raiz / "equipo" / "plantillas" / "adr.md").read_text(encoding="utf-8")
-    (destino / "decisiones" / "plantilla.md").write_text(plantilla_adr.replace("<ÁMBITO>", sigla), encoding="utf-8")
+    plantilla = plantilla_renderizada(raiz, producto)
+    for relativa, texto in plantilla.items():
+        (destino / relativa).parent.mkdir(parents=True, exist_ok=True)
+        (destino / relativa).write_text(texto, encoding="utf-8")
     movidos = []
     if anteriores.exists():
         for adr_anterior in sorted(anteriores.glob("ADR-*.md")):
@@ -245,7 +315,7 @@ def crear(raiz: Path, producto: str) -> dict:
         if not any(anteriores.iterdir()):
             anteriores.rmdir()
     git("init", "--quiet", "-b", "main", cwd=destino)
-    escribir_generados(raiz, producto)
+    escribir_generados(raiz, producto, {r: huella(x) for r, x in plantilla.items()})
     indices_decisiones(raiz, producto)
     commit(destino, f"Crea el harness de {producto} desde radiografia")
     return {"ruta": destino, "movidos": movidos}
@@ -268,12 +338,13 @@ def traer(raiz: Path, producto: str) -> str:
 
 def generar(raiz: Path, producto: str) -> dict:
     destino = ruta(raiz, producto)
-    cambiados = escribir_generados(raiz, producto)
+    huellas, agregados, avisos = sincronizar_plantilla(raiz, producto)
+    cambiados = escribir_generados(raiz, producto, huellas)
     indices_decisiones(raiz, producto)
-    rutas = [r for r in (*GENERADOS, "decisiones/INDICE.md", "decisiones/COHERENCIA.md") if (destino / r).exists()]
+    rutas = [r for r in (*GENERADOS, *agregados, "decisiones/INDICE.md", "decisiones/COHERENCIA.md") if (destino / r).exists()]
     hecho = commit(destino, "Actualiza lo generado desde radiografia", rutas)
     version = leer_json(destino / "GENERADO.json")["version"]
-    return {"cambiados": cambiados, "commit": hecho, "version": version}
+    return {"cambiados": cambiados + agregados, "commit": hecho, "version": version, "avisos": avisos}
 
 
 def guardar(raiz: Path, producto: str, mensaje: str) -> bool:
@@ -331,6 +402,8 @@ def main(argumentos: list[str] | None = None) -> int:
                 detalle = f"versión {r['version']}, commit local hecho: {', '.join(r['cambiados']) or 'índices de decisiones'}" \
                     if r["commit"] else "sin cambios"
                 print(f"  harness-{nombre}: {detalle}")
+                for aviso in r["avisos"]:
+                    print(f"    La plantilla cambió {aviso}: revisar si el cambio se lleva al harness (por MR).")
         elif o.accion == "guardar":
             print("Commit hecho en decisiones/." if guardar(raiz, o.producto, o.mensaje) else "Sin cambios en decisiones/.")
         elif o.accion == "estado":

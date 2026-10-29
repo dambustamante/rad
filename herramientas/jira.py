@@ -585,6 +585,8 @@ def config_jira(raiz: Path) -> dict:
         "campo_tipo": jira.get("campo_tipo", "Tipo"),
         "tipos_incidencia": {"tarea": "Tarea", "spike": "Spike", "error": "Error", "hotfix": "Hotfix",
                              **(jira.get("tipos_incidencia") or {})},
+        "campo_medicion": jira.get("campo_medicion", "Medición HU"),
+        "medicion_aceptada": list(jira.get("medicion_aceptada") or ["Óptima", "Completa", "Adecuada"]),
     }
 
 

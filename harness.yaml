@@ -41,3 +41,5 @@ jira:
     spike: Spike
     error: Error
     hotfix: Hotfix
+  campo_medicion: Medición HU    # campo con la medición de calidad de la historia (se llena a mano)
+  medicion_aceptada: [Óptima, Completa, Adecuada]   # valores con los que el harness toma una historia

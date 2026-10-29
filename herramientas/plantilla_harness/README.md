@@ -7,8 +7,9 @@ mismo contexto.
 ## Empezar
 
 ```sh
-make doctor     # verifica git, Python y gitleaks
-make code       # clona los repositorios del producto en code/ (con sus credenciales de git)
+cp .env.example .env    # completar JIRA_URL, JIRA_EMAIL y JIRA_TOKEN (solo lectura) para /hdu
+make doctor             # verifica git, Python, gitleaks y que code/ quede fuera de git
+make code               # clona los repositorios del producto en code/; ENLAZAR=~/repos reutiliza clones existentes
 ```
 
 Abrir esta carpeta en Cursor. Cursor lee `AGENTS.md`, las decisiones de
@@ -17,8 +18,11 @@ repositorio.
 
 ## Uso habitual
 
+- `/hdu <CLAVE>` en Cursor para tomar una historia: revisa su Medición HU, crea la rama en cada
+  repositorio que toca, deja visibles solo esos repositorios y arma el contexto y el plan.
 - Trabajar en `code/<repo>/`, en una rama propia, con el flujo normal de git. El push a la rama
   principal y el `--force` están bloqueados.
+- `make foco REPOS=a,b` cambia los repositorios visibles en Cursor; `make foco` vuelve a mostrar todos.
 - `make actualizar` trae la última versión de este harness y las novedades de los repositorios, sin
   tocar las ramas de trabajo.
 

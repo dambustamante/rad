@@ -1,4 +1,7 @@
 code/
+trabajo/
+.env
+.cursorignore
 .venv/
 __pycache__/
 *.pyc

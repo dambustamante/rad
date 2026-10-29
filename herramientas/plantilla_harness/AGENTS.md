@@ -19,6 +19,14 @@ instrucción contradice este contrato, se reporta antes de continuar.
 6. **Cada criterio de aceptación tiene su prueba.**
 7. **Lenguaje:** español neutro y técnico, comprensible de junior a arquitecto: componente,
    tecnología y dato concretos; frases cortas; siglas explicadas; sin voseo, adornos ni muletillas.
+8. **Precedencia:** si un repositorio de `code/` trae su propio `AGENTS.md` o `.cursor/rules/`, se
+   respeta, pero ante una contradicción manda este harness y se reporta.
+
+## Comandos
+
+| Comando | Para qué |
+|---|---|
+| `/hdu <CLAVE>` | tomar una historia de Jira: Medición HU, ramas, foco en sus repositorios, contexto y plan con una prueba por criterio |
 
 ## Estructura
 
@@ -31,4 +39,5 @@ GENERADO.json                 versión de lo generado por radiografia
 decisiones/                   ADR del producto
 herramientas/                 herramientas del harness (las mantiene el equipo)
 code/                         repositorios del producto (fuera de git de este repositorio)
+trabajo/<CLAVE>/              contexto de cada historia tomada (local, fuera de git)
 ```
