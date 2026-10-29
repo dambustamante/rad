@@ -47,13 +47,13 @@ indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 
 actualizar: doctor sync-arquitectura coherencia repos terceros historias indices ## Ejecuta la parte automática de /actualizar
 
-revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]
+revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1] [COMPLETA=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]"; exit 1)
 ifdef RAMA
 	@test -n "$(R)" || (echo "Para revisar una rama se indica el repositorio: make revisar P=<producto> R=<repo> RAMA=<rama>"; exit 1)
 	@$(PYTHON) herramientas/rama.py preparar $(P) $(R) $(RAMA)
 else
-	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar)
+	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar) $(if $(COMPLETA),--completa)
 endif
 
 semanal: repos ## Reporte semanal de cada producto (actualiza antes las copias de los repositorios)

@@ -50,20 +50,9 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
 
    Se aplica todo o nada. Si el script rechaza una fila, mostrar la línea y el motivo, y pedir la
    corrección. Si hay hallazgos para conversar, el script genera la agenda en
-   `productos/<producto>/triaje/agenda-<fecha>.md`.
+   `productos/<producto>/triaje/agenda-<fecha>.md`. Al final muestra la **calibración** por fuente.
 
-4. **Calibración.** Ejecutar y mostrar la tabla:
-
-   ```sh
-   .venv/bin/python herramientas/triaje.py calibracion
-   ```
-
-   - Para las fuentes "lista para publicar" que no son publicables, ofrecer agregarlas. Solo con
-     confirmación del usuario:
-
-     ```sh
-     .venv/bin/python herramientas/triaje.py publicables --agregar <fuente>
-     ```
+4. **Sugerir lo que sigue:**
 
    - Para los hallazgos marcados como Deuda, ofrecer crear una Tarea de Deuda Técnica con
      `/crear <producto> tarea --desde <ids>`, agrupando los del mismo tema en una sola Tarea.
@@ -84,5 +73,5 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
 <tabla>
 
 ### Sugerencias
-<fuentes para activar o ajustar>
+<fuentes para ajustar y deuda para llevar a Jira>
 ```

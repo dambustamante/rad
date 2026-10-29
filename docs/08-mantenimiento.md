@@ -30,12 +30,12 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 
 | Sección | Contenido |
 |---|---|
-| Repositorios | commits en la rama principal, ramas activas, MR o PR abiertos y mergeados |
-| Ramas activas | cada rama con commits en el período: último commit, commits adelante, su MR y el veredicto de su revisión (o "sin revisar", o "hay commits nuevos") |
+| Repositorios | commits en la rama principal, ramas activas y cuántas de ellas están revisadas |
+| Ramas activas | cada rama con commits en el período: último commit, commits adelante, su MR (si se revisó) y el veredicto de su revisión (o "sin revisar", o "hay commits nuevos") |
 | Hallazgos | nuevos, corregidos, reaparecidos y deuda vencida, con los bloqueantes y altos que requieren atención |
 
-- Mide repositorios, ramas y MR, no personas.
-- Los MR solo aparecen si la plataforma git está configurada; si no, quedan `NO DETERMINADO`.
+- Mide repositorios y ramas, no personas.
+- Usa solo git y el registro de radiografia: no consulta la API de la plataforma ni necesita token.
 - No publica nada ni crea incidencias: lo que surja se hace con `/revisar --rama`, `/triar` y `/crear`.
 - Nada se ejecuta solo: el reporte se pide. `/estado` recuerda pedirlo cuando pasan más de 7 días.
 
@@ -57,7 +57,7 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make venv` | crea o actualiza el entorno de Python |
 | `make estado` | estado general y qué sigue |
 | `make actualizar` | parte automática de `/actualizar` |
-| `make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]` | parte automática de `/revisar` |
+| `make revisar P=<producto> [R=<repo>] [SIN_SONAR=1] [COMPLETA=1]` | parte automática de `/revisar` y, con `R`, el paquete de revisión |
 | `make revisar P=<producto> R=<repo> RAMA=<rama>` | preparar la revisión de una rama |
 | `make semanal` | reporte semanal de cada producto |
 | `make test` | pruebas de las herramientas |
@@ -79,7 +79,6 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `arquitectura.fuentes` | repositorios de arquitectura; se administran con `/actualizar fuentes` |
 | `arquitectura.estados` | cómo se interpreta la sección Estado de los documentos |
 | `calibracion` | `minimo_triados` y `maximo_falsos_positivos` |
-| `publicacion.publicables` | fuentes cuyos hallazgos se publican en el MR sin triarlos |
 | `jira` | valores para crear Tareas, Spikes y Bugs: Equipos, nombres de campos y tipos de incidencia |
 
 `harness.yaml` se modifica solo mediante los scripts, que validan los datos y conservan los

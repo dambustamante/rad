@@ -8,9 +8,9 @@ Sin argumentos solo lee archivos locales: no descarga nada ni usa la red. Termin
 sigue", ordenada por prioridad, con el comando de Cursor que corresponde a cada paso.
 
 `semanal` escribe productos/<producto>/semanal/<AAAA-Wnn>.md con lo que cambió desde la ejecución anterior
-(o desde hace 7 días la primera vez): commits y ramas activas, MR o PR (si la plataforma está configurada),
-ramas revisadas, hallazgos nuevos, corregidos y reaparecidos, y deuda vencida. Mide repositorios, ramas y
-MR, no personas. Usa las copias locales: `make semanal` las actualiza antes.
+(o desde hace 7 días la primera vez): commits y ramas activas con su revisión y su MR, hallazgos nuevos,
+corregidos y reaparecidos, y deuda vencida. Mide repositorios y ramas, no personas. Usa solo las copias
+locales y el registro (sin API): `make semanal` actualiza antes las copias.
 """
 
 from __future__ import annotations
@@ -163,9 +163,8 @@ def actividad_git(clon: Path, rama: str, desde: str) -> dict:
     return {"commits": commits, "ramas": sorted(ramas, key=lambda r: r["fecha"], reverse=True)}
 
 
-def semanal(raiz: Path, producto: str, cliente=None, hoy: date | None = None) -> Path:
+def semanal(raiz: Path, producto: str, hoy: date | None = None) -> Path:
     import hallazgos
-    import plataforma
     import productos
     from revisar import veredicto
     from triaje import deuda_vencida
@@ -175,18 +174,11 @@ def semanal(raiz: Path, producto: str, cliente=None, hoy: date | None = None) ->
     if datos is None:
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
     desde = leer_json(archivo_semanal(raiz, producto)).get("ultima") or (hoy - timedelta(days=DIAS_SEMANAL)).isoformat()
-    aviso_mr = None
-    if cliente is None:
-        env = cargar_env(raiz)
-        config = plataforma.ConfigPlataforma.desde_env(env)
-        cliente = plataforma.ClientePlataforma(config) if config else None
-        aviso_mr = None if config else plataforma.ConfigPlataforma.motivo_sin_config(env)
     registro = hallazgos.cargar(raiz, producto)
     anio, semana, _ = hoy.isocalendar()
     lineas = [f"# Reporte semanal de {producto}: {anio}-W{semana:02d}", "",
-              f"Cambios desde el {desde} hasta el {hoy.isoformat()}. Se miden repositorios, ramas y MR, no personas.", "",
-              "## Repositorios", "", "| Repositorio | Commits en la rama principal | Ramas activas | MR abiertos | MR mergeados |",
-              "|---|---|---|---|---|"]
+              f"Cambios desde el {desde} hasta el {hoy.isoformat()}. Se miden repositorios y ramas, no personas.", "",
+              "## Repositorios", "", "| Repositorio | Commits en la rama principal | Ramas activas | Ramas revisadas |", "|---|---|---|---|"]
     detalle = []
     for repo in productos.repos_de(datos):
         if repo.get("estado") != "activo":
@@ -194,35 +186,25 @@ def semanal(raiz: Path, producto: str, cliente=None, hoy: date | None = None) ->
         id_repo = str(repo["id"])
         clon = raiz / "productos" / producto / "repos" / id_repo
         if not (clon / ".git").exists():
-            lineas.append(f"| {id_repo} | NO DETERMINADO - sin copia local | — | — | — |")
+            lineas.append(f"| {id_repo} | NO DETERMINADO - sin copia local | — | — |")
             continue
         try:
             actividad = actividad_git(clon, str(repo["rama"]), desde)
         except ErrorRadiografia as error:
-            lineas.append(f"| {id_repo} | NO DETERMINADO - {error} | — | — | — |")
+            lineas.append(f"| {id_repo} | NO DETERMINADO - {error} | — | — |")
             continue
-        mrs, texto_mr = None, f"NO DETERMINADO - {aviso_mr}" if aviso_mr else "—"
-        if cliente:
-            try:
-                mrs = cliente.mrs_desde(plataforma.proyecto_de(str(repo["url"])), desde)
-            except ErrorRadiografia as error:
-                texto_mr = f"NO DETERMINADO - {error}"
-        abiertos = [m for m in mrs or [] if m["estado"] == "abierto"]
-        mergeados = [m for m in mrs or [] if m["mergeado"] and m["mergeado"] >= desde]
-        lineas.append(f"| {id_repo} | {actividad['commits']} | {len(actividad['ramas'])} "
-                      f"| {len(abiertos) if mrs is not None else texto_mr} | {len(mergeados) if mrs is not None else texto_mr} |")
-        revisadas = {e["rama"]: e for e in registro.get("ramas", {}).values() if e["repo"] == id_repo}
-        if actividad["ramas"] or abiertos:
+        revisadas = {e["rama"]: e for e in registro.get("ramas", {}).values() if e["repo"] == id_repo and e.get("revisada")}
+        activas_revisadas = sum(1 for r in actividad["ramas"] if r["rama"] in revisadas)
+        lineas.append(f"| {id_repo} | {actividad['commits']} | {len(actividad['ramas'])} | {activas_revisadas} |")
+        if actividad["ramas"]:
             detalle += [f"### {id_repo}", "", "| Rama | Último commit | Commits adelante | MR | Revisión de la rama |", "|---|---|---|---|---|"]
-            por_rama = {m["rama"]: m for m in abiertos}
             for r in actividad["ramas"]:
-                mr = por_rama.get(r["rama"])
                 revisada = revisadas.get(r["rama"])
-                texto_revision = (f"{revisada['revisada']['fecha']}: {veredicto(registro, id_repo, r['rama'])}"
-                                  if revisada and revisada.get("revisada") else "sin revisar")
-                if revisada and revisada.get("revisada") and revisada["revisada"]["commit"] != revisada["commit"]:
-                    texto_revision += " (hay commits nuevos)"
+                mr = (revisada or {}).get("mr")
                 enlace_mr = f"[{mr['titulo']}]({mr['url']})" if mr else "—"
+                texto_revision = f"{revisada['revisada']['fecha']}: {veredicto(registro, id_repo, r['rama'])}" if revisada else "sin revisar"
+                if revisada and revisada["revisada"]["commit"] != git("rev-parse", f"origin/{r['rama']}", cwd=clon):
+                    texto_revision += " (hay commits nuevos)"
                 detalle.append(f"| `{r['rama']}` | {r['fecha']} | {r['commits']} | {enlace_mr} | {texto_revision} |")
             detalle.append("")
 

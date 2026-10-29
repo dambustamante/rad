@@ -11,7 +11,7 @@ Uso:
                                            --fragmento TEXTO [--cita-documento TEXTO]
                                            [--documento-tercero RUTA --cita-tercero TEXTO]
   python herramientas/revision.py registrar <producto> <repo> [--archivo LOTE.yaml]
-  python herramientas/revision.py cerrar <producto> <repo> [--archivos-leidos N]
+  python herramientas/revision.py cerrar <producto> <repo> [--archivos-leidos N]   (registra antes el lote, si existe)
   python herramientas/revision.py producto <producto> [--narrativa ARCHIVO]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
@@ -357,9 +357,8 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia.",
         f"2. C4 inferido: `productos/{producto}/revisiones/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
         "según las plantillas de `equipo/plantillas/`. Lo que no se pueda deducir, como NO DETERMINADO.",
-        f"3. Un único lote con todas las evaluaciones y hallazgos: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`, "
-        f"registrado con `.venv/bin/python herramientas/revision.py registrar {producto} {repo}`.",
-        f"4. Cerrar: `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
+        f"3. Un único lote con todas las evaluaciones y hallazgos: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`.",
+        f"4. Cerrar (registra el lote y cierra): `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
     ]
     archivo = carpeta / "paquetes" / f"{repo}.md"
     archivo.parent.mkdir(parents=True, exist_ok=True)
@@ -510,26 +509,45 @@ def archivo_lote(raiz: Path, producto: str, id_revision: str, repo: str) -> Path
     return carpeta_revision(raiz, producto, id_revision) / "revision" / f"{repo}-lote.yaml"
 
 
+def leer_lote(archivo: Path) -> dict:
+    """Contenido de un lote YAML o JSON."""
+    if not archivo.exists():
+        raise ErrorRadiografia(f"No existe el archivo de lote {archivo}.")
+    try:
+        texto = archivo.read_text(encoding="utf-8")
+        return (json.loads(texto) if archivo.suffix == ".json" else yaml.safe_load(texto)) or {}
+    except (json.JSONDecodeError, yaml.YAMLError) as error:
+        raise ErrorRadiografia(f"El lote no es un YAML o JSON válido: {error}") from error
+
+
+def como_lista(valor) -> list[str]:
+    return [str(v) for v in (valor if isinstance(valor, list) else [valor] if valor else [])]
+
+
+def hallazgos_del_lote(raiz: Path, ctx: dict, datos: dict, control: dict, errores: list[str]) -> list[dict]:
+    """Valida los hallazgos de un lote; agrega a `errores` los que no son válidos."""
+    hallazgos = []
+    for indice, h in enumerate(datos.get("hallazgos") or [], start=1):
+        try:
+            hallazgos.append(construir_hallazgo(
+                raiz, ctx, str(h.get("fuente", "")), h.get("criterio"), str(h.get("categoria", "")),
+                str(h.get("severidad", "")), h.get("titulo"), h.get("detalle"), como_lista(h.get("evidencia")),
+                h.get("fragmento"), h.get("cita_documento"), h.get("documento_tercero"), h.get("cita_tercero"),
+                control))
+        except ErrorRadiografia as error:
+            errores.append(f"hallazgos[{indice}] ({h.get('titulo', 'sin título')}): {error}")
+    return hallazgos
+
+
 def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = None) -> dict:
     """Valida y registra de una vez todas las evaluaciones y hallazgos de un archivo YAML o JSON.
 
     Si algún elemento no es válido, no se registra nada y se informan todos los errores juntos.
     """
     ctx = contexto(raiz, producto, repo)
-    archivo = archivo or archivo_lote(raiz, producto, ctx["id_revision"], repo)
-    if not archivo.exists():
-        raise ErrorRadiografia(f"No existe el archivo de lote {archivo}.")
-    try:
-        texto = archivo.read_text(encoding="utf-8")
-        datos = json.loads(texto) if archivo.suffix == ".json" else yaml.safe_load(texto)
-    except (json.JSONDecodeError, yaml.YAMLError) as error:
-        raise ErrorRadiografia(f"El lote no es un YAML o JSON válido: {error}") from error
-    datos = datos or {}
+    datos = leer_lote(archivo or archivo_lote(raiz, producto, ctx["id_revision"], repo))
     control = {e["clave"]: e for e in lista_de_control(raiz, ctx["tipo"], producto, repo)}
-    errores, evaluaciones, hallazgos = [], {}, []
-
-    def como_lista(valor) -> list[str]:
-        return [str(v) for v in (valor if isinstance(valor, list) else [valor] if valor else [])]
+    errores, evaluaciones = [], {}
 
     for indice, e in enumerate(datos.get("evaluaciones") or [], start=1):
         referencia = f"evaluaciones[{indice}] ({clave_de(str(e.get('fuente')), e.get('criterio'))})"
@@ -541,16 +559,7 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
             evaluaciones[clave] = evaluacion
         except ErrorRadiografia as error:
             errores.append(f"{referencia}: {error}")
-    for indice, h in enumerate(datos.get("hallazgos") or [], start=1):
-        referencia = f"hallazgos[{indice}] ({h.get('titulo', 'sin título')})"
-        try:
-            hallazgos.append(construir_hallazgo(
-                raiz, ctx, str(h.get("fuente", "")), h.get("criterio"), str(h.get("categoria", "")),
-                str(h.get("severidad", "")), h.get("titulo"), h.get("detalle"), como_lista(h.get("evidencia")),
-                h.get("fragmento"), h.get("cita_documento"), h.get("documento_tercero"), h.get("cita_tercero"),
-                control))
-        except ErrorRadiografia as error:
-            errores.append(f"{referencia}: {error}")
+    hallazgos = hallazgos_del_lote(raiz, ctx, datos, control, errores)
     if errores:
         raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
 
@@ -566,7 +575,10 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
 # --- Cierre ------------------------------------------------------------------------------------
 
 def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) -> dict:
+    """Registra el lote (si existe) y cierra la revisión de código."""
     ctx = contexto(raiz, producto, repo)
+    if archivo_lote(raiz, producto, ctx["id_revision"], repo).exists():
+        registrar_lote(raiz, producto, repo)
     trabajo = leer_trabajo(raiz, producto, ctx["id_revision"], repo)
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)
     if trabajo.get("incremental"):

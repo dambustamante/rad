@@ -11,9 +11,23 @@ Uso:
   python herramientas/coherencia.py registrar [--ambito equipo|<producto>] --decision ADR-XX-NNN --doc CLAVE
         --relacion RELACION [--cita-documento TEXTO --cita-decision TEXTO] [--criterios XX-NNN.N,...]
         [--explicacion TEXTO] [--manual MOTIVO]
+  python herramientas/coherencia.py lote <archivo.yaml>
   python herramientas/coherencia.py generar [--ambito equipo|<producto>]
 
 Sin --ambito, `preparar` y `generar` recorren el equipo y todos los productos. Opción común: --raiz RUTA.
+
+`lote` registra de una vez todos los pares de un ámbito (todo o nada) y regenera su COHERENCIA.md:
+
+  ambito: equipo
+  pares:
+    - {decision: ADR-EQ-002, doc: decisiones:ADR-011, relacion: sin_relacion}
+    - decision: ADR-EQ-002
+      doc: decisiones:ADR-010
+      relacion: choca
+      cita_documento: <texto copiado del documento>
+      cita_decision: <texto copiado de la decisión>
+      criterios: [EQ-002.2]
+      explicacion: <por qué>
 
 La comparación la hace el agente; este script decide qué pares hay que evaluar, valida cada resultado
 (incluido que las citas existan textualmente en los documentos) y genera `equipo/COHERENCIA.md` y
@@ -287,8 +301,9 @@ def cita_existe(cita: str, texto: str) -> bool:
     return texto_comparable(cita) in texto_comparable(texto)
 
 
-def registrar(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, cita_documento: str | None,
-              cita_decision: str | None, criterios: list[str], explicacion: str | None, manual: str | None) -> None:
+def evaluacion_valida(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, cita_documento: str | None,
+                      cita_decision: str | None, criterios: list[str], explicacion: str | None, manual: str | None) -> dict:
+    """Valida el resultado de un par y lo devuelve listo para guardar. Lanza ErrorRadiografia si no es válido."""
     if id_decision not in ambito.sujetos:
         raise ErrorRadiografia(f"No existe la decisión {id_decision} en el ámbito '{ambito.nombre}'.")
     if clave_doc not in ambito.referencias:
@@ -315,15 +330,51 @@ def registrar(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, c
     elif criterios:
         raise ErrorRadiografia("--criterios solo se usa con la relación 'choca'.")
 
-    estado = leer_estado(ambito)
-    estado["evaluaciones"][clave_par(id_decision, clave_doc)] = {
+    return {
         "decision": id_decision, "documento": clave_doc, "relacion": relacion,
         "cita_documento": cita_documento, "cita_decision": cita_decision, "criterios_suspendidos": criterios,
         "explicacion": explicacion, "manual": manual,
         "huella_decision": decision["huella"], "huella_documento": doc["huella"],
         "evaluado": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+
+
+def registrar(ambito: Ambito, id_decision: str, clave_doc: str, relacion: str, cita_documento: str | None,
+              cita_decision: str | None, criterios: list[str], explicacion: str | None, manual: str | None) -> None:
+    evaluacion = evaluacion_valida(ambito, id_decision, clave_doc, relacion, cita_documento, cita_decision,
+                                   criterios, explicacion, manual)
+    estado = leer_estado(ambito)
+    estado["evaluaciones"][clave_par(id_decision, clave_doc)] = evaluacion
     escribir_estado(ambito, estado)
+
+
+def registrar_lote(raiz: Path, archivo: Path) -> dict:
+    """Registra todos los pares de un archivo YAML (todo o nada) y regenera el COHERENCIA.md del ámbito."""
+    import yaml
+    if not archivo.exists():
+        raise ErrorRadiografia(f"No existe el archivo de lote {archivo}.")
+    try:
+        datos = yaml.safe_load(archivo.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as error:
+        raise ErrorRadiografia(f"El lote no es un YAML válido: {error}") from error
+    ambito = obtener_ambito(raiz, str(datos.get("ambito") or EQUIPO))
+    errores, evaluaciones = [], {}
+    for indice, par in enumerate(datos.get("pares") or [], start=1):
+        decision, doc = str(par.get("decision", "")), str(par.get("doc", ""))
+        criterios = par.get("criterios") or []
+        criterios = [c.strip() for c in (criterios.split(",") if isinstance(criterios, str) else criterios) if str(c).strip()]
+        try:
+            evaluaciones[clave_par(decision, doc)] = evaluacion_valida(
+                ambito, decision, doc, str(par.get("relacion", "")), par.get("cita_documento"), par.get("cita_decision"),
+                criterios, par.get("explicacion"), par.get("manual"))
+        except ErrorRadiografia as error:
+            errores.append(f"pares[{indice}] ({decision} × {doc}): {error}")
+    if errores:
+        raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
+    estado = leer_estado(ambito)
+    estado["evaluaciones"].update(evaluaciones)
+    escribir_estado(ambito, estado)
+    return {"registrados": len(evaluaciones), **generar(raiz, ambito)}
 
 
 # --- Generar -----------------------------------------------------------------------------------
@@ -423,6 +474,8 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--criterios", default="")
     p.add_argument("--explicacion")
     p.add_argument("--manual", help="motivo de una corrección hecha por el usuario")
+    p = sub.add_parser("lote", help="registra todos los pares de un archivo YAML y regenera COHERENCIA.md")
+    p.add_argument("archivo", type=Path)
     p = sub.add_parser("generar", help="escribe COHERENCIA.md")
     p.add_argument("--ambito")
     o = parser.parse_args(argumentos)
@@ -441,6 +494,10 @@ def main(argumentos: list[str] | None = None) -> int:
                           f"Criterios suspendidos: {sum(len(v) for v in r['suspendidos'].values())}.")
         elif o.accion == "extracto":
             print(extracto(raiz, o.identificador, o.ambito if o.ambito != EQUIPO else None))
+        elif o.accion == "lote":
+            r = registrar_lote(raiz, o.archivo.resolve())
+            print(f"[{r['ambito']}] {r['registrados']} par(es) registrado(s). Pares pendientes: {r['pendientes']}. "
+                  f"Criterios suspendidos: {sum(len(v) for v in r['suspendidos'].values())}.")
         elif o.accion == "registrar":
             criterios = [c.strip() for c in o.criterios.split(",") if c.strip()]
             registrar(obtener_ambito(raiz, o.ambito), o.decision, o.doc, o.relacion, o.cita_documento,

@@ -50,10 +50,6 @@ class ClienteFalso:
         self.comentarios[id_comentario] = cuerpo
         return id_comentario
 
-    def mrs_desde(self, proyecto: str, desde: str) -> list[dict]:
-        return [{"numero": 7, "titulo": "Consulta al buró", "url": "https://gitlab.com/x/-/merge_requests/7",
-                 "rama": "feature/buro", "creado": desde, "mergeado": None, "estado": "abierto"}]
-
 
 MR = {"numero": 7, "url": "https://gitlab.com/x/-/merge_requests/7", "titulo": "Consulta al buró", "descripcion": "Agrega el cliente.",
       "destino": "main", "autor": "dev1", "aprobado_por": ["dev1"]}
@@ -77,10 +73,9 @@ class PruebaRama(unittest.TestCase):
 
     def setUp(self) -> None:
         self.setUp_base()
-        for objetivo in ("rama.proyecto_de", "plataforma.proyecto_de"):
-            parche = mock.patch(objetivo, return_value="banco/fraude-core")
-            parche.start()
-            self.addCleanup(parche.stop)
+        parche = mock.patch("rama.proyecto_de", return_value="banco/fraude-core")
+        parche.start()
+        self.addCleanup(parche.stop)
         ejecutar("git", "checkout", "--quiet", "-b", "feature/buro", cwd=self.core)
         (self.core / "src/main/java/BuroClient.java").write_text(CLIENTE_BURO, encoding="utf-8")
         commit(self.core, "Cliente del buró")
@@ -107,7 +102,7 @@ class PruebaRama(unittest.TestCase):
         self.assertEqual(len(automaticos), 1)
         paquete = r["paquete"].read_text(encoding="utf-8")
         for esperado in ("+        System.out.println(\"consultando buró\");", "Aprobado por otra persona (EQ-008.2): todavía no",
-                         "| `ADR-EQ-008` | EQ-008.1 |", "> Agrega el cliente."):
+                         "- `ADR-EQ-002` Integraciones resilientes con política de degradación explícita (propuesta): EQ-002.1", "> Agrega el cliente."):
             self.assertIn(esperado, paquete)
 
     def test_registrar_valida_que_la_evidencia_este_en_la_rama(self) -> None:
@@ -186,15 +181,15 @@ class PruebaRama(unittest.TestCase):
         self.lote(LOTE)
         rama.registrar(self.raiz, "motor-fraudes", "fraude-core", "feature/buro")
         self.assertIn("motor-fraudes: sin reporte semanal: `/estado semanal`.", estado.que_sigue(estado.revisar_estado(self.raiz)))
-        archivo = estado.semanal(self.raiz, "motor-fraudes", ClienteFalso())
+        archivo = estado.semanal(self.raiz, "motor-fraudes")
         texto = archivo.read_text(encoding="utf-8")
-        self.assertIn("| fraude-core | 1 | 1 | 1 | 0 |", texto)
+        self.assertIn("| fraude-core | 1 | 1 | 1 |", texto)
         self.assertIn("| `feature/buro` |", texto)
         self.assertIn("[Consulta al buró](https://gitlab.com/x/-/merge_requests/7)", texto)
         self.assertIn(": NO PASA", texto)
         self.assertIn("· fraude-core @feature/buro · decisiones:ADR-010 · Llamada al buró sin timeout", texto)
         self.assertNotIn("sin reporte semanal", " ".join(estado.que_sigue(estado.revisar_estado(self.raiz))))
-        siguiente = estado.semanal(self.raiz, "motor-fraudes", ClienteFalso(), date.today() + timedelta(days=8))
+        siguiente = estado.semanal(self.raiz, "motor-fraudes", date.today() + timedelta(days=8))
         self.assertIn(f"Cambios desde el {date.today().isoformat()}", siguiente.read_text(encoding="utf-8"))
 
 

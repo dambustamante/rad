@@ -35,8 +35,8 @@ class PruebaTriaje(unittest.TestCase):
         producto = self.raiz / "productos" / "motor-fraudes"
         producto.mkdir(parents=True)
         (producto / "producto.yaml").write_text("nombre: motor-fraudes\nrepos: []\n", encoding="utf-8")
-        (self.raiz / "harness.yaml").write_text("version: 1\ncalibracion:\n  minimo_triados: 2\n  maximo_falsos_positivos: 0.2\n"
-                                                "publicacion:\n  publicables: [EQ-004.1]\n", encoding="utf-8")
+        (self.raiz / "harness.yaml").write_text("version: 1\ncalibracion:\n  minimo_triados: 2\n  maximo_falsos_positivos: 0.2\n",
+                                                encoding="utf-8")
         vencida = (date.today() - timedelta(days=1)).isoformat()
         registro = {"version": 1, "siguiente_id": 10, "hallazgos": {
             "h1": hallazgo(1),
@@ -149,20 +149,8 @@ class PruebaTriaje(unittest.TestCase):
     def test_calibracion(self) -> None:
         self.ejecutar("grupo", "motor-fraudes", "--decision", "falso-positivo", "--fuente", "sonar:", "--motivo", "regla ruidosa")
         codigo, salida = self.ejecutar("calibracion")
-        self.assertIn("| sonar:java:S1128 | 2 | 2 | 100% | ruidosa: ajustar | no |", salida)
-        self.assertIn("| EQ-003.1 | 3 | 0 | 0% | lista para publicar | no |", salida, "H-0004, H-0005 y H-0007 tienen decisión")
-
-    def test_publicables_conserva_comentarios(self) -> None:
-        (self.raiz / "harness.yaml").write_text("# cabecera\nversion: 1\npublicacion:\n  # comentario\n  publicables: []\n",
-                                                encoding="utf-8")
-        codigo, salida = self.ejecutar("publicables", "--agregar", "EQ-004.1")
-        self.assertEqual(codigo, 0, salida)
-        texto = (self.raiz / "harness.yaml").read_text(encoding="utf-8")
-        self.assertIn("publicables: [EQ-004.1]", texto)
-        self.assertIn("# comentario", texto)
-        self.assertEqual(self.ejecutar("publicables", "--agregar", "EQ-004.1")[0], 1)
-        self.ejecutar("publicables", "--quitar", "EQ-004.1")
-        self.assertIn("publicables: []", (self.raiz / "harness.yaml").read_text(encoding="utf-8"))
+        self.assertIn("| sonar:java:S1128 | 2 | 2 | 100% | ruidosa: ajustar |", salida)
+        self.assertIn("| EQ-003.1 | 3 | 0 | 0% | confiable |", salida, "H-0004, H-0005 y H-0007 tienen decisión")
 
 
 if __name__ == "__main__":

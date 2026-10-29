@@ -1,6 +1,6 @@
 """Parte automática de /revisar: línea base AS IS de los repositorios de un producto.
 
-Uso: python herramientas/revisar.py <producto> [--repo ID] [--sin-sonar] [--raiz RUTA]
+Uso: python herramientas/revisar.py <producto> [--repo ID [--completa]] [--sin-sonar] [--raiz RUTA]
 
 Para cada repositorio activo:
 1. lo actualiza en productos/<producto>/repos/<id>/ (solo lectura);
@@ -9,7 +9,8 @@ Para cada repositorio activo:
 4. consulta Sonar (quality gate, issues, hotspots, métricas y antigüedad del análisis);
 5. actualiza productos/<producto>/estado/hallazgos.json y la sección automática de as-is/<repo>.md.
 
-Deja el reporte en productos/<producto>/revisiones/<fecha>-linea-base[-<repo>]/. La revisión de código
+Deja el reporte en productos/<producto>/revisiones/<fecha>-linea-base[-<repo>]/. Con --repo, además genera
+el paquete de revisión para la parte que hace Cursor. La revisión de código
 (criterios de "revisión de código" y comparación con arquitectura) la completa el comando /revisar.
 """
 
@@ -324,6 +325,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("producto")
     parser.add_argument("--repo", help="revisar solo este repositorio")
     parser.add_argument("--sin-sonar", action="store_true", help="no consultar Sonar")
+    parser.add_argument("--completa", action="store_true", help="con --repo: paquete de revisión completa aunque haya una anterior")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
     opciones = parser.parse_args(argumentos)
     try:
@@ -343,6 +345,10 @@ def main(argumentos: list[str] | None = None) -> int:
         if r["sonar"].get("desfase"):
             print(f"    Aviso Sonar: {r['sonar']['desfase']}")
     print(f"\n  Reporte: {resultado['carpeta'].relative_to(opciones.raiz.resolve())}/resumen.md")
+    if opciones.repo and resultado["resultados"][0]["estado"] == "ok":
+        import revision
+        paquete = revision.generar_paquete(opciones.raiz.resolve(), opciones.producto, opciones.repo, opciones.completa)
+        print(f"  Paquete de revisión: {paquete.relative_to(opciones.raiz.resolve())}")
     return 0
 
 

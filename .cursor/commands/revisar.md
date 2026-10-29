@@ -16,27 +16,22 @@ contexto acumulado).
 ```
 
 - Si el usuario indicó un repositorio, usar ese. Si no, tomar el primero que no esté "al día".
-- Si todos están al día, ir al paso 8 (producto).
+- Si todos están al día, ir al paso 7 (producto).
 
-## 2. Parte automática
-
-Si el repositorio dice "falta la parte automática", o si el usuario pide revisar de nuevo:
+## 2. Preparar: parte automática y paquete
 
 ```sh
-make revisar P=<producto> R=<repo>
+make revisar P=<producto> R=<repo>        # COMPLETA=1 para forzar una revisión completa
 ```
 
-## 3. Paquete de revisión
-
-```sh
-.venv/bin/python herramientas/revision.py paquete <producto> <repo>
-```
+Actualiza la copia, ejecuta la parte automática (verificaciones, gitleaks y Sonar) y genera el
+paquete de revisión. Si la conversación se retoma a mitad de una revisión, no volver a ejecutarlo:
+regenerar solo el paquete con `.venv/bin/python herramientas/revision.py paquete <producto> <repo>`.
 
 Si el repositorio ya tuvo una revisión de código y su código cambió, el paquete es **incremental**:
 lista los archivos cambiados, pide evaluar solo los elementos afectados y muestra aparte los
 heredados, que se conservan solos al cerrar. El AS IS y los borradores C4 se copian de la revisión
-anterior: actualizar solo las partes que el cambio afecta. Si el usuario pide una revisión completa,
-generar el paquete con `--completa`.
+anterior: actualizar solo las partes que el cambio afecta.
 
 Leer el paquete completo antes de abrir cualquier archivo del repositorio. Contiene el mapa del
 repositorio, los archivos señalados por patrón, los hallazgos automáticos ya registrados (no
@@ -48,7 +43,7 @@ Leer el código de `productos/<producto>/repos/<repo>/` empezando por los manifi
 entrada y los archivos señalados. Llevar la cuenta de los archivos leídos: se informa al cerrar.
 Nunca modificar nada en esa carpeta. Si se encuentra un secreto, no copiar su valor.
 
-## 4. AS IS
+## 3. AS IS
 
 Escribir `productos/<producto>/revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`,
 en este orden, cada afirmación con su etiqueta de evidencia (`[hecho] ruta:línea`, `[doc] ruta`,
@@ -70,14 +65,14 @@ en este orden, cada afirmación con su etiqueta de evidencia (`[hecho] ruta:lín
 Para un repositorio de tipo `proveedor` o `config`, poner el foco en integraciones, contratos,
 configuración y despliegue; el diseño interno se describe solo si es visible y relevante.
 
-## 5. C4 inferido
+## 4. C4 inferido
 
 Escribir los borradores en `productos/<producto>/revisiones/<revisión>/borradores/<repo>/`
 (`c4-contexto.md` y `c4-contenedores.md`), con las plantillas de `equipo/plantillas/`. Todo elemento
 y relación sale del código; lo que no se pueda deducir se marca como NO DETERMINADO. Es un borrador
 para el equipo, no se escribe en el repositorio.
 
-## 6. Evaluar y registrar (en un solo lote)
+## 5. Evaluar en un solo lote
 
 Para **cada** elemento de la sección "Qué evaluar" del paquete, en orden de nivel, decidir
 `CUMPLE`, `NO CUMPLE`, `NO APLICA` (no corresponde a este repositorio) o `NO DETERMINADO` (no se
@@ -85,9 +80,8 @@ pudo verificar con el código disponible). Si la regla rápida no alcanza para d
 documento (`arquitectura/decisiones/<fuente>/…` o `arquitectura/estandares/<fuente>/…`).
 
 Escribir **todo** en un único archivo,
-`productos/<producto>/revisiones/<revisión>/revision/<repo>-lote.yaml`, y registrarlo con **un solo
-comando**. No usar un comando por evaluación: cada comando reenvía la conversación y multiplica el
-costo.
+`productos/<producto>/revisiones/<revisión>/revision/<repo>-lote.yaml`. El cierre lo registra: no usar un
+comando por evaluación, porque cada comando reenvía la conversación y multiplica el costo.
 
 ```yaml
 evaluaciones:
@@ -116,17 +110,7 @@ hallazgos:
     # cita_tercero: Timeout recomendado de 800 ms
 ```
 
-```sh
-.venv/bin/python herramientas/revision.py registrar <producto> <repo>
-```
-
-- Si el lote tiene errores, **no se registra nada** y se listan todos juntos: corregir esas entradas
-  en el mismo archivo y volver a registrar. Registrar de nuevo no duplica hallazgos.
-- Si quedan elementos sin evaluar, el comando los lista: agregarlos al lote y registrar otra vez.
-- Para corregir una sola entrada sin rehacer el lote también existen `revision.py evaluar` y
-  `revision.py hallazgo`.
-
-Reglas del registro:
+Reglas del lote:
 
 - El script rechaza archivos o líneas que no existen, fragmentos que no están en el código y citas
   que no están en el documento. Si rechaza algo, volver a copiar el texto desde la fuente: nunca
@@ -143,14 +127,15 @@ Reglas del registro:
 - Un hallazgo describe una señal concreta en una ubicación concreta. "No cumple SOLID" no es un
   hallazgo; "la clase X mezcla acceso a datos y llamadas HTTP (`ruta:línea`)" sí lo es.
 
-## 7. Cerrar
+## 6. Cerrar
 
 ```sh
 .venv/bin/python herramientas/revision.py cerrar <producto> <repo> --archivos-leidos <N>
 ```
 
-El cierre exige que todo esté evaluado, que cada `NO CUMPLE` tenga hallazgo y que el AS IS tenga
-sus secciones. Si falta algo, completarlo y volver a cerrar.
+Registra el lote y cierra. Si el lote tiene errores, **no se registra nada** y se listan todos juntos:
+corregir esas entradas en el mismo archivo y volver a cerrar (no duplica hallazgos). El cierre exige
+además que todo esté evaluado, que cada `NO CUMPLE` tenga hallazgo y que el AS IS tenga sus secciones.
 
 Responder con:
 
@@ -172,7 +157,7 @@ Responder con:
 Siguiente: abrir un chat nuevo y ejecutar `/revisar <producto>` para el próximo repositorio.
 ```
 
-## 8. Producto
+## 7. Producto
 
 Cuando todos los repositorios están al día:
 
@@ -203,25 +188,19 @@ principal si no hay MR. No hace falta AS IS, C4 ni evaluar cada elemento.
 2. **Leer el paquete** (`revisiones/<fecha>-rama-<repo>-<rama>/paquete.md`): archivos cambiados, diff,
    hallazgos automáticos, terceros, contra qué comparar y, si hay MR, su descripción y si ya lo aprobó
    otra persona. Abrir archivos de la copia de la rama solo si el diff no alcanza.
-3. **Registrar** los hallazgos que introduce o empeora la rama en `lote.yaml` (solo `hallazgos:`, mismo
-   formato que arriba) y ejecutar:
+3. **Escribir los hallazgos** que introduce o empeora la rama en `lote.yaml` (solo `hallazgos:`, mismo
+   formato que arriba). La evidencia debe estar en un archivo que la rama cambia.
+4. **Registrar y elegir qué publicar:**
 
    ```sh
-   .venv/bin/python herramientas/rama.py registrar <producto> <repo> <rama>
+   .venv/bin/python herramientas/rama.py publicar <producto> <repo> <rama>
    ```
 
-   La evidencia debe estar en un archivo que la rama cambia. Con MR también se pueden registrar los
-   criterios del MR de ADR-EQ-008 (por ejemplo, EQ-008.1: criterios de aceptación sin pruebas).
-4. **Elegir qué publicar.** Mostrar los hallazgos de la rama y preguntar cuáles se piden resolver. Se
-   publican los marcados Resolver, los que el usuario elija ahora y los de fuentes publicables sin triar.
-5. **Vista previa:**
-
-   ```sh
-   .venv/bin/python herramientas/rama.py publicar <producto> <repo> <rama> --incluir H-0012,H-0015
-   ```
-
-   Mostrar el destino (el MR o PR) y el comentario completo. Si hay avisos de lenguaje, corregir el
-   título o el detalle de esos hallazgos en el lote y registrar de nuevo.
+   Registra el lote y muestra el veredicto de la rama. Si ningún hallazgo está marcado Resolver,
+   lista los hallazgos abiertos: preguntar al usuario cuáles se piden resolver y repetir con
+   `--incluir H-0012,H-0015`. Si el lote tiene errores, no se registra nada: corregirlo y repetir.
+5. **Vista previa.** Mostrar el destino (el MR o PR) y el comentario completo. Si hay avisos de
+   lenguaje, corregir el título o el detalle de esos hallazgos en el lote y repetir.
 6. **Publicar**, solo si el usuario lo confirma explícitamente sobre la vista previa: repetir con
    `--confirmar`. En el MR se crea un solo comentario y las publicaciones siguientes lo editan (los
    corregidos aparecen como ✅). Solo se comentan MR o PR: si la rama no tiene uno abierto, no se

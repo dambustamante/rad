@@ -194,26 +194,20 @@ Si una historia de Jira ya cubre lo mismo, Cursor avisa antes de seguir.
 - Solo las decisiones que el trabajo debe respetar, con su regla rápida.
 - El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").
 
-### Paso 4: validar
-
-```sh
-.venv/bin/python herramientas/jira.py validar motor-fraudes <borrador>
-```
-
-Verifica la combinación de incidencia y Tipo, Equipos, Como/Quiero/Para, las secciones del tipo,
-los criterios fijos, al menos un criterio propio medible, que un Spike tenga una sola pregunta y
-como máximo 2 días, y la regla de lenguaje. Se corrige hasta que no haya errores.
-
-### Paso 5: vista previa
+### Paso 4: validar y ver la vista previa
 
 ```sh
 .venv/bin/python herramientas/jira.py crear motor-fraudes <borrador>
 ```
 
-Sin `--confirmar` no escribe nada: muestra el proyecto, el tipo, el título y el texto completo tal
-como quedará en Jira.
+Primero valida: la combinación de incidencia y Tipo, Equipos, Como/Quiero/Para, las secciones del
+tipo, los criterios fijos, al menos un criterio propio medible, que un Spike tenga una sola pregunta
+y como máximo 2 días, y la regla de lenguaje. Si hay errores, se corrigen y se repite.
 
-### Paso 6: crear en Jira
+Sin errores, y sin `--confirmar`, no escribe nada: muestra el proyecto, el tipo, el título y el
+texto completo tal como quedará en Jira.
+
+### Paso 5: crear en Jira
 
 Solo si el usuario lo confirma explícitamente sobre la vista previa:
 

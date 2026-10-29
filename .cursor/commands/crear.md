@@ -158,11 +158,10 @@ Spikes y Bugs.
    - Las secciones de su tipo con evidencia (hallazgos, `archivo:línea`, métricas).
    - Solo las decisiones que el trabajo debe respetar, con su regla rápida.
    - No editar el encabezado YAML salvo para corregir el Tipo o los repositorios.
-5. **Validar** con `.venv/bin/python herramientas/jira.py validar <producto> <borrador>` hasta que no
-   haya errores.
-6. **Vista previa:** `.venv/bin/python herramientas/jira.py crear <producto> <borrador>`. Mostrar el
-   título, el proyecto, el tipo y el texto completo.
-7. **Crear en Jira** solo si el usuario lo confirma explícitamente sobre la vista previa:
+5. **Validar y ver la vista previa:** `.venv/bin/python herramientas/jira.py crear <producto> <borrador>`.
+   Primero valida (ADR-EQ-009 y lenguaje); si hay errores, corregirlos y repetir. Sin errores, mostrar
+   el título, el proyecto, el tipo y el texto completo.
+6. **Crear en Jira** solo si el usuario lo confirma explícitamente sobre la vista previa:
    `.venv/bin/python herramientas/jira.py crear <producto> <borrador> --confirmar`. La clave queda
    en el borrador y en cada hallazgo de origen.
 

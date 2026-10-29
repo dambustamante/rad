@@ -61,8 +61,8 @@ nivel:
 - `[equipo]`: cada ADR-EQ frente a cada documento de arquitectura vigente.
 - `[<producto>]`: cada ADR del producto frente a arquitectura y a los ADR-EQ.
 
-Solo se evalúan los pares nuevos o los que cambiaron desde la última vez. Para cada par pendiente,
-Cursor trabaja en dos etapas.
+Solo se evalúan los pares nuevos o los que cambiaron desde la última vez. Cursor decide cada par
+pendiente en dos etapas y registra todos los de un ámbito en **un solo lote**.
 
 **Etapa A, filtro por tema.** Con los títulos y reglas rápidas decide si los dos documentos tratan
 el mismo tema. Los que no, se registran como `sin_relacion` sin leer más. Ante la duda, pasan a la
@@ -76,20 +76,32 @@ etapa B.
 | `duplica` | la decisión repite lo que arquitectura ya decide | las dos citas textuales |
 | `choca` | la decisión contradice o exige menos que arquitectura | las dos citas y los criterios afectados |
 
-Ejemplo de registro:
+Ejemplo de lote, `.cache/coherencia-equipo.yaml`:
 
-```sh
-.venv/bin/python herramientas/coherencia.py registrar --ambito equipo --decision ADR-EQ-002 \
-  --doc decision-records:ADR-010 --relacion choca \
-  --cita-documento "Los reintentos se configuran solo en el API Gateway" \
-  --cita-decision "Los reintentos se aplican en cada cliente HTTP" \
-  --criterios EQ-002.2 --explicacion "Arquitectura centraliza los reintentos en el gateway."
+```yaml
+ambito: equipo
+pares:
+  - {decision: ADR-EQ-002, doc: decision-records:ADR-011, relacion: sin_relacion}
+  - decision: ADR-EQ-002
+    doc: decision-records:ADR-010
+    relacion: choca
+    cita_documento: Los reintentos se configuran solo en el API Gateway
+    cita_decision: Los reintentos se aplican en cada cliente HTTP
+    criterios: [EQ-002.2]
+    explicacion: Arquitectura centraliza los reintentos en el gateway.
 ```
 
+```sh
+.venv/bin/python herramientas/coherencia.py lote .cache/coherencia-equipo.yaml
+```
+
+- Se registra todo o nada: si una cita no aparece en el documento, no se registra ningún par y se
+  listan todos los errores. Al registrar, se regenera el `COHERENCIA.md` del ámbito.
 - Las citas se validan contra el texto real de los dos documentos.
 - Un `choca` **suspende** los criterios indicados: `/revisar` no los evalúa hasta resolver el choque.
 - Un ADR solo puede pasar a Aprobado si su `COHERENCIA.md` no tiene choques ni pares pendientes.
-- Si el usuario no está de acuerdo con un resultado, se registra de nuevo con `--manual "<motivo>"`.
+- Si el usuario no está de acuerdo con un resultado, el par se registra de nuevo con
+  `manual: "<motivo>"`.
 
 ## Resultado
 

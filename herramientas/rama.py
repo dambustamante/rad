@@ -4,6 +4,7 @@ Uso:
   python herramientas/rama.py preparar <producto> <repo> <rama>
   python herramientas/rama.py registrar <producto> <repo> <rama> [--archivo LOTE.yaml]
   python herramientas/rama.py publicar <producto> <repo> <rama> [--incluir H-0012,H-0015] [--confirmar]
+        (registra antes el lote de la rama, si existe)
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
@@ -25,12 +26,10 @@ Sonar no se consulta en ramas: SonarQube Community no las analiza.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from datetime import date
 from pathlib import Path
 
-import yaml
 
 import hallazgos as registro_hallazgos
 import lenguaje
@@ -42,12 +41,10 @@ from coherencia import suspendidos as criterios_suspendidos
 from comun import RAIZ, ErrorRadiografia, actualizar_clon, cargar_env, git, resolver_commit, slug
 from plataforma import ClientePlataforma, ConfigPlataforma, proyecto_de
 from revisar import decisiones_con_criterios, veredicto
-from revision import construir_hallazgo, lista_de_control
-from triaje import umbrales
+from revision import hallazgos_del_lote, leer_lote, lista_de_control
 
 MAXIMO_LINEAS_DIFF = 1500
 ORDEN_SEVERIDAD = {"bloqueante": 0, "alta": 1, "media": 2, "baja": 3}
-CRITERIOS_DEL_MR = "revisión del mr"   # criterios de ADR-EQ-008 que se evalúan en la revisión de un MR
 
 
 # --- Estado ------------------------------------------------------------------------------------
@@ -101,19 +98,9 @@ def contexto_rama(raiz: Path, producto: str, repo: str, rama: str, registro: dic
             "commit": estado["commit"], "estado": estado}
 
 
-def control_de_rama(raiz: Path, producto: str, repo: str, tipo: str, con_mr: bool) -> dict[str, dict]:
-    """Lo mismo que se evalúa en la revisión de código, más los criterios del MR de ADR-EQ-008 si hay MR."""
-    control = {e["clave"]: e for e in lista_de_control(raiz, tipo, producto, repo) if not e.get("exceptuado")}
-    if con_mr and tipo == "propio":
-        for id_eq, decision in decisiones_con_criterios(raiz).items():
-            for id_criterio, criterio in decision["tabla"].items():
-                if CRITERIOS_DEL_MR in criterio["como"].lower():
-                    control[f"{id_eq}|{id_criterio}"] = {
-                        "clave": f"{id_eq}|{id_criterio}", "fuente": id_eq, "criterio": id_criterio, "nivel": 3,
-                        "titulo": decision["titulo"], "texto": criterio["texto"], "archivo": decision["archivo"],
-                        "modo": "propuesta" if decision["estado"].lower() == "propuesto" else "vigente",
-                        "severidad": criterio["severidad"]}
-    return control
+def control_de_rama(raiz: Path, producto: str, repo: str, tipo: str) -> dict[str, dict]:
+    """Lo mismo que se evalúa en la revisión de código del repositorio, sin lo exceptuado."""
+    return {e["clave"]: e for e in lista_de_control(raiz, tipo, producto, repo) if not e.get("exceptuado")}
 
 
 # --- Preparar ----------------------------------------------------------------------------------
@@ -214,18 +201,27 @@ def escribir_paquete(raiz: Path, producto: str, estado: dict, carpeta: Path, clo
         lineas += ["", "## Terceros del repositorio", ""]
         lineas += [f"- `{f['id']}` {f.get('nombre') or ''}: p95 {(f.get('sla') or {}).get('p95_ms') or '—'} ms, "
                    f"política ante falla {f.get('politica_ante_falla')}" for f in fichas]
-    control = control_de_rama(raiz, producto, repo, estado["tipo"], bool(mr))
-    lineas += ["", "## Contra qué comparar", "", "| Fuente | Criterio | Regla | Modo |", "|---|---|---|---|"]
-    lineas += [f"| `{e['fuente']}` | {e['criterio'] or '—'} | {e['texto'].replace('|', '/')} | {e['modo']} |"
-               for e in sorted(control.values(), key=lambda e: (e["nivel"], e["clave"]))]
+    control = control_de_rama(raiz, producto, repo, estado["tipo"])
+    lineas += ["", "## Contra qué comparar", "",
+               "Documentos de arquitectura vigentes (regla rápida) y criterios de revisión de código de las decisiones. "
+               "El texto de cada criterio está en su ADR.", ""]
+    por_fuente: dict[str, list[dict]] = {}
+    for e in sorted(control.values(), key=lambda e: (e["nivel"], e["clave"])):
+        por_fuente.setdefault(e["fuente"], []).append(e)
+    for fuente, elementos in por_fuente.items():
+        primero = elementos[0]
+        if primero["criterio"] is None:
+            lineas.append(f"- `{fuente}`: {primero['texto']}")
+        else:
+            lineas.append(f"- `{fuente}` {primero['titulo']} ({primero['modo']}): " + ", ".join(e["criterio"] for e in elementos))
     if mr:
         lineas += ["", "Descripción del MR:", "", *[f"> {l}" for l in (mr["descripcion"] or "(vacía)").splitlines()]]
     lote = carpeta / "lote.yaml"
     lineas += [
         "", "## Entregables", "",
         f"1. Hallazgos en `{lote.relative_to(raiz)}` (solo la lista `hallazgos:`, con el mismo formato que en `/revisar`).",
-        f"2. Registrar: `.venv/bin/python herramientas/rama.py registrar {producto} {repo} {rama}`.",
-        f"3. Vista previa del comentario: `.venv/bin/python herramientas/rama.py publicar {producto} {repo} {rama}`.",
+        f"2. Registrar y ver la vista previa del comentario: `.venv/bin/python herramientas/rama.py publicar {producto} {repo} {rama} "
+        "[--incluir H-NNNN,…]`.",
     ]
     archivo = carpeta / "paquete.md"
     archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
@@ -238,30 +234,15 @@ def registrar(raiz: Path, producto: str, repo: str, rama: str, archivo: Path | N
     registro = registro_hallazgos.cargar(raiz, producto)
     ctx = contexto_rama(raiz, producto, repo, rama, registro)
     estado = ctx["estado"]
-    archivo = archivo or raiz / "productos" / producto / "revisiones" / estado["id_revision"] / "lote.yaml"
-    if not archivo.exists():
-        raise ErrorRadiografia(f"No existe el archivo de lote {archivo}.")
-    try:
-        texto = archivo.read_text(encoding="utf-8")
-        datos = (json.loads(texto) if archivo.suffix == ".json" else yaml.safe_load(texto)) or {}
-    except (json.JSONDecodeError, yaml.YAMLError) as error:
-        raise ErrorRadiografia(f"El lote no es un YAML o JSON válido: {error}") from error
-    control = control_de_rama(raiz, producto, repo, estado["tipo"], bool(estado["mr"]))
-    cambiados = set(estado["cambiados"])
-    errores, hallazgos = [], []
-    for indice, h in enumerate(datos.get("hallazgos") or [], start=1):
-        referencia = f"hallazgos[{indice}] ({h.get('titulo', 'sin título')})"
-        evidencias = [str(v) for v in (h.get("evidencia") if isinstance(h.get("evidencia"), list) else [h.get("evidencia")] if h.get("evidencia") else [])]
-        try:
-            hallazgo = construir_hallazgo(
-                raiz, ctx, str(h.get("fuente", "")), h.get("criterio"), str(h.get("categoria", "")), str(h.get("severidad", "")),
-                h.get("titulo"), h.get("detalle"), evidencias, h.get("fragmento"), h.get("cita_documento"),
-                h.get("documento_tercero"), h.get("cita_tercero"), control)
-            if hallazgo["evidencia"][0]["archivo"] not in cambiados:
-                raise ErrorRadiografia(f"'{hallazgo['evidencia'][0]['archivo']}' no es un archivo que cambia la rama.")
+    datos = leer_lote(archivo or raiz / "productos" / producto / "revisiones" / estado["id_revision"] / "lote.yaml")
+    control = control_de_rama(raiz, producto, repo, estado["tipo"])
+    errores: list[str] = []
+    hallazgos = []
+    for hallazgo in hallazgos_del_lote(raiz, ctx, datos, control, errores):
+        if hallazgo["evidencia"][0]["archivo"] in estado["cambiados"]:
             hallazgos.append(hallazgo)
-        except ErrorRadiografia as error:
-            errores.append(f"{referencia}: {error}")
+        else:
+            errores.append(f"{hallazgo['titulo']}: '{hallazgo['evidencia'][0]['archivo']}' no es un archivo que cambia la rama.")
     if errores:
         raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
 
@@ -274,16 +255,11 @@ def registrar(raiz: Path, producto: str, repo: str, rama: str, archivo: Path | N
 
 # --- Publicar ----------------------------------------------------------------------------------
 
-def a_publicar(registro: dict, repo: str, rama: str, publicables: list[str], incluir: list[str]) -> list[dict]:
-    """Hallazgos abiertos de la rama marcados Resolver, elegidos ahora, o de fuentes publicables sin triar."""
-    seleccion = []
-    for h in registro["hallazgos"].values():
-        if h["repo"] != repo or h["rama"] != rama or h["estado"] != "abierto" or h.get("absorbido_por"):
-            continue
-        decision = (h.get("triaje") or {}).get("decision")
-        if (decision in ("resolver", "confirmar") or h["id"] in incluir
-                or (decision is None and h["modo"] == "vigente" and (h["criterio"] or h["fuente"]) in publicables)):
-            seleccion.append(h)
+def a_publicar(registro: dict, repo: str, rama: str, incluir: list[str]) -> list[dict]:
+    """Hallazgos abiertos de la rama marcados Resolver o elegidos ahora, seguridad primero y por severidad."""
+    seleccion = [h for h in registro["hallazgos"].values()
+                 if h["repo"] == repo and h["rama"] == rama and h["estado"] == "abierto" and not h.get("absorbido_por")
+                 and ((h.get("triaje") or {}).get("decision") in ("resolver", "confirmar") or h["id"] in incluir)]
     return sorted(seleccion, key=lambda h: (h["categoria"] != "seguridad", ORDEN_SEVERIDAD.get(h["severidad"], 9), h["id"]))
 
 
@@ -317,6 +293,10 @@ def publicar(raiz: Path, producto: str, repo: str, rama: str, incluir: list[str]
     datos_repo = repo_del_producto(raiz, producto, repo)
     registro = registro_hallazgos.cargar(raiz, producto)
     estado = estado_rama(registro, repo, rama)
+    if (raiz / "productos" / producto / "revisiones" / estado["id_revision"] / "lote.yaml").exists():
+        registrar(raiz, producto, repo, rama)
+        registro = registro_hallazgos.cargar(raiz, producto)
+        estado = estado_rama(registro, repo, rama)
     if not estado.get("revisada") or estado["revisada"]["commit"] != estado["commit"]:
         raise ErrorRadiografia(f"Falta registrar la revisión de código de la rama: rama.py registrar {producto} {repo} {rama}")
     de_la_rama = {h["id"]: h for h in registro["hallazgos"].values() if h["repo"] == repo and h["rama"] == rama}
@@ -324,13 +304,15 @@ def publicar(raiz: Path, producto: str, repo: str, rama: str, incluir: list[str]
     if desconocidos:
         raise ErrorRadiografia(f"No son hallazgos abiertos de la rama: {', '.join(desconocidos)}.")
 
-    seleccion = a_publicar(registro, repo, rama, umbrales(raiz)[2], incluir)
+    seleccion = a_publicar(registro, repo, rama, incluir)
     anterior = estado.get("publicacion") or {}
     corregidos = [de_la_rama[i] for i in anterior.get("publicados", []) if i in de_la_rama and de_la_rama[i]["estado"] == "corregido"]
     if not seleccion and not corregidos:
-        candidatos = sorted(i for i, h in de_la_rama.items() if h["estado"] == "abierto")
-        raise ErrorRadiografia("Nada que publicar: ningún hallazgo de la rama está marcado Resolver. "
-                               + (f"Elegirlos con --incluir ({', '.join(candidatos)})." if candidatos else "La rama no tiene hallazgos abiertos."))
+        candidatos = sorted((h for h in de_la_rama.values() if h["estado"] == "abierto"), key=lambda h: h["id"])
+        raise ErrorRadiografia(
+            f"Nada que publicar: ningún hallazgo de la rama está marcado Resolver. Veredicto de la rama: {veredicto(registro, repo, rama)}. "
+            + ("Elegir con --incluir entre:\n  - " + "\n  - ".join(f"{h['id']} · {h['severidad']} · {h['titulo']}" for h in candidatos)
+               if candidatos else "La rama no tiene hallazgos abiertos."))
 
     if cliente is None:
         cliente, motivo = cliente_desde_env(raiz)
@@ -349,7 +331,7 @@ def publicar(raiz: Path, producto: str, repo: str, rama: str, incluir: list[str]
     carpeta.mkdir(parents=True, exist_ok=True)
     (carpeta / "comentario.md").write_text(cuerpo, encoding="utf-8")
     resultado = {"cuerpo": cuerpo, "destino": destino, "avisos": avisos, "publicado": False,
-                 "seleccion": [h["id"] for h in seleccion]}
+                 "seleccion": [h["id"] for h in seleccion], "veredicto": veredicto(registro, repo, rama)}
     if not confirmar:
         return resultado
     if avisos:
@@ -416,6 +398,7 @@ def main(argumentos: list[str] | None = None) -> int:
             if r["publicado"]:
                 print(f"Publicado en {r['destino']}.")
             else:
+                print(f"Veredicto de la rama: {r['veredicto']}")
                 print(f"Vista previa (destino: {r['destino']}). Para publicar, repetir con --confirmar.\n")
                 print(r["cuerpo"])
                 for aviso in r["avisos"]:

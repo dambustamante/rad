@@ -1,8 +1,7 @@
-"""Cliente mínimo de la plataforma git (GitLab o GitHub) para la revisión de ramas y el reporte semanal.
+"""Cliente mínimo de la plataforma git (GitLab o GitHub) para la revisión de ramas.
 
 Solo hace lo necesario:
 - buscar el MR o PR abierto de una rama, con sus aprobaciones;
-- listar los MR o PR actualizados desde una fecha;
 - crear o editar un comentario en un MR o PR (no se comentan commits).
 
 La conexión se lee de .env (GIT_PLATAFORMA, GITLAB_URL/GITLAB_TOKEN o GITHUB_URL/GITHUB_TOKEN). Este módulo
@@ -118,21 +117,6 @@ class ClientePlataforma:
         propietario = proyecto.split("/")[0]
         lista = self._pedir("GET", f"{self._proyecto(proyecto)}/pulls", params={"head": f"{propietario}:{rama}", "state": "open"})
         return self._mr_github(proyecto, lista[0]) if lista else None
-
-    def mrs_desde(self, proyecto: str, desde: str) -> list[dict]:
-        """MR o PR creados, mergeados o cerrados desde la fecha ISO `desde`."""
-        if self.config.tipo == "gitlab":
-            lista = self._pedir("GET", f"{self._proyecto(proyecto)}/merge_requests",
-                                params={"updated_after": f"{desde}T00:00:00Z", "state": "all", "per_page": 100})
-            return [{"numero": m["iid"], "titulo": m["title"], "url": m["web_url"], "rama": m["source_branch"],
-                     "creado": (m.get("created_at") or "")[:10], "mergeado": (m.get("merged_at") or "")[:10] or None,
-                     "estado": {"opened": "abierto", "merged": "mergeado"}.get(m["state"], "cerrado")} for m in lista]
-        lista = self._pedir("GET", f"{self._proyecto(proyecto)}/pulls",
-                            params={"state": "all", "sort": "updated", "direction": "desc", "per_page": 100})
-        return [{"numero": p["number"], "titulo": p["title"], "url": p["html_url"], "rama": p["head"]["ref"],
-                 "creado": (p.get("created_at") or "")[:10], "mergeado": (p.get("merged_at") or "")[:10] or None,
-                 "estado": "abierto" if p["state"] == "open" else ("mergeado" if p.get("merged_at") else "cerrado")}
-                for p in lista if (p.get("updated_at") or "")[:10] >= desde]
 
     # --- Comentarios ---
 

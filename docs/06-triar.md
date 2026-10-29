@@ -54,28 +54,19 @@ pide ayuda, Cursor lee el detalle y la evidencia y da una recomendación.
 
 ## Paso 4: calibración
 
-```sh
-.venv/bin/python herramientas/triaje.py calibracion
-```
-
-Muestra, por fuente (un ADR, un criterio o una regla de Sonar), cuántos hallazgos tiene triados y
-qué porcentaje fue falso positivo. Los umbrales están en `harness.yaml`:
+Al aplicar, el script muestra la calibración del producto (también se puede pedir con
+`.venv/bin/python herramientas/triaje.py calibracion`). Por fuente (un ADR, un criterio o una regla de
+Sonar) indica cuántos hallazgos tiene triados y qué porcentaje fue falso positivo. Los umbrales están
+en `harness.yaml`:
 
 | Estado | Condición | Qué hacer |
 |---|---|---|
-| lista para publicar | al menos 5 triados y menos de 20% de falsos positivos | ofrecer agregarla a `publicables` |
+| confiable | al menos 5 triados y menos de 20% de falsos positivos | nada |
 | ruidosa: ajustar | 20% o más de falsos positivos | revisar los motivos y ajustar la fuente |
 | pocos datos | menos de 5 triados | seguir triando |
 
-- **Publicables:** la lista de fuentes confiables. Al revisar una rama, sus hallazgos se publican en el
-  MR sin necesidad de triarlos uno por uno. Se agregan con confirmación:
-
-  ```sh
-  .venv/bin/python herramientas/triaje.py publicables --agregar EQ-002.1
-  ```
-
-- **Fuentes ruidosas:** el ajuste puede ser precisar el texto del criterio en el ADR-EQ, cambiar su
-  severidad o, si es una regla de Sonar, desactivarla en el perfil de calidad.
+El ajuste de una fuente ruidosa puede ser precisar el texto del criterio en el ADR-EQ, cambiar su
+severidad o, si es una regla de Sonar, desactivarla en el perfil de calidad.
 
 ## Paso 5: de la deuda a Jira
 

@@ -239,6 +239,18 @@ class PruebaRevision(unittest.TestCase):
         trabajo = json.loads((carpeta / "fraude-core.json").read_text(encoding="utf-8"))
         self.assertEqual(len(trabajo["hallazgos"]), 1, "registrar el mismo lote dos veces no duplica hallazgos")
 
+    def test_cerrar_registra_el_lote(self) -> None:
+        carpeta = self.automatica["carpeta"]
+        (carpeta / "revision").mkdir(parents=True, exist_ok=True)
+        evaluaciones = [{"fuente": e["fuente"], "criterio": e["criterio"], "resultado": "NO APLICA", "motivo": "prueba"}
+                        for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")]
+        import yaml
+        (carpeta / "revision" / "fraude-core-lote.yaml").write_text(yaml.safe_dump({"evaluaciones": evaluaciones}), encoding="utf-8")
+        (carpeta / "revision" / "fraude-core-asis.md").write_text(AS_IS, encoding="utf-8")
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core", "--archivos-leidos", "3")
+        self.assertEqual(codigo, 0, salida)
+        self.assertIn("cerrada", salida, "un solo comando registra el lote y cierra")
+
     def nueva_revision_automatica(self, archivo: str, contenido: str) -> None:
         (self.core / archivo).write_text(contenido, encoding="utf-8")
         commit(self.core, f"Cambia {archivo}")

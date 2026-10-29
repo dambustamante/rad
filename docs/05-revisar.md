@@ -11,10 +11,13 @@ Sin indicar el repositorio, `/revisar` toma el primero pendiente. Un repositorio
 si le falta la parte automática, si no tiene revisión de código o si su código cambió desde la
 última revisión.
 
-## Paso 1: parte automática (sin IA)
+Cursor ejecuta solo **dos comandos** por repositorio: `make revisar` al empezar y `revision.py cerrar`
+al terminar. Todo lo demás es leer y escribir archivos.
+
+## Paso 1: parte automática y paquete (sin IA)
 
 ```sh
-make revisar P=motor-fraudes R=fraude-core      # SIN_SONAR=1 para omitir Sonar
+make revisar P=motor-fraudes R=fraude-core      # SIN_SONAR=1 omite Sonar; COMPLETA=1 fuerza revisión completa
 ```
 
 1. Actualiza la copia en `productos/<p>/repos/<repo>/` y anota el commit.
@@ -36,15 +39,12 @@ make revisar P=motor-fraudes R=fraude-core      # SIN_SONAR=1 para omitir Sonar
    como desfase.
 6. Actualiza `estado/hallazgos.json` y la sección automática de `as-is/<repo>.md`, y deja un
    reporte en `revisiones/<fecha>-linea-base-<repo>/`.
+7. Genera el **paquete de revisión** (ver el paso 2).
 
-## Paso 2: paquete de revisión
+## Paso 2: leer el paquete
 
-```sh
-.venv/bin/python herramientas/revision.py paquete motor-fraudes fraude-core
-```
-
-Genera un único archivo con todo lo que Cursor necesita, para no tener que leer el repositorio
-completo:
+El paquete es un único archivo con todo lo que Cursor necesita, para no tener que leer el
+repositorio completo:
 
 - mapa del repositorio, manifiestos y puntos de entrada;
 - señales en el código con `archivo:línea`: clientes de sistemas externos, acceso a datos, resiliencia, manejo de excepciones sospechoso y logs con posibles datos sensibles;
@@ -62,7 +62,9 @@ sus archivos, el paquete:
 - muestra aparte los heredados, que se conservan solos al cerrar;
 - copia el AS IS y los borradores C4 de la revisión anterior, para actualizar solo lo que cambió.
 
-Con `--completa` se fuerza una revisión completa.
+Con `COMPLETA=1` se fuerza una revisión completa. Si la conversación se retoma a mitad de una
+revisión, el paquete se regenera sin repetir la parte automática con
+`.venv/bin/python herramientas/revision.py paquete <producto> <repo>`.
 
 ## Paso 3: AS IS
 
@@ -89,7 +91,7 @@ Borradores de `c4-contexto.md` y `c4-contenedores.md` en Mermaid, en
 código; lo que no se puede deducir queda `NO DETERMINADO`. Es material para el equipo: nunca se
 escribe en el repositorio.
 
-## Paso 5: evaluar y registrar en un solo lote
+## Paso 5: evaluar en un solo lote
 
 Cursor evalúa cada elemento de "Qué evaluar" y escribe todo en un único archivo,
 `revisiones/<id>/revision/<repo>-lote.yaml`:
@@ -120,12 +122,8 @@ hallazgos:
     cita_tercero: Timeout recomendado de 800 ms                 # opcional
 ```
 
-```sh
-.venv/bin/python herramientas/revision.py registrar motor-fraudes fraude-core
-```
-
-Un solo comando para todo el lote, porque cada comando reenvía la conversación y multiplica el
-costo. El script valida antes de registrar:
+El lote se registra al cerrar (paso 6), con un solo comando: cada comando reenvía la conversación y
+multiplica el costo. Antes de registrar, el script valida:
 
 - que los archivos y líneas existan y que el fragmento esté en el código;
 - que `cita_documento` aparezca textualmente en el documento, y `cita_tercero` en la documentación
@@ -133,8 +131,8 @@ costo. El script valida antes de registrar:
 - que un `incumplimiento` tenga cita;
 - que todo `NO CUMPLE` tenga al menos un hallazgo de la misma fuente y criterio.
 
-Si hay errores, **no registra nada** y los lista todos juntos. Registrar de nuevo no duplica
-hallazgos. Si un problema ya está como issue de Sonar y además incumple un documento de mayor nivel,
+Si hay errores, **no registra nada** y los lista todos juntos; se corrige el lote y se vuelve a
+cerrar, sin duplicar hallazgos. Si un problema ya está como issue de Sonar y además incumple un documento de mayor nivel,
 se registra en ese nivel y el issue de Sonar queda asociado.
 
 Un buen hallazgo describe una señal concreta en una ubicación concreta: "la clase X mezcla acceso a
@@ -146,8 +144,8 @@ datos y llamadas HTTP (`ruta:línea`)", no "no cumple SOLID".
 .venv/bin/python herramientas/revision.py cerrar motor-fraudes fraude-core --archivos-leidos 34
 ```
 
-El cierre exige que todo esté evaluado, que cada `NO CUMPLE` tenga hallazgo y que el AS IS tenga sus
-secciones. Además:
+Registra el lote y cierra. Exige que todo esté evaluado, que cada `NO CUMPLE` tenga hallazgo y que el
+AS IS tenga sus secciones. Además:
 
 - registra como NO APLICA los criterios exceptuados;
 - conserva las evaluaciones heredadas de una revisión incremental;
@@ -197,36 +195,31 @@ make revisar P=motor-fraudes R=fraude-core RAMA=feature/consulta-buro
    - el diff completo (hasta 1500 líneas);
    - hallazgos automáticos en los archivos cambiados;
    - terceros del repositorio;
-   - contra qué comparar: arquitectura vigente, criterios de revisión de código y, si hay MR, los
-     criterios del MR de ADR-EQ-008.
+   - contra qué comparar: la regla rápida de cada documento de arquitectura vigente y los criterios de
+     revisión de código agrupados por decisión (el texto de cada criterio está en su ADR).
 
 Sonar no se consulta en ramas, porque SonarQube Community no las analiza: EQ-008.3 queda
 `NO DETERMINADO`.
 
-### Paso 2: revisar y registrar
+### Paso 2: revisar
 
 Cursor lee el diff (y la copia de la rama solo si hace falta) y escribe en `lote.yaml` los hallazgos
-que la rama **introduce o empeora**, con el mismo formato del paso 5. Después:
+que la rama **introduce o empeora**, con el mismo formato del paso 5. La evidencia debe estar en un
+archivo que la rama cambia.
+
+### Paso 3: registrar, elegir qué publicar y ver la vista previa
 
 ```sh
-.venv/bin/python herramientas/rama.py registrar motor-fraudes fraude-core feature/consulta-buro
+.venv/bin/python herramientas/rama.py publicar motor-fraudes fraude-core feature/consulta-buro [--incluir H-0041]
 ```
 
-Además de las validaciones habituales, la evidencia debe estar en un archivo que la rama cambia. Con
-MR también se pueden registrar los criterios del MR, por ejemplo EQ-008.1 (criterios de aceptación
-sin pruebas). Muestra el veredicto de la rama.
-
-### Paso 3: elegir qué publicar y ver la vista previa
-
-Se publican:
+Un solo comando registra el lote (con las validaciones habituales; si hay errores no se registra
+nada), muestra el veredicto de la rama y arma el comentario. Se publican:
 
 - los hallazgos de la rama marcados **Resolver** en el triaje;
-- los que el usuario elija en ese momento, con `--incluir` (quedan triados como Resolver);
-- los de fuentes publicables (ver [Triaje](06-triar.md)) que todavía no tienen decisión.
+- los que el usuario elija en ese momento, con `--incluir` (quedan triados como Resolver al publicar).
 
-```sh
-.venv/bin/python herramientas/rama.py publicar motor-fraudes fraude-core feature/consulta-buro --incluir H-0041
-```
+Si ninguno está elegido, el comando lista los hallazgos abiertos de la rama para elegir.
 
 Sin `--confirmar` solo muestra el destino y el comentario completo:
 
@@ -260,5 +253,5 @@ Solo si el usuario lo confirma explícitamente sobre la vista previa, se repite 
 - **Solo se comentan MR o PR.** Si la rama no tiene uno abierto, no se publica: la revisión queda
   registrada y la vista previa queda en `revisiones/<id>/comentario.md`. Se publica cuando exista el MR.
 
-Para seguir la rama después de nuevos commits, se repiten los pasos: preparar, registrar (los
-hallazgos que ya no aparecen quedan corregidos) y publicar.
+Para seguir la rama después de nuevos commits, se repiten los pasos: preparar, actualizar el lote y
+publicar. Los hallazgos que ya no aparecen quedan corregidos.

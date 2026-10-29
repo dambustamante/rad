@@ -26,8 +26,8 @@ arquitectura:
     no_vigente: [Reemplazado, Deprecado, Rechazado, Obsoleto]
 
 calibracion:
-  # Una fuente (ADR, criterio o regla de Sonar) está lista para publicarse cuando tiene al menos
-  # `minimo_triados` hallazgos con decisión y su tasa de falsos positivos es menor que el máximo.
+  # Una fuente (ADR, criterio o regla de Sonar) es confiable cuando tiene al menos `minimo_triados`
+  # hallazgos con decisión y su tasa de falsos positivos es menor que el máximo; si no, es ruidosa.
   minimo_triados: 5
   maximo_falsos_positivos: 0.20
 
@@ -40,8 +40,3 @@ jira:
     tarea: Tarea
     spike: Spike
     bug: Bug
-
-publicacion:
-  # Fuentes (ADR o criterios) cuyos hallazgos se publican en el MR o PR sin triarlos (/revisar --rama).
-  # Vacía: no se publica nada. Se agrega una fuente solo cuando su tasa de falsos positivos es baja.
-  publicables: []

@@ -194,6 +194,33 @@ class PruebaCoherencia(unittest.TestCase):
         self.assertEqual(codigo, 1)
         self.assertIn("exige --criterios", salida)
 
+    def test_lote_todo_o_nada(self) -> None:
+        lote = self.raiz / "lote.yaml"
+        pares = """\
+            ambito: equipo
+            pares:
+              - decision: ADR-EQ-002
+                doc: decisiones:ADR-010
+                relacion: choca
+                cita_documento: los servicios no implementan reintentos propios
+                cita_decision: Los reintentos se aplican solo en operaciones idempotentes
+                criterios: [EQ-002.2]
+                explicacion: Arquitectura centraliza los reintentos en el gateway.
+              - {decision: ADR-EQ-002, doc: decisiones:ADR-011, relacion: sin_relacion}
+              - {decision: ADR-EQ-003, doc: decisiones:ADR-010, relacion: sin_relacion}
+            """
+        lote.write_text(textwrap.dedent(pares).replace("ADR-011, relacion: sin_relacion", "ADR-011, relacion: parecido"),
+                        encoding="utf-8")
+        codigo, salida = self.ejecutar("lote", str(lote))
+        self.assertEqual(codigo, 1)
+        self.assertIn("no se registró nada", salida)
+        self.assertEqual(self.plan()["total_pares"], 6)
+        lote.write_text(textwrap.dedent(pares), encoding="utf-8")
+        codigo, salida = self.ejecutar("lote", str(lote))
+        self.assertEqual(codigo, 0, salida)
+        self.assertIn("3 par(es) registrado(s). Pares pendientes: 3. Criterios suspendidos: 1.", salida)
+        self.assertIn("❌ 1 choque(s) · ⏳ 1 par(es) pendiente(s) de evaluar | EQ-002.2", (self.raiz / "equipo" / "COHERENCIA.md").read_text(encoding="utf-8"))
+
     def test_genera_coherencia_con_choque_y_suspension(self) -> None:
         self.registrar_todo()
         self.assertEqual(self.plan()["total_pares"], 0)

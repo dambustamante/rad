@@ -48,7 +48,7 @@ herramientas/        scripts deterministas que usan los comandos, con sus prueba
 .cursor/rules/       reglas de Cursor
 .cursor/commands/    comandos de Cursor (/estado, /actualizar, /producto, /revisar, /triar, /crear)
 .cache/ramas/        copias de solo lectura de las ramas en revisión (fuera de git)
-harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
+harness.yaml         configuración global (fuentes de arquitectura, estados, calibración y Jira)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
 

@@ -6,13 +6,15 @@ Uso:
   python herramientas/triaje.py grupo <producto> --decision D [--motivo TEXTO] [--vence AAAA-MM-DD]
                                      [--repo R] [--nivel N,...] [--severidad S,...] [--fuente PREFIJO] [--simular]
   python herramientas/triaje.py calibracion [<producto>]
-  python herramientas/triaje.py publicables (--agregar FUENTE | --quitar FUENTE)
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
 `generar` escribe productos/<producto>/triaje/triaje-<fecha>.md con una fila por hallazgo pendiente y una
-columna por decisión; el usuario marca con `x` y `aplicar` registra todo o nada. La fuente de verdad es
-hallazgos.json; el archivo de triaje queda como registro de lo decidido.
+columna por decisión; el usuario marca con `x` y `aplicar` registra todo o nada y muestra la calibración.
+La fuente de verdad es hallazgos.json; el archivo de triaje queda como registro de lo decidido.
+
+La calibración indica, por fuente, si sus hallazgos son confiables o ruidosos (muchos falsos positivos),
+para ajustar los criterios que fallan.
 """
 
 from __future__ import annotations
@@ -26,9 +28,8 @@ from pathlib import Path
 
 import hallazgos as registro_hallazgos
 import productos
-from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from comun import RAIZ, ErrorRadiografia, cargar_config, escribir_yaml_conservador, leer_yaml_conservador
+from comun import RAIZ, ErrorRadiografia, cargar_config
 
 # "confirmar" existió en versiones anteriores: si aparece en un registro, cuenta igual que "resolver".
 DECISIONES = {"Resolver": "resolver", "Conversar": "a-conversar",
@@ -264,15 +265,13 @@ def grupo(raiz: Path, producto: str, decision: str, motivo: str, vence: str | No
 
 # --- Calibración -------------------------------------------------------------------------------
 
-def umbrales(raiz: Path) -> tuple[int, float, list[str]]:
-    config = cargar_config(raiz)
-    calibracion = config.get("calibracion") or {}
-    publicables = (config.get("publicacion") or {}).get("publicables") or []
-    return int(calibracion.get("minimo_triados", 5)), float(calibracion.get("maximo_falsos_positivos", 0.20)), publicables
+def umbrales(raiz: Path) -> tuple[int, float]:
+    calibracion = cargar_config(raiz).get("calibracion") or {}
+    return int(calibracion.get("minimo_triados", 5)), float(calibracion.get("maximo_falsos_positivos", 0.20))
 
 
 def calibracion(raiz: Path, producto: str | None = None) -> list[dict]:
-    minimo, maximo, publicables = umbrales(raiz)
+    minimo, maximo = umbrales(raiz)
     nombres = [producto] if producto else list(productos.leer_productos(raiz))
     por_fuente: dict[str, dict] = defaultdict(lambda: {"triados": 0, "falsos_positivos": 0})
     for nombre in nombres:
@@ -289,34 +288,21 @@ def calibracion(raiz: Path, producto: str | None = None) -> list[dict]:
         if datos["triados"] < minimo:
             estado = "pocos datos"
         elif tasa < maximo:
-            estado = "lista para publicar"
+            estado = "confiable"
         else:
             estado = "ruidosa: ajustar"
-        resultado.append({"fuente": fuente, **datos, "tasa": tasa, "estado": estado, "publicable": fuente in publicables})
+        resultado.append({"fuente": fuente, **datos, "tasa": tasa, "estado": estado})
     return resultado
 
 
-def cambiar_publicables(raiz: Path, agregar: str | None, quitar: str | None) -> list[str]:
-    """Agrega o quita una fuente de publicacion.publicables en harness.yaml, conservando los comentarios."""
-    archivo = raiz / "harness.yaml"
-    datos = leer_yaml_conservador(archivo)
-    publicacion = datos.setdefault("publicacion", CommentedMap())
-    lista = publicacion.get("publicables")
-    if not isinstance(lista, CommentedSeq):
-        lista = CommentedSeq(lista or [])
-        lista.fa.set_flow_style()
-        publicacion["publicables"] = lista
-    if agregar:
-        if agregar in lista:
-            raise ErrorRadiografia(f"'{agregar}' ya es publicable.")
-        lista.append(agregar)
-    if quitar:
-        if quitar not in lista:
-            raise ErrorRadiografia(f"'{quitar}' no está en la lista de publicables.")
-        lista.remove(quitar)
-    lista.fa.set_flow_style()
-    escribir_yaml_conservador(archivo, datos)
-    return list(lista)
+def imprimir_calibracion(filas: list[dict]) -> None:
+    if not filas:
+        print("Todavía no hay hallazgos triados.")
+        return
+    print("| Fuente | Triados | Falsos positivos | Tasa | Estado |")
+    print("|---|---|---|---|---|")
+    for f in filas:
+        print(f"| {f['fuente']} | {f['triados']} | {f['falsos_positivos']} | {f['tasa']:.0%} | {f['estado']} |")
 
 
 # --- Programa principal ------------------------------------------------------------------------
@@ -342,10 +328,6 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("--simular", action="store_true")
     p = sub.add_parser("calibracion")
     p.add_argument("producto", nargs="?")
-    p = sub.add_parser("publicables")
-    grupo_publicables = p.add_mutually_exclusive_group(required=True)
-    grupo_publicables.add_argument("--agregar")
-    grupo_publicables.add_argument("--quitar")
     o = parser.parse_args(argumentos)
     raiz = o.raiz.resolve()
 
@@ -358,6 +340,8 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"Triaje aplicado en '{r['producto']}': {r['aplicadas']} decisión(es) {r['por_decision']}.")
             if r["agenda"]:
                 print(f"Agenda: {r['agenda'].relative_to(raiz)}")
+            print("\nCalibración:")
+            imprimir_calibracion(calibracion(raiz, r["producto"]))
         elif o.accion == "grupo":
             niveles = [int(n) for n in o.nivel.split(",") if n.strip()]
             severidades = [s.strip() for s in o.severidad.split(",") if s.strip()]
@@ -365,18 +349,7 @@ def main(argumentos: list[str] | None = None) -> int:
             accion = "Se aplicaría" if o.simular else "Aplicado"
             print(f"{accion} '{o.decision}' a {len(ids)} hallazgo(s): {', '.join(ids) or 'ninguno'}")
         elif o.accion == "calibracion":
-            filas = calibracion(raiz, o.producto)
-            if not filas:
-                print("Todavía no hay hallazgos triados.")
-            else:
-                print("| Fuente | Triados | Falsos positivos | Tasa | Estado | Publicable |")
-                print("|---|---|---|---|---|---|")
-                for f in filas:
-                    print(f"| {f['fuente']} | {f['triados']} | {f['falsos_positivos']} | {f['tasa']:.0%} | {f['estado']} "
-                          f"| {'sí' if f['publicable'] else 'no'} |")
-        elif o.accion == "publicables":
-            lista = cambiar_publicables(raiz, o.agregar, o.quitar)
-            print(f"Publicables: {', '.join(lista) or 'ninguno'}")
+            imprimir_calibracion(calibracion(raiz, o.producto))
     except ErrorRadiografia as error:
         print(f"ERROR: {error}")
         return 1
