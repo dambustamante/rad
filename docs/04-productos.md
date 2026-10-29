@@ -6,14 +6,28 @@
 /producto motor-fraudes
 ```
 
-1. Si el producto no existe, Cursor pide una descripción de una frase y lo crea en
-   `productos/motor-fraudes/producto.yaml`.
-2. El script le asigna una **sigla** para numerar sus ADR (`MF` → `ADR-MF-001`). Se puede cambiar
-   mientras el producto no tenga ADR:
+1. Si el producto no existe, Cursor pide una descripción de una frase, el **origen** y la **sigla**,
+   y lo crea en `productos/motor-fraudes/producto.yaml`:
 
    ```sh
-   .venv/bin/python herramientas/productos.py sigla motor-fraudes --asignar MFR
+   .venv/bin/python herramientas/productos.py crear --producto motor-fraude --origen nuevo \
+     --descripcion "Motor de fraude propio" --sigla MF
    ```
+
+   | Origen | Qué es | Cómo sigue |
+   |---|---|---|
+   | `heredado` | se recibe de otro equipo | toma de control: repositorios, terceros, línea base con `/revisar` y harness |
+   | `nuevo` | se construye desde el inicio | puede quedar sin repositorios hasta tener código; conviene crear su harness temprano |
+
+2. La **sigla** numera sus ADR (`MF` → `ADR-MF-001`). Si no se indica, el script propone una. Se puede
+   cambiar mientras el producto no tenga ADR:
+
+   ```sh
+   .venv/bin/python herramientas/productos.py sigla motor-fraude --asignar MFR
+   ```
+
+3. Todos los productos aparecen en **`productos/INDICE.md`**, el portafolio generado: origen, sigla,
+   repositorios, línea base, harness, veredicto y hallazgos bloqueantes o altos abiertos.
 
 ## Agregar repositorios
 

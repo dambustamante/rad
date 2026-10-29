@@ -20,10 +20,18 @@ este comando: siempre mediante el script.
      `estado`) y preguntar: agregar repositorios, retirar uno, registrar o completar terceros
      (el producto comprado y las integraciones), configurar las historias de usuario (ver
      `.cursor/partes/crear-historias.md`, "Fuente de historias") o nada.
-   - Si no existe, informar que se creará y pedir una descripción de una frase. Al crearse, el
-     script le asigna una sigla (por ejemplo `MF` para motor-fraudes) para numerar sus ADR. Mostrarla
-     y ofrecer cambiarla mientras el producto no tenga ADR:
-     `.venv/bin/python herramientas/productos.py sigla <producto> --asignar <SIGLA>`.
+   - Si no existe, pedir una descripción de una frase, el **origen** (`heredado`: se recibe de otro
+     equipo y se toma el control; `nuevo`: se construye desde el inicio) y la sigla para numerar sus
+     ADR (proponer una: `MF` para motor-fraude). Crearlo:
+
+     ```sh
+     .venv/bin/python herramientas/productos.py crear --producto <producto> --origen <heredado|nuevo> --descripcion "<frase>" [--sigla <SIGLA>]
+     ```
+
+     Un producto nuevo puede quedar sin repositorios hasta que tenga código. La sigla se cambia con
+     `productos.py sigla <producto> --asignar <SIGLA>` mientras el producto no tenga ADR.
+   - Producto **heredado**: seguir con los repositorios y, al terminar, sugerir la toma de control con
+     `/revisar <producto>` (un repositorio por chat) y después `/producto <producto> harness`.
 
 2. **Para agregar**, pedir los repositorios, uno por línea. Se aceptan URL SSH o HTTPS de GitLab
    o GitHub y rutas de carpetas locales con un repositorio git.

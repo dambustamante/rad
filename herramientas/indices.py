@@ -1,4 +1,4 @@
-"""Índices generados: equipo/INDICE.md y productos/<producto>/INDICE.md.
+"""Índices generados: equipo/INDICE.md, productos/INDICE.md (portafolio) y productos/<producto>/INDICE.md.
 
 Uso: python herramientas/indices.py [--producto P] [--raiz RUTA]
 
@@ -56,6 +56,7 @@ def indice_producto(raiz: Path, producto: str) -> Path:
     registro = hallazgos.cargar(raiz, producto)
     lineas = [f"# {producto}", "", AVISO_GENERADO, "",
               f"- **Descripción:** {datos.get('descripcion') or 'sin descripción'}",
+              f"- **Origen:** {datos.get('origen') or 'NO DETERMINADO'}",
               f"- **Sigla de sus ADR:** {datos.get('sigla') or 'sin asignar'}", ""]
 
     lineas += ["## Repositorios", "",
@@ -119,17 +120,54 @@ def indice_producto(raiz: Path, producto: str) -> Path:
 
     archivo = carpeta / "INDICE.md"
     archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
+    indice_portafolio(raiz)
+    return archivo
+
+
+def indice_portafolio(raiz: Path) -> Path:
+    """productos/INDICE.md: una fila por producto gobernado."""
+    import hallazgos
+    import harness
+    import productos
+    import revisar
+    import revision
+    from triaje import ORDEN_SEVERIDAD
+    lineas = ["# Productos", "", AVISO_GENERADO, "",
+              "| Producto | Origen | Sigla | Repositorios | Línea base | Harness | Veredicto | Bloqueantes o altos abiertos |",
+              "|---|---|---|---|---|---|---|---|"]
+    todos = productos.leer_productos(raiz)
+    for nombre, datos in sorted(todos.items()):
+        estados = revision.pendientes(raiz, nombre)
+        registro = hallazgos.cargar(raiz, nombre)
+        revisados = [e for e in estados if e["codigo"]]
+        veredictos = [revisar.veredicto(registro, e["repo"], str((registro.get("repos", {}).get(e["repo"]) or {}).get("rama", "")))
+                      for e in revisados]
+        no_pasa = sum(1 for v in veredictos if v.startswith("NO PASA"))
+        graves = sum(1 for h in registro["hallazgos"].values()
+                     if h["estado"] == "abierto" and not h.get("absorbido_por") and ORDEN_SEVERIDAD.get(h["severidad"], 9) <= 1
+                     and not revisar.descontado_por_triaje(h))
+        texto_harness = f"versión {harness.estado(raiz, nombre)['version']}" if harness.existe(raiz, nombre) else "—"
+        texto_veredicto = (f"{len(veredictos) - no_pasa} PASA · {no_pasa} NO PASA" if veredictos else "sin revisar")
+        lineas.append(f"| [{nombre}]({nombre}/INDICE.md) | {datos.get('origen') or '—'} | {datos.get('sigla') or '—'} "
+                      f"| {len(estados)} | {len(revisados)}/{len(estados)} | {texto_harness} | {texto_veredicto} | {graves} |")
+    if not todos:
+        lineas.append("| — | | | | | | | |")
+    lineas += ["", "Origen: `heredado` (se recibe de otro equipo y se toma el control) o `nuevo` (se construye desde el inicio). "
+               "Línea base: repositorios con revisión de código sobre su commit actual."]
+    archivo = raiz / "productos" / "INDICE.md"
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+    archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return archivo
 
 
 def regenerar(raiz: Path, producto: str | None = None) -> list[Path]:
-    """Regenera el índice de un producto, o el del equipo y los de todos los productos."""
+    """Regenera el índice de un producto, o el del equipo, el del portafolio y los de todos los productos."""
     if producto:
-        return [indice_producto(raiz, producto)]
+        return [indice_producto(raiz, producto), raiz / "productos" / "INDICE.md"]
     generados = [indice_equipo(raiz)]
     for archivo in sorted((raiz / "productos").glob("*/producto.yaml")):
         generados.append(indice_producto(raiz, archivo.parent.name))
-    return generados
+    return generados + [indice_portafolio(raiz)]
 
 
 def main(argumentos: list[str] | None = None) -> int:

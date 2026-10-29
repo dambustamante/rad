@@ -105,7 +105,8 @@ La guía paso a paso está en [docs/](docs/README.md):
 8. [Mantenimiento](docs/08-mantenimiento.md)
 9. [Harness del producto](docs/09-harness.md): el repositorio de trabajo de los devs
 
-El contrato de trabajo para Cursor está en [AGENTS.md](AGENTS.md), y las decisiones del equipo en
+Los productos gobernados están en [productos/INDICE.md](productos/INDICE.md) (portafolio generado), el
+contrato de trabajo para Cursor en [AGENTS.md](AGENTS.md) y las decisiones del equipo en
 [equipo/](equipo/README.md).
 
 ## Estado

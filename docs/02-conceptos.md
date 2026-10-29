@@ -84,6 +84,7 @@ equipo/                       nivel 3: decisiones del equipo
 ├── plantillas/               ADR, Tarea, Spike, Error, Hotfix, README y C4
 ├── lenguaje.yaml             expresiones a evitar
 └── estado/                   coherencia.json
+productos/INDICE.md           portafolio: una fila por producto
 productos/<producto>/
 ├── INDICE.md · producto.yaml
 ├── decisiones/               ADR-<SIGLA>-NNN, INDICE.md y COHERENCIA.md

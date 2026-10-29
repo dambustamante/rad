@@ -121,6 +121,26 @@ class PruebaProductos(unittest.TestCase):
         self.assertEqual(codigo, 1)
         self.assertIn("debe ir en minúsculas", salida)
 
+    def test_crear_sin_repositorios_origen_y_portafolio(self) -> None:
+        codigo, salida = self.ejecutar("crear", "--producto", "motor-fraude", "--origen", "nuevo",
+                                       "--descripcion", "Motor de fraude propio", "--sigla", "MF")
+        self.assertEqual(codigo, 0, salida)
+        self.assertIn("Producto 'motor-fraude' (nuevo) creado con la sigla MF, sin repositorios.", salida)
+        datos = productos.leer_productos(self.raiz)["motor-fraude"]
+        self.assertEqual((datos["origen"], datos["sigla"], len(datos["repos"])), ("nuevo", "MF", 0))
+        self.assertEqual(self.ejecutar("crear", "--producto", "motor-fraude", "--origen", "nuevo", "--descripcion", "x")[0], 1)
+        codigo, salida = self.ejecutar("crear", "--producto", "3ds", "--origen", "heredado", "--descripcion", "3DS", "--sigla", "MF")
+        self.assertIn("ya está en uso", salida)
+        self.assertEqual(self.ejecutar("crear", "--producto", "3ds", "--origen", "heredado", "--descripcion", "3DS",
+                                       "--sigla", "TDS")[0], 0)
+        self.ejecutar("agregar", "--producto", "odin", "--id", "odin-core", "--url", str(self.java), "--rama", "main", "--tipo", "propio")
+        self.assertEqual(productos.leer_productos(self.raiz)["odin"]["origen"], "heredado", "al agregar el primer repo, heredado por defecto")
+        portafolio = (self.raiz / "productos" / "INDICE.md").read_text(encoding="utf-8")
+        self.assertIn("| [motor-fraude](motor-fraude/INDICE.md) | nuevo | MF | 0 | 0/0 | — | sin revisar | 0 |", portafolio)
+        self.assertIn("| [3ds](3ds/INDICE.md) | heredado | TDS |", portafolio)
+        self.assertIn("| [odin](odin/INDICE.md) | heredado | ODI | 1 | 0/1 |", portafolio)
+        self.assertIn("- **Origen:** nuevo", (self.raiz / "productos" / "motor-fraude" / "INDICE.md").read_text(encoding="utf-8"))
+
     def test_urls_equivalentes(self) -> None:
         self.assertEqual(productos.normalizar_url_git("git@gitlab.com:banco/fraude-core.git"),
                          productos.normalizar_url_git("https://gitlab.com/banco/fraude-core/"))

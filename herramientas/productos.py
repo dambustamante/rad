@@ -36,6 +36,7 @@ TIPOS_REPO = ("propio", "proveedor", "config")
 PATRON_SIGLA = re.compile(r"[A-Z]{2,5}")
 SIGLAS_RESERVADAS = {"EQ"}
 PATRON_NOMBRE = re.compile(r"[a-z0-9][a-z0-9-]*")
+ORIGENES = ("heredado", "nuevo")
 PATRON_CONTRATO = re.compile(r"(^|/)[^/]*(openapi|swagger|asyncapi)[^/]*\.(ya?ml|json)$", re.IGNORECASE)
 
 PLANTILLA_PRODUCTO = """\
@@ -43,6 +44,8 @@ PLANTILLA_PRODUCTO = """\
 
 nombre: {nombre}
 descripcion: ""
+# heredado (se recibe de otro equipo y se toma el control) | nuevo (se construye desde el inicio)
+origen: {origen}
 # Sigla para numerar los ADR del producto (ADR-{sigla}-001). Se cambia con `productos.py sigla` mientras no haya ADR.
 sigla: {sigla}
 
@@ -271,8 +274,35 @@ def inspeccionar(url: str, raiz: Path) -> dict:
 
 # --- Altas y bajas -----------------------------------------------------------------------------
 
+def datos_nuevos(raiz: Path, producto: str, descripcion: str | None, origen: str, sigla: str | None = None):
+    validar_nombre(producto, "nombre de producto")
+    if producto == "equipo":
+        raise ErrorRadiografia("'equipo' está reservado para las decisiones del equipo; elegir otro nombre de producto.")
+    if origen not in ORIGENES:
+        raise ErrorRadiografia(f"Origen '{origen}' inválido; valores válidos: {', '.join(ORIGENES)}.")
+    if sigla is not None:
+        if not PATRON_SIGLA.fullmatch(sigla):
+            raise ErrorRadiografia(f"La sigla '{sigla}' debe tener de 2 a 5 letras mayúsculas.")
+        if sigla in siglas_en_uso(raiz, producto):
+            raise ErrorRadiografia(f"La sigla '{sigla}' ya está en uso o reservada.")
+    datos = yaml_conservador().load(PLANTILLA_PRODUCTO.format(nombre=producto, sigla=sigla or proponer_sigla(raiz, producto),
+                                                              origen=origen))
+    datos["descripcion"] = descripcion or ""
+    return datos
+
+
+def crear(raiz: Path, producto: str, descripcion: str | None, origen: str, sigla: str | None = None) -> None:
+    """Crea un producto sin repositorios (por ejemplo, uno nuevo que todavía no tiene código)."""
+    archivo = archivo_producto(raiz, producto)
+    if archivo.exists():
+        raise ErrorRadiografia(f"El producto '{producto}' ya existe.")
+    datos = datos_nuevos(raiz, producto, descripcion, origen, sigla)
+    archivo.parent.mkdir(parents=True, exist_ok=True)
+    escribir_yaml_conservador(archivo, datos)
+
+
 def agregar(raiz: Path, producto: str, id_repo: str, url: str, rama: str, tipo: str,
-            sonar: str | None, descripcion: str | None) -> bool:
+            sonar: str | None, descripcion: str | None, origen: str = "heredado") -> bool:
     """Registra un repositorio. Devuelve True si además se creó el producto."""
     validar_nombre(producto, "nombre de producto")
     if producto == "equipo":
@@ -296,8 +326,7 @@ def agregar(raiz: Path, producto: str, id_repo: str, url: str, rama: str, tipo: 
     creado = not archivo.exists()
     if creado:
         archivo.parent.mkdir(parents=True, exist_ok=True)
-        datos = yaml_conservador().load(PLANTILLA_PRODUCTO.format(nombre=producto, sigla=proponer_sigla(raiz, producto)))
-        datos["descripcion"] = descripcion or ""
+        datos = datos_nuevos(raiz, producto, descripcion, origen)
     else:
         datos = leer_yaml_conservador(archivo)
     repos = repos_de(datos)
@@ -394,6 +423,12 @@ def main(argumentos: list[str] | None = None) -> int:
     p_agregar.add_argument("--tipo", required=True, choices=TIPOS_REPO)
     p_agregar.add_argument("--sonar")
     p_agregar.add_argument("--descripcion", help="descripción del producto; se usa solo al crearlo")
+    p_agregar.add_argument("--origen", default="heredado", choices=ORIGENES, help="se usa solo al crear el producto")
+    p_crear = sub.add_parser("crear", help="crea un producto sin repositorios")
+    p_crear.add_argument("--producto", required=True)
+    p_crear.add_argument("--origen", required=True, choices=ORIGENES)
+    p_crear.add_argument("--descripcion", required=True)
+    p_crear.add_argument("--sigla")
     p_retirar = sub.add_parser("retirar", help="marca un repositorio como retirado")
     p_retirar.add_argument("--producto", required=True)
     p_retirar.add_argument("--id", required=True)
@@ -422,11 +457,15 @@ def main(argumentos: list[str] | None = None) -> int:
             print(json.dumps(inspeccionar(opciones.url, raiz), indent=2, ensure_ascii=False))
         elif opciones.accion == "agregar":
             creado = agregar(raiz, opciones.producto, opciones.id, opciones.url, opciones.rama, opciones.tipo,
-                             opciones.sonar, opciones.descripcion)
+                             opciones.sonar, opciones.descripcion, opciones.origen)
             if creado:
                 sigla = leer_productos(raiz)[opciones.producto].get("sigla")
                 print(f"Producto '{opciones.producto}' creado con la sigla {sigla} (se puede cambiar mientras no tenga ADR).")
             print(f"Repositorio '{opciones.id}' agregado al producto '{opciones.producto}'.")
+        elif opciones.accion == "crear":
+            crear(raiz, opciones.producto, opciones.descripcion, opciones.origen, opciones.sigla)
+            sigla = leer_productos(raiz)[opciones.producto].get("sigla")
+            print(f"Producto '{opciones.producto}' ({opciones.origen}) creado con la sigla {sigla}, sin repositorios.")
         elif opciones.accion == "retirar":
             retirar(raiz, opciones.producto, opciones.id, opciones.motivo)
             print(f"Repositorio '{opciones.id}' retirado del producto '{opciones.producto}'.")
@@ -449,7 +488,7 @@ def main(argumentos: list[str] | None = None) -> int:
             if datos is None:
                 raise ErrorRadiografia(f"No existe el producto '{opciones.producto}'.")
             print(f"Sigla de '{opciones.producto}': {datos.get('sigla') or 'sin asignar'}")
-        if opciones.accion in ("agregar", "retirar", "sigla"):
+        if opciones.accion in ("agregar", "crear", "retirar", "sigla"):
             import indices
             indices.indice_producto(raiz, opciones.producto)
     except ErrorRadiografia as error:
