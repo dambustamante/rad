@@ -21,9 +21,47 @@ Uso:
 
 ## Pasos
 
-1. **Entender el pedido.** Preguntar el tipo, el título, los repositorios involucrados y unas palabras
-   clave del tema (sirven para buscar en la documentación y en Jira). Para un Bug, pedir lo que se
-   sabe del incidente; para una Deuda Operativa, la frecuencia y el esfuerzo del trabajo manual.
+1. **Entender el pedido.** Si no se indicó el tipo, preguntarlo primero. Después hacer las preguntas
+   de ese tipo, de a una o todas juntas, y no inventar respuestas: lo que el usuario no sepa queda
+   `NO DETERMINADO`.
+
+   **Spike** (`--spike`):
+
+   1. ¿Qué hay que decidir? Una sola pregunta concreta (por ejemplo, "¿Kafka o RabbitMQ para los
+      eventos de evaluación?"). De ahí sale el título: "Evaluar… para decidir…".
+   2. ¿Por qué hay que decidirlo ahora? Qué trabajo o historia queda bloqueado.
+   3. ¿Qué opciones se conocen de entrada?
+   4. ¿Qué pesa más al decidir? Para ordenar los criterios: cumplimiento de ADR, latencia, costo,
+      operación, soporte del proveedor…
+   5. ¿Qué repositorios o integraciones toca?
+
+   No preguntar la duración máxima (2 días), el entregable (ADR de producto en Propuesto) ni los
+   criterios de aceptación fijos: ya vienen en la plantilla.
+
+   **Bug:**
+
+   1. ¿Qué falla y dónde? (servicio, endpoint, proceso)
+   2. ¿Desde cuándo y en qué entorno?
+   3. ¿Cuál es el impacto? (transacciones, clientes o procesos afectados, con cantidades si se conocen)
+   4. ¿Se puede reproducir? Pasos o datos de entrada.
+   5. ¿Hay evidencia? Logs, `trace_id`, alertas o el incidente asociado.
+
+   **Tarea de Deuda Operativa:**
+
+   1. ¿Qué tarea manual se hace hoy y por qué falta un backoffice para evitarla?
+   2. ¿Con qué frecuencia se hace y cuánto tarda cada vez?
+   3. ¿Quién la hace y qué riesgo tiene hacerla a mano?
+   4. ¿Qué repositorios estarían involucrados en automatizarla?
+
+   **Tarea de Deuda Técnica:**
+
+   - Con `--desde`, el contexto sale de los hallazgos: solo preguntar si conviene agrupar otros
+     hallazgos abiertos del mismo tema (el contexto los lista en "Otros hallazgos abiertos
+     relacionados") y confirmar el título.
+   - Sin `--desde`: qué hay que corregir o mejorar, dónde, qué problema causa hoy y qué evidencia hay.
+
+   En todos los casos, pedir unas palabras clave del tema si no surgen de las respuestas: sirven para
+   buscar en la documentación del proveedor y en Jira.
 
 2. **Crear el borrador y el contexto:**
 
