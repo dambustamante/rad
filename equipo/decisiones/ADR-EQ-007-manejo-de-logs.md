@@ -51,7 +51,7 @@ Propuesto
 
 ### Positivas
 
-- Una transacción se sigue de punta a punta con un solo identificador.
+- Una transacción se sigue en todos los servicios por los que pasa, con un solo identificador.
 - Las alertas se basan en niveles con significado común.
 - Menos volumen y menos costo de almacenamiento.
 

@@ -1,0 +1,120 @@
+# ADR-EQ-009: Definición de terminado
+
+## 2. Estado
+
+Propuesto
+
+## 3. Fecha
+
+- Fecha de creación: `28-10-2026`
+- Fecha de aprobación: `—`
+
+## 4. Contexto
+
+- **Problema o necesidad:** "terminado" significa cosas distintas según quién cierra el trabajo. Se
+  mergean cambios sin contrato actualizado, sin diagrama C4 o con hallazgos abiertos, y se detecta
+  después, en una revisión o en producción.
+- **Alcance:** Tareas, Spikes y Bugs del equipo Back.
+- **Restricciones:** no duplicar reglas: cada condición remite a la decisión del equipo que la
+  define.
+
+## 5. Decisión
+
+Un trabajo está terminado cuando cumple las condiciones base de su tipo y, además, las condiciones
+que correspondan según lo que cambió.
+
+**Condiciones base para Tareas y Bugs:**
+
+1. Los criterios de aceptación se cumplen y hay pruebas automatizadas que los verifican.
+2. El MR fue revisado y aprobado por otra persona del equipo.
+3. El quality gate de Sonar está en verde después del merge.
+4. No hay secretos ni datos sensibles en el código, los logs ni las pruebas (ADR-EQ-004).
+5. Si el trabajo nace de hallazgos de una revisión de código o de arquitectura, la revisión
+   siguiente ya no los reporta.
+
+**Condiciones adicionales para Bugs:**
+
+1. Hay una prueba automatizada que reproduce el error y que pasa con la corrección.
+2. La causa está identificada y documentada en el Bug. Si no se pudo determinar, se documenta por
+   qué y qué se hizo para mitigarla.
+3. Existe al menos una medida que evita que el error se repita sin aviso: una prueba, una alerta o
+   un criterio en un ADR.
+
+**Condiciones según lo que cambió (Tareas y Bugs):**
+
+| Si el cambio… | Debe cumplir |
+|---|---|
+| Agrega o modifica una API o un evento | ADR-EQ-002: contrato actualizado y versionado |
+| Agrega o modifica un contenedor o una integración | ADR-EQ-001: C4 actualizado; ADR-EQ-003: timeout, reintentos y política ante falla |
+| Agrega o modifica logs | ADR-EQ-007: JSON, `trace_id` y nivel correcto |
+| Cambia cómo se ejecuta, configura u opera | ADR-EQ-005: README actualizado |
+| Cambia el diseño de clases o módulos | ADR-EQ-006: principios SOLID y KISS |
+| Toca una decisión del producto (ADR-<SIGLA>) | Los criterios de verificación de esa decisión |
+
+**Condiciones para Spikes:**
+
+1. La pregunta tiene respuesta documentada: opciones evaluadas, criterios usados y recomendación.
+2. Hay un ADR de producto en estado `Propuesto` con la decisión recomendada.
+3. Se respetó la duración máxima de 2 días; si no alcanzó, se documenta qué faltó y por qué.
+4. Los riesgos y las dependencias quedaron identificados.
+
+## 6. Alternativas evaluadas
+
+| Alternativa | Ventajas | Desventajas | Motivo del descarte |
+|---|---|---|---|
+| Sin definición explícita | Sin esfuerzo | Cada persona decide qué es "terminado" | Criterio dispar |
+| Lista completa con todas las reglas escritas | Autocontenida | Duplica los ADR-EQ y se desactualiza | Inconsistencia |
+| Condiciones base por tipo + enlace a los ADR-EQ según el cambio | Una sola fuente por regla; corta | Requiere conocer los ADR-EQ | **Elegida** |
+
+## 7. Consecuencias
+
+### Positivas
+
+- Criterio común para cerrar Tareas, Spikes y Bugs y para aprobar MR.
+- Las condiciones que dependen del código se pueden verificar en la revisión de cada MR.
+
+### Negativas o compromisos
+
+- El trabajo tarda algo más en cerrarse cuando cambian contratos o estructura.
+
+### Riesgos
+
+- Que se trate como trámite. Se mitiga verificando las condiciones en la revisión del MR y no solo
+  como una lista.
+
+## 8. Impacto
+
+Todas las Tareas, Spikes y Bugs del equipo Back. Las plantillas de Tarea, Spike y Bug enlazan a este
+ADR en lugar de repetir la lista.
+
+## 9. Acciones requeridas
+
+- Las plantillas de Tarea, Spike y Bug (ADR-EQ-008) enlazan a este ADR.
+- En la revisión de cada MR se indica qué condiciones se cumplen y cuáles faltan.
+
+## 10. Referencias
+
+- ADR-EQ-001, ADR-EQ-002, ADR-EQ-003, ADR-EQ-004, ADR-EQ-005, ADR-EQ-006, ADR-EQ-007, ADR-EQ-008
+
+## 11. Regla rápida
+
+> Terminado es: criterios probados, MR aprobado por otra persona, Sonar en verde, sin secretos y las
+> decisiones del equipo que aplican a lo que cambió, cumplidas. Un Bug, además, tiene su prueba de
+> reproducción y su causa documentada; un Spike termina con un ADR propuesto.
+
+## 12. Relación con arquitectura
+
+Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](../COHERENCIA.md), junto con los criterios que quedan suspendidos si hay un choque.
+
+## 13. Criterios de verificación
+
+| Criterio | Qué se verifica | Cómo | Severidad |
+|---|---|---|---|
+| `EQ-009.1` | Los criterios de aceptación tienen pruebas que los verifican | revisión del MR | alta |
+| `EQ-009.2` | El MR fue aprobado por otra persona | plataforma git | alta |
+| `EQ-009.3` | Quality gate de Sonar en verde | automática | alta |
+| `EQ-009.4` | Sin secretos (remite a EQ-004.1) | automática | bloqueante |
+| `EQ-009.5` | Los hallazgos de origen ya no se reportan | automática | alta |
+| `EQ-009.6` | Se cumplen los ADR-EQ que aplican según lo que cambió | automática + revisión del MR | según el ADR-EQ |
+| `EQ-009.7` | Un Bug tiene una prueba que reproduce el error y su causa documentada | revisión del MR | alta |
+| `EQ-009.8` | Un Spike deja un ADR de producto en estado Propuesto | automática | alta |

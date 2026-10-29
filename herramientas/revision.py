@@ -617,7 +617,8 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
     sin_seccion = [s for s in SECCIONES_AS_IS if normalizar(s) not in encabezados]
     if sin_seccion:
         raise ErrorRadiografia(f"Al AS IS le faltan secciones: {', '.join(sin_seccion)}.")
-    avisos = []
+    import lenguaje
+    avisos = [f"lenguaje: {a}" for a in lenguaje.formatear(lenguaje.revisar(texto_asis), asis.name)]
     for nombre in ("c4-contexto.md", "c4-contenedores.md"):
         if not (carpeta / "borradores" / repo / nombre).exists():
             avisos.append(f"falta el borrador {nombre}")

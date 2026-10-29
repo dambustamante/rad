@@ -68,6 +68,8 @@ Columna **Cómo**:
 - `automática`: la verifica una herramienta, siempre con el mismo resultado.
 - `revisión de código`: requiere leer y entender el código; se reporta con evidencia `ruta:línea`.
 - `automática + revisión de código`: una herramienta detecta candidatos y la revisión los confirma.
+- `revisión de la historia`, `revisión del MR` o `plataforma git`: para decisiones sobre la forma de
+  trabajar (historias, MR); no se evalúan en la revisión del código de un repositorio.
 
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|

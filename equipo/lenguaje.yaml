@@ -1,0 +1,59 @@
+# Reglas de lenguaje para todo lo que se escribe: historias, reportes, AS IS, ADR y comentarios.
+# Se puede editar: agregar o quitar expresiones no requiere tocar código.
+#
+# Cada expresión se busca sin distinguir mayúsculas ni tildes, como palabra o frase completa.
+
+voseo:
+  - tenés
+  - podés
+  - querés
+  - sabés
+  - hacé
+  - ejecutá
+  - mirá
+  - abrí
+  - corré
+  - elegí
+  - decidí
+  - fijate
+  - vos
+
+expresiones:
+  # adornos sin contenido verificable
+  - {texto: robusto, sugerencia: "decir qué soporta: carga, fallas, tiempos"}
+  - {texto: robusta, sugerencia: "decir qué soporta: carga, fallas, tiempos"}
+  - {texto: escalable, sugerencia: "decir hasta qué carga y cómo"}
+  - {texto: resiliente, sugerencia: "decir qué mecanismo: timeout, reintentos, circuit breaker"}
+  - {texto: potenciar, sugerencia: "usar el verbo concreto: agregar, reducir, mover"}
+  - {texto: aprovechar, sugerencia: "usar el verbo concreto"}
+  - {texto: optimizar, sugerencia: "decir qué métrica cambia y cuánto"}
+  - {texto: agilizar, sugerencia: "decir qué tiempo se reduce y cuánto"}
+  - {texto: fortalecer, sugerencia: "decir qué control se agrega"}
+  - {texto: de manera integral, sugerencia: "decir qué partes abarca"}
+  - {texto: holístico, sugerencia: "decir qué partes abarca"}
+  - {texto: holística, sugerencia: "decir qué partes abarca"}
+  - {texto: sinergia, sugerencia: "eliminar o decir qué se combina"}
+  - {texto: ecosistema, sugerencia: "nombrar los sistemas concretos"}
+  - {texto: sin fricción, sugerencia: "decir qué paso se elimina"}
+  - {texto: de punta a punta, sugerencia: "nombrar desde dónde hasta dónde"}
+  - {texto: end-to-end, sugerencia: "nombrar desde dónde hasta dónde"}
+  - {texto: garantizar, sugerencia: "indicar el criterio que lo verifica"}
+  # muletillas
+  - {texto: es importante destacar, sugerencia: "decirlo directamente"}
+  - {texto: cabe mencionar, sugerencia: "decirlo directamente"}
+  - {texto: cabe destacar, sugerencia: "decirlo directamente"}
+  - {texto: en resumen, sugerencia: "eliminar"}
+  - {texto: en conclusión, sugerencia: "eliminar"}
+  - {texto: vale la pena mencionar, sugerencia: "decirlo directamente"}
+  # dudas vacías
+  - {texto: podría potencialmente, sugerencia: "afirmar lo que se sabe o marcar NO DETERMINADO"}
+  - {texto: potencialmente, sugerencia: "afirmar lo que se sabe o marcar NO DETERMINADO"}
+  - {texto: idealmente, sugerencia: "decir qué se requiere"}
+  - {texto: en principio, sugerencia: "afirmar lo que se sabe o marcar NO DETERMINADO"}
+
+# Siglas de uso común que no necesitan explicación. Cualquier otra sigla se explica la primera vez:
+# "p95 (percentil 95 del tiempo de respuesta)" o "SLA (acuerdo de nivel de servicio)".
+siglas_conocidas: [API, APIs, HTTP, HTTPS, JSON, YAML, XML, REST, SQL, URL, ID, IDs, ADR, MR, PR, CI, CD, UTC, ISO,
+                   CPU, RAM, DNS, TLS, SSH, JWT, UI, PDF, CSV, AWS, GCP, OK, QA, C4, TODO, ADF,
+                   README, AGENTS, SOLID, KISS, MVP, AS, IS, EQ, IA, HTML, NNN,
+                   "NO", CUMPLE, APLICA, PASA]   # "NO" va entre comillas: sin ellas, YAML lo lee como falso

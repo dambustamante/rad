@@ -32,3 +32,5 @@ Cada ADR-EQ termina con sus criterios (`EQ-NNN.N`). La columna **Cómo** indica:
 - `automática`: la verifica una herramienta, siempre con el mismo resultado.
 - `revisión de código`: requiere leer y entender el código; se reporta con evidencia `ruta:línea`.
 - `automática + revisión de código`: una herramienta detecta candidatos y la revisión los confirma.
+- `revisión de la historia`, `revisión del MR` o `plataforma git`: criterios sobre la forma de
+  trabajar (ADR-EQ-008 y ADR-EQ-009); no se evalúan en la revisión del código de un repositorio.

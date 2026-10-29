@@ -13,3 +13,5 @@ Evaluado contra: sin fuentes sincronizadas
 | [ADR-EQ-005](decisiones/ADR-EQ-005-readme-estandar.md) README estándar en español neutro y técnico | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-006](decisiones/ADR-EQ-006-principios-solid-kiss.md) Principios de diseño SOLID y KISS | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
 | [ADR-EQ-007](decisiones/ADR-EQ-007-manejo-de-logs.md) Manejo de logs estructurados y correlacionados | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
+| [ADR-EQ-008](decisiones/ADR-EQ-008-estructura-de-tareas-spikes-y-bugs.md) Estructura de Tareas, Spikes y Bugs | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |
+| [ADR-EQ-009](decisiones/ADR-EQ-009-definicion-de-terminado.md) Definición de terminado | Propuesto | NO DETERMINADO - no hay documentos de referencia sincronizados | — |

@@ -37,7 +37,7 @@ los terceros.
 
 | Alternativa | Ventajas | Desventajas | Motivo del descarte |
 |---|---|---|---|
-| Structurizr DSL | Modelo único con varias vistas; fiel al modelo C4 | Requiere herramientas para visualizar; GitLab y GitHub no lo muestran | Mayor costo de adopción |
+| Structurizr DSL (lenguaje propio de Structurizr para describir el modelo) | Modelo único con varias vistas; fiel al modelo C4 | Requiere herramientas para visualizar; GitLab y GitHub no lo muestran | Mayor costo de adopción |
 | C4-PlantUML | Notación madura y completa | GitLab y GitHub no lo muestran sin configuración adicional | Mayor costo de adopción |
 | Imágenes (PNG, draw.io) | Libertad visual | No se puede verificar ni comparar entre versiones; se desactualiza sin aviso | No es verificable |
 | Mermaid C4 | GitLab y GitHub lo muestran dentro del markdown; texto simple y fácil de revisar | Soporte de C4 menos completo que Structurizr | **Elegida** |

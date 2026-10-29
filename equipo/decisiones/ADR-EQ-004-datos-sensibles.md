@@ -16,7 +16,8 @@ Propuesto
   exposición que no se puede deshacer y un incumplimiento regulatorio.
 - **Alcance:** todos los repositorios de tipo `propio`. El criterio `EQ-004.1` (secretos) aplica
   también a los repositorios de tipo `config`, donde suelen vivir las credenciales.
-- **Restricciones:** normativa de protección de datos personales y requisitos PCI DSS para
+- **Restricciones:** normativa de protección de datos personales y requisitos PCI DSS (estándar de
+  seguridad de datos de la industria de tarjetas de pago) para
   datos de tarjetas.
 
 ## 5. Decisión
@@ -67,7 +68,7 @@ Todos los puntos donde se escriben logs, se manejan errores o se preparan datos 
 | PAN (número de tarjeta) | Solo los 4 últimos dígitos (o 6 primeros y 4 últimos) | Según PCI DSS |
 | CVV | Nunca | Nunca |
 | Fecha de vencimiento de tarjeta | Nunca | Según PCI DSS |
-| RUT u otro documento de identidad | Enmascarado | Según normativa |
+| RUT (rol único tributario) u otro documento de identidad | Enmascarado | Según normativa |
 | Nombre, correo, teléfono, dirección | Nunca | Según normativa |
 | Tokens, contraseñas, claves | Nunca | Gestor de secretos |
 

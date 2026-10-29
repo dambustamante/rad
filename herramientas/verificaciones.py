@@ -30,6 +30,9 @@ TAMANO_MAXIMO = 1_000_000
 
 CATEGORIAS = {"ADR-EQ-001": "documentacion", "ADR-EQ-002": "documentacion", "ADR-EQ-004": "seguridad",
               "ADR-EQ-005": "documentacion", "ADR-EQ-007": "diseño"}
+# Decisiones cuyos criterios automáticos verifican el código de un repositorio. Las demás (por ejemplo,
+# ADR-EQ-008 y ADR-EQ-009, sobre historias y MR) no se evalúan en la revisión de un repositorio.
+DECISIONES_DE_CODIGO = set(CATEGORIAS)
 
 SECCIONES_README = (
     ("Resumen y propósito", ("resumen", "proposito", "descripcion")),
@@ -454,6 +457,8 @@ def verificar_repo(repo: Path, id_repo: str, rama: str, tipo: str, decisiones: d
             verificar_secretos(v, gitleaks)
         evaluados = {r["criterio"] for r in v.resultados}
         for decision in decisiones.values():
+            if decision["id"] not in DECISIONES_DE_CODIGO:
+                continue
             for id_criterio, criterio in decision["tabla"].items():
                 if criterio["como"].startswith("automática") and id_criterio not in evaluados:
                     v.registrar(id_criterio, NO_APLICA, f"no aplica a repositorios de tipo {tipo}")

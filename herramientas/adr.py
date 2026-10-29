@@ -105,6 +105,9 @@ def validar_adr(raiz: Path, producto: str, adr: dict) -> tuple[list[str], list[s
         errores.append(f"tipo '{adr['tipo']}' inválido; valores válidos: {', '.join(TIPOS)}")
     if re.search(r"<[a-záéíóúñ][^>\n]{3,}>", adr["texto"], re.IGNORECASE):
         avisos.append("la plantilla tiene textos sin completar (<…>)")
+    import lenguaje
+    avisos += [f"lenguaje: línea {a['linea']}: «{a['texto']}» ({a['regla']}); {a['sugerencia']}"
+               for a in lenguaje.revisar(adr["texto"])]
     repos_producto = {str(r["id"]) for r in productos.repos_de(productos.leer_productos(raiz)[producto])}
     desconocidos = [r for r in (alcance(adr) or []) if r not in repos_producto]
     if desconocidos:

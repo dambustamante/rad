@@ -65,8 +65,17 @@ harness.yaml         configuración global (fuentes de arquitectura, estados, ca
    se declara `NO DETERMINADO - <motivo>`.
 6. **El código prevalece** sobre la documentación del repositorio cuando se contradicen; la
    contradicción se registra como hallazgo.
-7. **Idioma.** Todo lo que se escribe va en español neutro y técnico, sin voseo ni
-   regionalismos, comprensible desde un desarrollador junior hasta un arquitecto.
+7. **Lenguaje.** Todo lo que se escribe (historias, reportes, AS IS, ADR y comentarios) va en
+   español neutro y técnico, comprensible desde un desarrollador junior hasta un arquitecto:
+   - se nombra el componente, la tecnología y el dato concreto;
+   - frases cortas, voz activa y siglas explicadas la primera vez;
+   - sin voseo ni regionalismos;
+   - sin adornos ni muletillas: cada frase dice algo verificable. Lo que no se sabe se marca
+     `NO DETERMINADO`.
+
+   La lista de expresiones a evitar está en `equipo/lenguaje.yaml` y se verifica con
+   `herramientas/lenguaje.py`. Lo que sale hacia Jira o hacia un MR no se publica con avisos de
+   lenguaje; en el resto, los avisos se informan.
 
 ## Convención de evidencia
 

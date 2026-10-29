@@ -74,7 +74,7 @@ HTTP (`ruta:línea`)" sí lo es.
 | O | Cadenas de `if` o `switch` por tipo que crecen con cada variante (por ejemplo, por tipo de transacción o de regla) |
 | L | Implementaciones que lanzan "operación no soportada" o ignoran el contrato de su abstracción |
 | I | Interfaces grandes con implementaciones vacías o que lanzan excepciones |
-| D | El dominio crea su infraestructura directamente (`new` de clientes HTTP, repositorios o SDK) |
+| D | El dominio crea su infraestructura directamente (`new` de clientes HTTP, repositorios o SDK (kits de desarrollo de terceros)) |
 | KISS | Capas que solo pasan datos, fábricas con un solo producto, genéricos o patrones sin variación que los justifique |
 
 ## 10. Referencias
