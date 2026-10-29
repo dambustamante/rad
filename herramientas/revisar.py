@@ -60,7 +60,7 @@ def carpeta_reporte(raiz: Path, producto: str, repo: str | None) -> tuple[str, P
 
 def hallazgos_sonar(datos: dict, id_repo: str, rama: str) -> list[dict]:
     """Issues bloqueantes y altos uno por uno; medios y bajos agrupados por regla."""
-    base = {"nivel": 4, "origen": "sonar", "modo": "vigente"}
+    base = {"nivel": 5, "origen": "sonar", "modo": "vigente"}
     resultado = []
     if datos["quality_gate"]["estado"] == "ERROR":
         condiciones = ", ".join(f"{c['metrica']} = {c['valor']} (umbral {c['umbral']})"

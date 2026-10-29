@@ -16,8 +16,9 @@ Uso:
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
-Fuentes: documentos vigentes de arquitectura en formato `fuente:ID` (niveles 1 y 2) y decisiones del
-equipo `ADR-EQ-NNN` con su `--criterio EQ-NNN.N` (nivel 3). Toda evidencia se valida contra el commit
+Fuentes: documentos vigentes de arquitectura en formato `fuente:ID` (niveles 1 y 2), decisiones del
+equipo `ADR-EQ-NNN` con su `--criterio EQ-NNN.N` (nivel 3) y del producto `ADR-<SIGLA>-NNN` (nivel 4).
+Sonar es el nivel 5. Toda evidencia se valida contra el commit
 revisado y toda cita contra el texto del documento: lo que no existe se rechaza.
 """
 
@@ -156,7 +157,7 @@ def lista_de_control(raiz: Path, tipo: str, producto: str | None = None, repo: s
                 for id_criterio, criterio in verificaciones.leer_criterios(decision["texto"]).items():
                     if id_criterio in suspendidos.get(id_adr, []):
                         continue
-                    elementos.append({"clave": f"{id_adr}|{id_criterio}", "fuente": id_adr, "criterio": id_criterio, "nivel": 3,
+                    elementos.append({"clave": f"{id_adr}|{id_criterio}", "fuente": id_adr, "criterio": id_criterio, "nivel": 4,
                                       "titulo": decision["titulo"], "texto": criterio["texto"], "archivo": decision["archivo"],
                                       "modo": modo, "severidad": criterio["severidad"]})
     exceptuados = excepciones_activas(raiz, producto, repo) if producto and repo else {}
@@ -330,16 +331,17 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     arquitectura = [e for e in control if e["nivel"] in (1, 2)]
     lineas += ["### Niveles 1 y 2: arquitectura vigente (clave: el documento)", ""]
     lineas += [f"- `{e['fuente']}` {PREFIJO_ID.sub('', e['titulo'])}: {e['texto']}" for e in arquitectura] or ["Nada que evaluar."]
-    lineas += ["", "### Nivel 3: decisiones del equipo y del producto (clave: el criterio)", ""]
-    por_decision: dict[str, list[dict]] = {}
-    for e in control:
-        if e["nivel"] == 3:
-            por_decision.setdefault(e["fuente"], []).append(e)
-    if not por_decision:
-        lineas += ["Nada que evaluar.", ""]
-    for fuente, elementos in por_decision.items():
-        lineas += [f"**`{fuente}` {elementos[0]['titulo']}**" + (" (propuesta: no afecta el veredicto)" if elementos[0]["modo"] == "propuesta" else ""), ""]
-        lineas += [f"- `{e['criterio']}` ({e['severidad'] or '—'}): {e['texto']}" for e in elementos] + [""]
+    for nivel, titulo in ((3, "Nivel 3: decisiones del equipo"), (4, "Nivel 4: decisiones del producto")):
+        lineas += ["", f"### {titulo} (clave: el criterio)", ""]
+        por_decision: dict[str, list[dict]] = {}
+        for e in control:
+            if e["nivel"] == nivel:
+                por_decision.setdefault(e["fuente"], []).append(e)
+        if not por_decision:
+            lineas += ["Nada que evaluar.", ""]
+        for fuente, elementos in por_decision.items():
+            lineas += [f"**`{fuente}` {elementos[0]['titulo']}**" + (" (propuesta: no afecta el veredicto)" if elementos[0]["modo"] == "propuesta" else ""), ""]
+            lineas += [f"- `{e['criterio']}` ({e['severidad'] or '—'}): {e['texto']}" for e in elementos] + [""]
     if heredados_control:
         lineas += [f"### Heredados de la revisión {base['id']} (no evaluar salvo que un cambio los afecte)", "",
                    ", ".join(f"`{e['criterio'] or e['fuente']}` {heredados[e['clave']]['evaluacion']['resultado']}" for e in heredados_control), ""]
@@ -800,7 +802,8 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
     lineas += tabla_componentes(trabajo.get("componentes", []))
     lineas += ["", "## Comparación con lo decidido", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura"), (2, "Nivel 2: estándares de arquitectura"),
-                          (3, "Nivel 3: decisiones del equipo y del producto (revisión de código)")):
+                          (3, "Nivel 3: decisiones del equipo (revisión de código)"),
+                          (4, "Nivel 4: decisiones del producto (revisión de código)")):
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
         lineas += [f"### {titulo}", ""]
         if not evaluaciones:

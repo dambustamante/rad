@@ -169,6 +169,8 @@ class PruebaRevisar(unittest.TestCase):
         self.assertIn("Contexto de negocio y responsables", core["EQ-007.1"]["detalle"])
 
         self.assertEqual(core["sonar:quality-gate"]["severidad"], "alta")
+        self.assertEqual(core["sonar:quality-gate"]["nivel"], 5, "Sonar es el nivel 5")
+        self.assertEqual(core["EQ-006.1"]["nivel"], 3, "las decisiones del equipo son el nivel 3")
         self.assertEqual(core["sonar:java:S2095"]["evidencia"], [{"archivo": "src/main/java/Evaluacion.java", "linea": 10}])
         self.assertIn("2 issue(s) de la regla java:S1128", core["sonar:java:S1128"]["titulo"], "los issues menores se agrupan")
         self.assertIn("sonar:hotspots", core)

@@ -11,8 +11,9 @@ guía paso a paso: [README.md](README.md) y [docs/](docs/README.md).
 |---|---|
 | 1 | ADR de arquitectura vigentes (`arquitectura/`, solo lectura) |
 | 2 | Estándares de arquitectura vigentes (`arquitectura/`, solo lectura) |
-| 3 | Decisiones del equipo (ADR-EQ) y del producto (ADR-<SIGLA>) |
-| 4 | Sonar (solo lectura) |
+| 3 | Decisiones del equipo (ADR-EQ): aplican a todos los productos |
+| 4 | Decisiones del producto (ADR-<SIGLA>): no relajan ni contradicen las del equipo |
+| 5 | Sonar (solo lectura) |
 
 - Un problema se reporta **una sola vez**, en el nivel más alto en que aparece.
 - Arquitectura prevalece siempre: una decisión que choca con ella queda suspendida (`COHERENCIA.md`).

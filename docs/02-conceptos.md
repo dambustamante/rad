@@ -9,8 +9,9 @@ nivel más alto en que aparece.
 |---|---|---|---|
 | 1 | ADR de arquitectura vigentes | `arquitectura/decisiones/` | arquitectura (se descarga, no se edita) |
 | 2 | Estándares de arquitectura vigentes | `arquitectura/estandares/` | arquitectura (se descarga, no se edita) |
-| 3 | Decisiones del equipo (ADR-EQ) y del producto (ADR-<SIGLA>) | `equipo/decisiones/`, `productos/<p>/decisiones/` | el equipo |
-| 4 | Sonar | API de Sonar | análisis de Sonar (solo lectura) |
+| 3 | Decisiones del equipo (ADR-EQ): aplican a todos los productos | `equipo/decisiones/` | el equipo |
+| 4 | Decisiones del producto (ADR-<SIGLA>): no relajan ni contradicen las del equipo | `decisiones/` del harness del producto | el equipo del producto, con aprobación del TL |
+| 5 | Sonar | API de Sonar | análisis de Sonar (solo lectura) |
 
 - Arquitectura prevalece siempre. Si una decisión del equipo choca con arquitectura, sus criterios
   afectados quedan suspendidos hasta resolver el choque.
@@ -46,7 +47,7 @@ Todo `NO CUMPLE` genera al menos un **hallazgo**:
 | Campo | Valores |
 |---|---|
 | `id` | `H-0001`, estable para siempre |
-| `nivel` | 1 a 4 |
+| `nivel` | 1 a 5 |
 | `fuente` y `criterio` | por ejemplo `ADR-EQ-002` y `EQ-002.1`, o `decision-records:ADR-010` |
 | `categoria` | `incumplimiento`, `diseño`, `error`, `seguridad`, `deuda`, `documentacion` |
 | `severidad` | `bloqueante`, `alta`, `media`, `baja` |
@@ -87,7 +88,7 @@ equipo/                       nivel 3: decisiones del equipo
 productos/INDICE.md           portafolio: una fila por producto
 productos/<producto>/
 ├── INDICE.md · producto.yaml
-├── decisiones/               ADR-<SIGLA>-NNN, INDICE.md y COHERENCIA.md
+├── decisiones/               ADR-<SIGLA>-NNN (nivel 4), solo si el producto todavía no tiene harness
 ├── terceros/<id>/            ficha.yaml y docs/; terceros/INDICE.md
 ├── historias/                INDICE.md y borradores/ para Jira
 ├── as-is/                    <repo>.md y PRODUCTO.md

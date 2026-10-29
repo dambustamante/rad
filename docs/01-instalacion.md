@@ -40,7 +40,7 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix |
 | `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar ramas con su MR o PR, publicar el comentario y contar MR en el reporte semanal |
 
-Sin Sonar, el nivel 4 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer
+Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer
 historias ni crear incidencias. Sin la plataforma git, una rama se revisa contra la rama principal y
 no se puede publicar el comentario. El resto funciona igual.
 

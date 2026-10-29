@@ -109,7 +109,7 @@ def que_sigue(estado: dict) -> list[str]:
         detalle = ", ".join(f"{a}: {n}" for a, n in pendientes_coherencia.items())
         pasos.append(f"Coherencia con pares sin evaluar ({detalle}): `/actualizar`.")
     if estado["sonar"]:
-        pasos.append(f"Configurar Sonar en .env ({estado['sonar']}); sin eso el nivel 4 queda NO DETERMINADO.")
+        pasos.append(f"Configurar Sonar en .env ({estado['sonar']}); sin eso el nivel 5 (Sonar) queda NO DETERMINADO.")
     if not estado["productos"]:
         pasos.append("Crear el primer producto: `/producto <nombre>`.")
     for p in estado["productos"]:

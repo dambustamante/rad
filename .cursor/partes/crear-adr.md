@@ -34,6 +34,6 @@ los hace el usuario. Un ADR de producto lo aprueban un par dev y el TL por MR al
 6. **Aprobar**, solo cuando el usuario lo indique: estado `Aprobado` y fecha de aprobación. Una
    `decision` solo se aprueba si `decisiones/COHERENCIA.md` no muestra choques ni pares pendientes.
 
-Efectos en `/revisar`: los criterios de una `decision` Propuesta o Aprobada se evalúan en el nivel 3
+Efectos en `/revisar`: los criterios de una `decision` Propuesta o Aprobada se evalúan en el nivel 4
 (en modo `propuesta` mientras está Propuesta). Una `excepcion` Aprobada y vigente deja sus criterios
 como NO APLICA en su alcance hasta que vence.

@@ -154,6 +154,9 @@ class PruebaAdrProducto(unittest.TestCase):
 
         filas = {f["id"]: f for f in adr.listar(self.raiz, "motor-fraudes")}
         self.assertEqual(filas["ADR-MF-001"]["efecto"], "se evalúa")
+        niveles = {e["clave"]: e["nivel"] for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")}
+        self.assertEqual((niveles["ADR-MF-001|MF-001.1"], niveles["ADR-EQ-002|EQ-002.2"]), (4, 3),
+                         "las decisiones del producto son el nivel 4, después de las del equipo")
         self.assertEqual(filas["ADR-MF-002"]["efecto"], "activa")
         self.assertEqual(filas["ADR-MF-003"]["efecto"], "inactiva: falta la aprobación de arquitectura")
         self.assertTrue((self.raiz / "productos" / "motor-fraudes" / "decisiones" / "INDICE.md").exists())
