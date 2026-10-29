@@ -120,7 +120,26 @@ hallazgos:
     cita_documento: Ninguna llamada externa sin timeout explícito
     documento_tercero: terceros/buro-credito/docs/manual.pdf    # opcional
     cita_tercero: Timeout recomendado de 800 ms                 # opcional
+componentes:                                 # todo lo que el repositorio usa o expone, con evidencia
+  - nombre: Buró de crédito
+    tipo: integracion                          # base-de-datos|mensajeria|cache|integracion|api-expuesta|almacenamiento|programado
+    tecnologia: HTTPS/JSON
+    detalle: BURO_URL, timeout no configurado  # variable, tópico, tabla, ruta…: lo que identifica al componente
+    direccion: saliente                        # produce|consume|saliente|entrante o null
+    tercero: buro-credito                      # id de la ficha en terceros/, o null
+    evidencia: [src/main/resources/application.yml:41, src/main/java/BuroClient.java:15]
+  - nombre: evaluaciones.resultado
+    tipo: mensajeria
+    tecnologia: Kafka
+    direccion: produce
+    evidencia: [src/main/java/Publicador.java:22]
 ```
+
+**Componentes.** La lista `componentes:` es el inventario del repositorio: todo lo que usa o expone,
+armado por Cursor y validado por el script (tipo válido, evidencia existente y, si se indica, un
+`tercero` con ficha). Queda como tabla en `as-is/<repo>.md` y se consolida en el producto. En una
+revisión incremental se incluyen solo los componentes que tocan archivos cambiados o los nuevos; el
+resto se hereda.
 
 El lote se registra al cerrar (paso 6), con un solo comando: cada comando reenvía la conversación y
 multiplica el costo. Antes de registrar, el script valida:
@@ -161,8 +180,13 @@ Cuando todos los repositorios están al día, `/revisar <producto>` escribe la n
 .venv/bin/python herramientas/revision.py producto motor-fraudes --narrativa <archivo>
 ```
 
-Genera `as-is/PRODUCTO.md` con la matriz repositorio × documento, las brechas comunes y la visión
-del producto.
+Genera `as-is/PRODUCTO.md` con la matriz repositorio × documento, las brechas comunes, la visión del
+producto y los **componentes del producto**: cada base, tópico, caché o integración con los
+repositorios que lo usan (y si producen o consumen) y su tercero. Además muestra tres cruces:
+
+- integraciones sin ficha en `terceros/` (nadie documentó el acuerdo con ese sistema);
+- fichas de `terceros/` que ningún repositorio usa (pueden estar desactualizadas);
+- mensajería que solo se produce o solo se consume dentro del producto (puede venir de otro producto).
 
 ## Revisión de una rama (`--rama`)
 

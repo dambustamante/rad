@@ -52,7 +52,9 @@ en este orden, cada afirmación con su etiqueta de evidencia (`[hecho] ruta:lín
 1. **Propósito**: qué hace el repositorio y qué capacidad de negocio soporta.
 2. **Arquitectura real**: estilo (por capas, hexagonal, sin estructura clara…), módulos y cómo
    dependen entre sí. Describir lo que hay, no lo que debería haber.
-3. **Componentes y contenedores**: aplicaciones, bases de datos, colas y caché, con su tecnología.
+3. **Componentes y contenedores**: aplicaciones, bases de datos, colas y caché, con su tecnología. Cada
+   componente va además en la lista `componentes:` del lote (ver el paso 5), que se vuelve la tabla de
+   la ficha y el inventario del producto.
 4. **Integraciones**: sistemas externos que llama o que lo llaman, con protocolo, timeouts,
    reintentos y qué pasa ante una falla.
 5. **Contratos**: APIs y eventos que expone y consume, y dónde están documentados (o que no lo están).
@@ -108,7 +110,26 @@ hallazgos:
     # opcional, si la evidencia viene de la documentación de un tercero:
     # documento_tercero: terceros/motor/docs/manual.pdf
     # cita_tercero: Timeout recomendado de 800 ms
+componentes:                                 # todo lo que el repositorio usa o expone, con evidencia
+  - nombre: Buró de crédito
+    tipo: integracion                          # base-de-datos|mensajeria|cache|integracion|api-expuesta|almacenamiento|programado
+    tecnologia: HTTPS/JSON
+    detalle: BURO_URL, timeout no configurado  # variable, tópico, tabla, ruta…: lo que identifica al componente
+    direccion: saliente                        # produce|consume|saliente|entrante o null
+    tercero: buro-credito                      # id de la ficha en terceros/, o null
+    evidencia: [src/main/resources/application.yml:41, src/main/java/BuroClient.java:15]
+  - nombre: evaluaciones.resultado
+    tipo: mensajeria
+    tecnologia: Kafka
+    direccion: produce
+    evidencia: [src/main/java/Publicador.java:22]
 ```
+
+Componentes: registrar **todo** lo que el repositorio usa o expone (bases de datos, tópicos y colas,
+cachés, integraciones salientes y entrantes, APIs, almacenamiento y procesos programados), cada uno con
+evidencia de configuración y, si se puede, de uso en el código. Si una integración corresponde a un
+tercero con ficha, indicar su `tercero`; si no tiene ficha, dejar `null` (el producto lo informa como
+integración sin ficha).
 
 Reglas del lote:
 

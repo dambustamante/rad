@@ -251,6 +251,50 @@ class PruebaRevision(unittest.TestCase):
         self.assertEqual(codigo, 0, salida)
         self.assertIn("cerrada", salida, "un solo comando registra el lote y cierra")
 
+    def test_componentes_validados_y_consolidados(self) -> None:
+        import terceros
+        import yaml
+        terceros.nuevo(self.raiz, "motor-fraudes", "buro-credito", "Buró de crédito")
+        terceros.nuevo(self.raiz, "motor-fraudes", "listas-sanciones", "Listas de sanciones")
+        carpeta = self.automatica["carpeta"]
+        (carpeta / "revision").mkdir(parents=True, exist_ok=True)
+        lote = carpeta / "revision" / "fraude-core-lote.yaml"
+        evaluaciones = [{"fuente": e["fuente"], "criterio": e["criterio"], "resultado": "NO APLICA", "motivo": "prueba"}
+                        for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")]
+        evidencia = ["src/main/java/EvaluacionController.java:3"]
+        componentes = [
+            {"nombre": "Buró de crédito", "tipo": "integracion", "tecnologia": "HTTPS", "detalle": "BURO_URL",
+             "direccion": "saliente", "tercero": "buro-credito", "evidencia": evidencia},
+            {"nombre": "Core bancario", "tipo": "integracion", "tecnologia": "HTTPS", "direccion": "saliente", "evidencia": evidencia},
+            {"nombre": "evaluaciones.resultado", "tipo": "mensajeria", "tecnologia": "Kafka", "direccion": "produce", "evidencia": evidencia},
+        ]
+        invalidos = [{"nombre": "x", "tipo": "servidor", "evidencia": evidencia},
+                     {"nombre": "y", "tipo": "cache", "evidencia": ["no-existe.java:1"]},
+                     {"nombre": "z", "tipo": "integracion", "tercero": "no-existe", "evidencia": evidencia},
+                     {"nombre": "w", "tipo": "base-de-datos"}]
+        lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones, "componentes": componentes + invalidos},
+                                       allow_unicode=True), encoding="utf-8")
+        (carpeta / "revision" / "fraude-core-asis.md").write_text(AS_IS, encoding="utf-8")
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 1)
+        for esperado in ("componentes[4] (x): tipo 'servidor' inválido", "componentes[5] (y)", "componentes[6] (z): el tercero 'no-existe'",
+                         "componentes[7] (w): el componente necesita al menos una evidencia"):
+            self.assertIn(esperado, salida)
+
+        lote.write_text(yaml.safe_dump({"evaluaciones": evaluaciones, "componentes": componentes}, allow_unicode=True), encoding="utf-8")
+        codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        self.assertEqual(codigo, 0, salida)
+        ficha = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").read_text(encoding="utf-8")
+        self.assertIn("## Componentes", ficha)
+        self.assertIn("| Buró de crédito | integracion | HTTPS | BURO_URL | saliente | buro-credito | "
+                      "`src/main/java/EvaluacionController.java:3` |", ficha)
+        self.ejecutar("producto", "motor-fraudes")
+        producto = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "PRODUCTO.md").read_text(encoding="utf-8")
+        self.assertIn("| evaluaciones.resultado | mensajeria | Kafka | fraude-core (produce) | — |", producto)
+        self.assertIn("- Integraciones sin ficha en `terceros/`: Core bancario.", producto)
+        self.assertIn("- Fichas de `terceros/` que ningún repositorio usa: listas-sanciones.", producto)
+        self.assertIn("- Mensajería que solo se produce o solo se consume dentro del producto: evaluaciones.resultado.", producto)
+
     def nueva_revision_automatica(self, archivo: str, contenido: str) -> None:
         (self.core / archivo).write_text(contenido, encoding="utf-8")
         commit(self.core, f"Cambia {archivo}")

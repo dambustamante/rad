@@ -42,8 +42,16 @@ marcado como retirado, con fecha, y se conserva su historial de hallazgos.
 
 ## Terceros: producto comprado e integraciones
 
-El producto comprado y cada sistema externo (buró, red de tarjetas, listas de sanciones, otro
-producto…) se registran igual, en `productos/<p>/terceros/<id>/`:
+Un tercero es todo sistema del que depende el producto y que el equipo no construye: el producto
+comprado (rol `producto-comprado`) y cada sistema externo con el que se integra (rol `integracion`):
+buró, red de tarjetas, listas de sanciones o un sistema del banco de otro equipo.
+
+La ficha registra lo **acordado o documentado** con ese sistema (protocolo, p95, límites, política
+ante falla). Lo que el código **usa de verdad** lo registra `/revisar` como componentes, con
+evidencia. El inventario del producto cruza ambos: integraciones del código sin ficha y fichas que
+ningún repositorio usa.
+
+Se registran en `productos/<p>/terceros/<id>/`:
 
 ```
 terceros/

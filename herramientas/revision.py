@@ -56,6 +56,8 @@ VENTANA_FRAGMENTO = 3
 UMBRAL_INCREMENTAL = 0.4   # si cambió más de esta fracción de archivos, la revisión es completa
 MINIMO_ARCHIVOS_UMBRAL = 20  # en repositorios más chicos el umbral no se aplica
 SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
+TIPOS_COMPONENTE = ("base-de-datos", "mensajeria", "cache", "integracion", "api-expuesta", "almacenamiento", "programado")
+DIRECCIONES = ("produce", "consume", "saliente", "entrante")
 
 SENALES = {
     "Clientes de sistemas externos": re.compile(
@@ -290,7 +292,9 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         lineas += ["## Revisión incremental", "",
                    f"Base: revisión `{base['id']}` (commit `{base['commit'][:12]}`). Cambiaron {len(base['cambiados'])} archivo(s). "
                    "El AS IS y los borradores C4 se copiaron de la revisión base: actualizar solo lo que cambió. "
-                   "Las evaluaciones heredadas se conservan al cerrar; si un archivo cambiado afecta a alguna, incluirla en el lote.",
+                   "Las evaluaciones heredadas se conservan al cerrar; si un archivo cambiado afecta a alguna, incluirla en el lote. "
+                   "Lo mismo con los componentes: incluir en el lote solo los que tocan archivos cambiados (o los nuevos); "
+                   "el resto se hereda.",
                    "", "Archivos cambiados:", ""]
         lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
         lineas.append("")
@@ -357,7 +361,8 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         + ", ".join(SECCIONES_AS_IS) + ". Cada afirmación con su etiqueta de evidencia.",
         f"2. C4 inferido: `productos/{producto}/revisiones/{ctx['id_revision']}/borradores/{repo}/c4-contexto.md` y `c4-contenedores.md`, "
         "según las plantillas de `equipo/plantillas/`. Lo que no se pueda deducir, como NO DETERMINADO.",
-        f"3. Un único lote con todas las evaluaciones y hallazgos: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`.",
+        f"3. Un único lote con todas las evaluaciones, hallazgos y componentes: `productos/{producto}/revisiones/{ctx['id_revision']}/revision/{repo}-lote.yaml`. "
+        f"Tipos de componente: {', '.join(TIPOS_COMPONENTE)}.",
         f"4. Cerrar (registra el lote y cierra): `.venv/bin/python herramientas/revision.py cerrar {producto} {repo} --archivos-leidos <N>`.",
     ]
     archivo = carpeta / "paquetes" / f"{repo}.md"
@@ -477,6 +482,32 @@ def construir_hallazgo(raiz: Path, ctx: dict, fuente: str, criterio: str | None,
     }
 
 
+def construir_componente(raiz: Path, ctx: dict, c: dict, fichas: set[str]) -> dict:
+    """Valida un componente del lote (base, cola, integración…) y lo devuelve normalizado."""
+    nombre, tipo = str(c.get("nombre") or "").strip(), str(c.get("tipo") or "")
+    if not nombre:
+        raise ErrorRadiografia("el componente necesita un nombre.")
+    if tipo not in TIPOS_COMPONENTE:
+        raise ErrorRadiografia(f"tipo '{tipo}' inválido; valores válidos: {', '.join(TIPOS_COMPONENTE)}.")
+    direccion = c.get("direccion")
+    if direccion not in (None, *DIRECCIONES):
+        raise ErrorRadiografia(f"dirección '{direccion}' inválida; valores válidos: {', '.join(DIRECCIONES)} o null.")
+    tercero = c.get("tercero")
+    if tercero and tercero not in fichas:
+        raise ErrorRadiografia(f"el tercero '{tercero}' no tiene ficha en terceros/ (crearla con /producto o dejar null).")
+    evidencias = [leer_evidencia(e) for e in como_lista(c.get("evidencia"))]
+    if not evidencias:
+        raise ErrorRadiografia("el componente necesita al menos una evidencia ruta:línea.")
+    for evidencia in evidencias:
+        validar_evidencia(ctx["destino"], evidencia)
+    return {"nombre": nombre, "tipo": tipo, "tecnologia": str(c.get("tecnologia") or "NO DETERMINADO").strip(),
+            "detalle": str(c.get("detalle") or "").strip(), "direccion": direccion, "tercero": tercero, "evidencia": evidencias}
+
+
+def clave_componente(c: dict) -> tuple[str, str]:
+    return c["tipo"], normalizar(c["nombre"])
+
+
 def agregar_hallazgo(trabajo: dict, hallazgo: dict) -> None:
     """Agrega un hallazgo al trabajo; si ya hay uno con la misma huella, lo reemplaza."""
     trabajo["hallazgos"] = [h for h in trabajo["hallazgos"] if h["huella"] != hallazgo["huella"]] + [hallazgo]
@@ -560,6 +591,13 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
         except ErrorRadiografia as error:
             errores.append(f"{referencia}: {error}")
     hallazgos = hallazgos_del_lote(raiz, ctx, datos, control, errores)
+    fichas = set(terceros.ids(raiz, producto))
+    componentes = []
+    for indice, c in enumerate(datos.get("componentes") or [], start=1):
+        try:
+            componentes.append(construir_componente(raiz, ctx, c, fichas))
+        except ErrorRadiografia as error:
+            errores.append(f"componentes[{indice}] ({c.get('nombre', 'sin nombre')}): {error}")
     if errores:
         raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
 
@@ -567,9 +605,12 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
     trabajo["evaluaciones"].update(evaluaciones)
     for hallazgo in hallazgos:
         agregar_hallazgo(trabajo, hallazgo)
+    if "componentes" in datos:
+        trabajo["componentes"] = componentes
     guardar_trabajo(raiz, producto, ctx["id_revision"], repo, trabajo)
     pendientes_lote = [c for c, e in control.items() if not e.get("exceptuado") and c not in trabajo["evaluaciones"]]
-    return {"evaluaciones": len(evaluaciones), "hallazgos": len(hallazgos), "pendientes": pendientes_lote}
+    return {"evaluaciones": len(evaluaciones), "hallazgos": len(hallazgos), "componentes": len(componentes),
+            "pendientes": pendientes_lote}
 
 
 # --- Cierre ------------------------------------------------------------------------------------
@@ -591,6 +632,11 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
             for hallazgo in heredado["hallazgos"]:
                 if all(h["huella"] != hallazgo["huella"] for h in trabajo["hallazgos"]):
                     trabajo["hallazgos"].append(hallazgo)
+        cambiados = set(base["cambiados"])
+        propios = {clave_componente(c) for c in trabajo.get("componentes", [])}
+        for c in leer_trabajo(raiz, producto, base["id"], repo).get("componentes", []):
+            if clave_componente(c) not in propios and not {e["archivo"] for e in c["evidencia"]} & cambiados:
+                trabajo.setdefault("componentes", []).append({**c, "heredado_de": base["id"]})
     for e in control:
         if e.get("exceptuado"):
             trabajo["evaluaciones"][e["clave"]] = {
@@ -618,6 +664,8 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
     for nombre in ("c4-contexto.md", "c4-contenedores.md"):
         if not (carpeta / "borradores" / repo / nombre).exists():
             avisos.append(f"falta el borrador {nombre}")
+    if not trabajo.get("componentes"):
+        avisos.append("no se registraron componentes (bases, mensajería, integraciones…): agregarlos al lote si los hay")
 
     registro = ctx["registro"]
     hoy = date.today().isoformat()
@@ -646,6 +694,20 @@ def absorber_sonar(registro: dict, repo: str, rama: str) -> None:
                                    if e["archivo"] == es["archivo"] and es.get("linea") and abs(e["linea"] - es["linea"]) <= 2), None)
 
 
+def ubicaciones(evidencia: list[dict], maximo: int = 3) -> str:
+    return ", ".join(f"`{e['archivo']}:{e['linea']}`" for e in evidencia[:maximo]) or "—"
+
+
+def tabla_componentes(componentes: list[dict]) -> list[str]:
+    if not componentes:
+        return ["Sin componentes registrados."]
+    filas = ["| Componente | Tipo | Tecnología | Detalle | Dirección | Tercero | Evidencia |", "|---|---|---|---|---|---|---|"]
+    for c in sorted(componentes, key=lambda c: (TIPOS_COMPONENTE.index(c["tipo"]), normalizar(c["nombre"]))):
+        filas.append(f"| {c['nombre'].replace('|', '/')} | {c['tipo']} | {c['tecnologia']} | {c['detalle'].replace('|', '/') or '—'} "
+                     f"| {c['direccion'] or '—'} | {c['tercero'] or '—'} | {ubicaciones(c['evidencia'])} |")
+    return filas
+
+
 def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, trabajo: dict, texto_asis: str, registro: dict) -> None:
     archivo = raiz / "productos" / producto / "as-is" / f"{repo}.md"
     texto = archivo.read_text(encoding="utf-8") if archivo.exists() else f"# {repo}: ficha AS IS\n"
@@ -656,7 +718,9 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
     for h in registro["hallazgos"].values():
         if h["repo"] == repo and h["rama"] == ctx["rama"] and h["estado"] == "abierto" and h["origen"] == "revision":
             hallazgos_por_clave.setdefault(clave_de(h["fuente"], h["criterio"]), []).append(h["id"])
-    lineas = ["## Comparación con lo decidido", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
+    lineas = ["## Componentes", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
+    lineas += tabla_componentes(trabajo.get("componentes", []))
+    lineas += ["", "## Comparación con lo decidido", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura"), (2, "Nivel 2: estándares de arquitectura"),
                           (3, "Nivel 3: decisiones del equipo y del producto (revisión de código)")):
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
@@ -675,6 +739,36 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
 
 
 # --- Producto ----------------------------------------------------------------------------------
+
+def componentes_del_producto(raiz: Path, producto: str, estados: list[dict]) -> list[str]:
+    """Componentes de todos los repositorios revisados, agrupados, con los cruces contra terceros/."""
+    grupos: dict[tuple[str, str], dict] = {}
+    for estado in estados:
+        if not estado["codigo"]:
+            continue
+        for c in leer_trabajo(raiz, producto, estado["codigo"]["id"], estado["repo"]).get("componentes", []):
+            grupo = grupos.setdefault(clave_componente(c), {**c, "usos": [], "terceros": set()})
+            grupo["usos"].append(f"{estado['repo']}" + (f" ({c['direccion']})" if c["direccion"] else ""))
+            if c["tercero"]:
+                grupo["terceros"].add(c["tercero"])
+    lineas = ["## Componentes del producto", ""]
+    if not grupos:
+        return lineas + ["Sin componentes registrados en las revisiones de código."]
+    lineas += ["| Componente | Tipo | Tecnología | Repositorios | Tercero |", "|---|---|---|---|---|"]
+    for (tipo, _), g in sorted(grupos.items(), key=lambda x: (TIPOS_COMPONENTE.index(x[0][0]), x[0][1])):
+        lineas.append(f"| {g['nombre'].replace('|', '/')} | {tipo} | {g['tecnologia']} | {', '.join(g['usos'])} "
+                      f"| {', '.join(sorted(g['terceros'])) or '—'} |")
+    sin_ficha = sorted(g["nombre"] for (tipo, _), g in grupos.items() if tipo == "integracion" and not g["terceros"])
+    usados = set().union(*(g["terceros"] for g in grupos.values()))
+    sin_uso = sorted(set(terceros.ids(raiz, producto)) - usados)
+    sin_par = sorted(g["nombre"] for (tipo, _), g in grupos.items() if tipo == "mensajeria"
+                     and len({u.split(" (")[-1].rstrip(")") for u in g["usos"]} & {"produce", "consume"}) == 1)
+    lineas += ["", "Cruces:", "",
+               f"- Integraciones sin ficha en `terceros/`: {', '.join(sin_ficha) or 'ninguna'}.",
+               f"- Fichas de `terceros/` que ningún repositorio usa: {', '.join(sin_uso) or 'ninguna'}.",
+               f"- Mensajería que solo se produce o solo se consume dentro del producto: {', '.join(sin_par) or 'ninguna'}."]
+    return lineas
+
 
 def consolidar_producto(raiz: Path, producto: str, narrativa: Path | None) -> Path:
     estados = pendientes(raiz, producto)
@@ -706,6 +800,7 @@ def consolidar_producto(raiz: Path, producto: str, narrativa: Path | None) -> Pa
     for clave in sorted(matriz, key=lambda c: titulos[c]):
         nivel, nombre = titulos[clave]
         lineas.append(f"| {nivel} | {nombre} | " + " | ".join(SIMBOLOS.get(matriz[clave].get(r, ""), "") for r in repos) + " |")
+    lineas += ["", *componentes_del_producto(raiz, producto, estados)]
     abiertos = [h for h in registro["hallazgos"].values() if h["estado"] == "abierto" and not h.get("absorbido_por")]
     por_fuente = Counter((h["nivel"], h["criterio"] or h["fuente"]) for h in abiertos if h["severidad"] in ("bloqueante", "alta"))
     lineas += ["", "## Brechas principales (hallazgos bloqueantes y altos abiertos)", ""]
@@ -791,7 +886,7 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"Hallazgo registrado: {clave_de(o.fuente, o.criterio)} · {o.severidad} · {o.titulo}")
         elif o.accion == "registrar":
             r = registrar_lote(raiz, o.producto, o.repo, o.archivo)
-            print(f"Lote registrado: {r['evaluaciones']} evaluación(es) y {r['hallazgos']} hallazgo(s).")
+            print(f"Lote registrado: {r['evaluaciones']} evaluación(es), {r['hallazgos']} hallazgo(s) y {r['componentes']} componente(s).")
             if r["pendientes"]:
                 print(f"Faltan {len(r['pendientes'])} elemento(s) por evaluar: {', '.join(r['pendientes'])}")
         elif o.accion == "cerrar":
