@@ -46,7 +46,8 @@ productos/<p>/       INDICE.md, producto.yaml, decisiones/ (ADR-<SIGLA>), provee
                      exportaciones CSV), as-is/, revisiones/, triaje/, agendas/, estado/, repos/
 herramientas/        scripts deterministas que usan los comandos, con sus pruebas
 .cursor/rules/       reglas de Cursor
-.cursor/commands/    comandos de Cursor (/estado, /arquitectura, /actualizar, /producto, /adr, /revisar, /triar)
+.cursor/commands/    comandos de Cursor (/estado, /arquitectura, /actualizar, /producto, /adr, /revisar, /triar,
+                     /historia)
 harness.yaml         configuración global (fuentes de arquitectura, estados, calibración, publicables)
 .env                 conexiones y tokens (no versionado; ver .env.example)
 ```
@@ -114,6 +115,7 @@ Sin cita del documento, un hallazgo no puede ser `incumplimiento`: como máximo 
 | `/producto <nombre>` | crea un producto (con su sigla) o le agrega o retira repositorios |
 | `/adr <producto>` | crea y administra los ADR del producto: decisiones propias, mejoras a partir de hallazgos, excepciones con vencimiento y propuestas a partir de historias de usuario de Jira |
 | `/revisar <producto> [repo]` | línea base AS IS de un repositorio por conversación: parte automática, revisión de código y comparación con lo decidido; al final, consolidación del producto. La revisión de ramas (`--rama`, `--desde`) es de la fase 2 |
+| `/historia <producto>` | crea Tareas, Spikes y Bugs con la estructura de ADR-EQ-008 a partir de la información del producto; en Jira solo con confirmación |
 | `/triar <producto> [repo]` | registra la decisión sobre cada hallazgo (resolver, conversar, deuda o falso positivo) y muestra la calibración por fuente |
 
 Cada comando ejecuta primero su parte determinista (`make` o los scripts de `herramientas/`) y

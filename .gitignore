@@ -10,6 +10,7 @@ productos/*/repos/
 productos/*/revisiones/*/crudo/
 productos/*/estado/proveedor/texto/
 productos/*/estado/integraciones/*/texto/
+productos/*/historias/borradores/*-jira.json
 
 # Sistema
 .DS_Store

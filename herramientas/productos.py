@@ -9,7 +9,7 @@ Uso:
   python herramientas/productos.py sincronizar [--producto P]
   python herramientas/productos.py sigla <producto> [--asignar SIGLA]
   python herramientas/productos.py historias <producto> --fuente jira|archivo|ninguna [--jql JQL | --tablero N [--etiqueta E]]
-                                             [--campo-tipo NOMBRE] [--archivo export.csv]
+                                             [--campo-tipo NOMBRE] [--archivo export.csv] [--proyecto CLAVE]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
@@ -120,7 +120,8 @@ def asignar_sigla(raiz: Path, producto: str, sigla: str) -> None:
 
 
 def configurar_historias(raiz: Path, producto: str, fuente: str, jql: str | None, tablero: int | None,
-                         etiqueta: str | None, campo_tipo: str | None, archivo_csv: str | None) -> None:
+                         etiqueta: str | None, campo_tipo: str | None, archivo_csv: str | None,
+                         proyecto: str | None = None) -> None:
     archivo = archivo_producto(raiz, producto)
     if not archivo.exists():
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
@@ -140,6 +141,8 @@ def configurar_historias(raiz: Path, producto: str, fuente: str, jql: str | None
         configuracion["archivo"] = archivo_csv
     if campo_tipo and fuente != "ninguna":
         configuracion["campo_tipo"] = campo_tipo
+    if proyecto:
+        configuracion["proyecto"] = proyecto  # donde se crean Tareas, Spikes y Bugs
     datos = leer_yaml_conservador(archivo)
     datos["historias"] = configuracion
     escribir_yaml_conservador(archivo, datos)
@@ -403,6 +406,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p_historias.add_argument("--etiqueta")
     p_historias.add_argument("--campo-tipo")
     p_historias.add_argument("--archivo")
+    p_historias.add_argument("--proyecto", help="clave del proyecto de Jira donde se crean Tareas, Spikes y Bugs")
     p_sigla = sub.add_parser("sigla", help="muestra o cambia la sigla de un producto")
     p_sigla.add_argument("producto")
     p_sigla.add_argument("--asignar")
@@ -434,7 +438,7 @@ def main(argumentos: list[str] | None = None) -> int:
             return 1 if any(r["resultado"] == "error" for r in resultados) else 0
         elif opciones.accion == "historias":
             configurar_historias(raiz, opciones.producto, opciones.fuente, opciones.jql, opciones.tablero,
-                                 opciones.etiqueta, opciones.campo_tipo, opciones.archivo)
+                                 opciones.etiqueta, opciones.campo_tipo, opciones.archivo, opciones.proyecto)
             print(f"Historias de '{opciones.producto}': fuente {opciones.fuente}.")
         elif opciones.accion == "sigla":
             if opciones.asignar:

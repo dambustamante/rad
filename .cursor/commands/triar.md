@@ -65,6 +65,8 @@ La parte determinista la hace `herramientas/triaje.py`. Nunca editar `productos/
      .venv/bin/python herramientas/triaje.py publicables --agregar <fuente>
      ```
 
+   - Para los hallazgos marcados como Deuda, ofrecer crear una Tarea de Deuda Técnica con
+     `/historia <producto> --desde <ids>`, agrupando los del mismo tema en una sola Tarea.
    - Para las fuentes "ruidosa: ajustar", revisar los motivos de sus falsos positivos y sugerir el
      ajuste concreto: precisar el texto del criterio en el ADR-EQ, cambiar su severidad o, si es una
      regla de Sonar, desactivarla en el perfil de calidad de Sonar.

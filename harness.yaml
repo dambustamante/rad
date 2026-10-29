@@ -31,6 +31,16 @@ calibracion:
   minimo_triados: 5
   maximo_falsos_positivos: 0.20
 
+jira:
+  # Valores para crear Tareas, Spikes y Bugs (ADR-EQ-008). La conexión va en .env.
+  equipos: Back                  # valor del campo Equipos
+  campo_equipos: Equipos         # nombre del campo en Jira
+  campo_tipo: Tipo               # nombre del campo en Jira (Deuda Técnica, Deuda Operativa, Bau/Incidentes, Spike)
+  tipos_incidencia:              # nombre del tipo de incidencia en Jira
+    tarea: Tarea
+    spike: Spike
+    bug: Bug
+
 publicacion:
   # Fuentes (ADR o reglas) cuyos hallazgos pueden publicarse en un MR o PR (fase 2).
   # Vacía: no se publica nada. Se agrega una fuente solo cuando su tasa de falsos positivos es baja.

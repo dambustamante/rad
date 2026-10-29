@@ -28,6 +28,7 @@ def dias_desde(fecha_iso: str | None) -> int | None:
 def revisar_estado(raiz: Path) -> dict:
     import adr
     import coherencia
+    import historia
     import historias
     import integraciones
     import hallazgos
@@ -61,6 +62,7 @@ def revisar_estado(raiz: Path) -> dict:
         except ErrorRadiografia:
             fuente_historias = "ninguna"
         estado_productos.append({
+            "borradores": [b["archivo"] for b in historia.listar(raiz, nombre) if b["estado"] != "creada"],
             "integraciones_incompletas": [f["id"] for f in integraciones.listar(raiz, nombre) if f["errores"] or f["pendientes"]],
             "historias_fuente": fuente_historias,
             "historias_pendientes": len(historias.candidatas(raiz, nombre)),
@@ -111,6 +113,9 @@ def que_sigue(estado: dict) -> list[str]:
             pasos.append(f"{p['nombre']}: {p['triaje']} hallazgo(s) esperando decisión: `/triar {p['nombre']}`.")
         if p["excepciones"]:
             pasos.append(f"{p['nombre']}: excepciones vencidas o inactivas ({', '.join(p['excepciones'])}): `/adr {p['nombre']}`.")
+        if p["borradores"]:
+            pasos.append(f"{p['nombre']}: {len(p['borradores'])} borrador(es) de Tarea, Spike o Bug sin crear en Jira: "
+                         f"`/historia {p['nombre']}`.")
         if p["integraciones_incompletas"]:
             pasos.append(f"{p['nombre']}: fichas de integración por completar ({', '.join(p['integraciones_incompletas'])}): "
                          f"`/producto {p['nombre']}` → integraciones.")

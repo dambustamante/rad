@@ -46,6 +46,7 @@ El orden habitual es:
 | 3b | `/adr <producto>` | opcional: reglas propias del producto, mejoras a partir de hallazgos, excepciones con vencimiento y ADR propuestos desde las historias de Jira (`--desde-historias`) |
 | 4 | `/revisar <producto>` | revisa **un repositorio por conversación**: parte automática, AS IS, comparación con lo decidido y C4 inferido. Abrir un chat nuevo para cada repositorio |
 | 5 | `/triar <producto>` | genera un archivo para marcar la decisión sobre cada hallazgo y muestra la calibración |
+| 6 | `/historia <producto>` | crea Tareas, Spikes y Bugs (ADR-EQ-008), por ejemplo a partir de la deuda aceptada; en Jira solo con confirmación |
 
 Cuando todos los repositorios de un producto tienen su revisión, `/revisar` consolida el producto en
 `productos/<producto>/as-is/PRODUCTO.md`.
@@ -111,7 +112,9 @@ El contrato de trabajo completo está en [AGENTS.md](AGENTS.md).
 
 ## Estado
 
-**MVP:** `/estado`, `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar` y `/triar`.
+**MVP:** `/estado`, `/arquitectura`, `/actualizar`, `/producto`, `/adr`, `/revisar`, `/triar` y `/historia`.
 
-**Fase 2:** revisión de ramas (`--rama`, `--desde`) con publicación en el MR o PR (GitLab o GitHub),
-reporte semanal, historias de deuda en Jira y pruebas de integración y de carga.
+**Fase 2:** revisión de ramas (`--rama`, `--desde`) con publicación en el MR o PR (GitLab o GitHub) y
+reporte semanal.
+
+**Fase 3:** pruebas de integración y de carga.
