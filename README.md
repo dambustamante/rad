@@ -5,8 +5,10 @@ repositorios de cada producto y lo compara con lo que se decidió, en este orden
 
 1. ADR de arquitectura
 2. Estándares de arquitectura
-3. Decisiones del equipo (ADR-EQ) y del producto
-4. Sonar
+3. Decisiones del equipo (ADR-EQ): aplican a todos los productos
+4. Decisiones del producto (ADR-<SIGLA>): aplican a su producto y no pueden relajar ni contradecir
+   las del equipo
+5. Sonar
 
 Además crea y gobierna el **harness de cada producto** (`harness-<producto>`), el repositorio donde
 los devs desarrollan el día a día.
