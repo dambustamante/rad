@@ -35,6 +35,10 @@ SEVERIDADES_SIEMPRE = ("bloqueante", "alta")
 MAXIMO_DOCUMENTOS = 3
 COINCIDENCIAS_MINIMAS = 2
 ESPERA_ARQUITECTURA = 15
+RAMA_PRINCIPAL = "main"
+SECCIONES_SPEC = ("Objetivo", "Criterios de aceptación", "Diseño", "Pruebas", "Reglas que aplican", "Fuera de alcance")
+PENDIENTE_SPEC = "<completar"
+MAXIMO_LINEAS_SPEC = 80
 
 
 class ErrorHdu(Exception):
@@ -273,8 +277,135 @@ def preparar_rama(repo: dict, nombre: str) -> str:
     return f"rama {nombre} creada desde origin/{repo['rama']}" if codigo == 0 else f"ERROR: {salida}"
 
 
+# --- Spec --------------------------------------------------------------------------------------
+
+def tipo_historia(tipo_incidencia: str | None) -> str:
+    return normalizar(tipo_incidencia or "")
+
+
+def ruta_spec(clave: str) -> Path:
+    return RAIZ / "specs" / clave / "spec.md"
+
+
+def texto_spec(historia: dict, repos: list[str]) -> str:
+    criterios = [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or ["<completar: la historia no trae criterios>"]
+    pruebas = [f"| {i} | <completar: nombre> | <completar: qué verifica> |" for i in range(1, len(historia["criterios"]) + 1)]
+    lineas = [f"# {historia['clave']}: {historia['titulo']}", "", f"- Jira: {historia['url']}",
+              f"- Tipo: {historia['tipo_incidencia'] or 'NO DETERMINADO'}", f"- Repositorios: {', '.join(repos)}", "",
+              "## Objetivo", "", "<completar: qué problema resuelve, en una o dos frases>", "",
+              "## Criterios de aceptación", "", *criterios, "",
+              "## Diseño", "", "<completar: qué cambia en cada repositorio, citando archivo:línea>", "",
+              "## Pruebas", "", "| Criterio | Prueba | Qué verifica |", "|---|---|---|", *pruebas, "",
+              "## Reglas que aplican", "", "<completar: ID de los documentos y decisiones, con la sección citada>", "",
+              "## Fuera de alcance", "", "<completar: lo que este cambio no hace>", ""]
+    return "\n".join(lineas)
+
+
+def seccion_spec(texto: str, nombre: str) -> str | None:
+    coincidencia = re.search(rf"^## {re.escape(nombre)}[ \t]*\n(.*?)(?=^## |\Z)", texto, re.MULTILINE | re.DOTALL)
+    return coincidencia.group(1) if coincidencia else None
+
+
+def criterios_spec(texto: str) -> list[str]:
+    return re.findall(r"^\d+\.\s+(.+)$", seccion_spec(texto, "Criterios de aceptación") or "", re.MULTILINE)
+
+
+def errores_spec(clave: str) -> list[str]:
+    archivo = ruta_spec(clave)
+    if not archivo.exists():
+        return [f"no existe specs/{clave}/spec.md"]
+    texto = archivo.read_text(encoding="utf-8")
+    errores = [f"falta la sección {s}" for s in SECCIONES_SPEC if seccion_spec(texto, s) is None]
+    if PENDIENTE_SPEC in texto:
+        errores.append("quedan partes por completar")
+    criterios = criterios_spec(texto)
+    if not criterios:
+        errores.append("no tiene criterios de aceptación")
+    pruebas = seccion_spec(texto, "Pruebas") or ""
+    errores += [f"el criterio {n} no tiene prueba" for n in range(1, len(criterios) + 1)
+                if not re.search(rf"^\|\s*{n}\s*\|", pruebas, re.MULTILINE)]
+    if len(texto.splitlines()) > MAXIMO_LINEAS_SPEC:
+        errores.append(f"supera las {MAXIMO_LINEAS_SPEC} líneas")
+    return errores + [f"lenguaje: {a}" for a in avisos_lenguaje(texto)]
+
+
+def spec_aprobada(clave: str) -> bool:
+    """Una spec está aprobada cuando su MR se integró en la rama principal del harness."""
+    referencia = RAMA_PRINCIPAL
+    if git("remote", "get-url", "origin", cwd=RAIZ)[0] == 0:
+        git("fetch", "--quiet", "origin", RAMA_PRINCIPAL, cwd=RAIZ)
+        referencia = f"origin/{RAMA_PRINCIPAL}"
+    return git("cat-file", "-e", f"{referencia}:specs/{clave}/spec.md", cwd=RAIZ)[0] == 0
+
+
+def preparar_spec(historia: dict, repos: list[str], crear_rama: bool) -> str:
+    """Rama spec/<CLAVE> del harness y borrador. Un Spike no lleva spec: su entregable es un ADR."""
+    clave = historia["clave"]
+    if tipo_historia(historia["tipo_incidencia"]) == "spike":
+        return "sin spec: el entregable del Spike es un ADR"
+    if spec_aprobada(clave):
+        return f"specs/{clave}/spec.md (ya aprobada)"
+    if crear_rama:
+        nombre, actual = f"spec/{clave}", git("branch", "--show-current", cwd=RAIZ)[1]
+        if actual not in (RAMA_PRINCIPAL, nombre):
+            raise ErrorHdu(f"El harness está en la rama {actual}. Volver a {RAMA_PRINCIPAL} y repetir.")
+        if actual == RAMA_PRINCIPAL:
+            existe = git("rev-parse", "--verify", "--quiet", nombre, cwd=RAIZ)[0] == 0
+            codigo, salida = git("switch", "--quiet", *([nombre] if existe else ["-c", nombre]), cwd=RAIZ)
+            if codigo != 0:
+                raise ErrorHdu(f"No se pudo crear la rama {nombre}: {salida}")
+    archivo = ruta_spec(clave)
+    if not archivo.exists():
+        archivo.parent.mkdir(parents=True, exist_ok=True)
+        archivo.write_text(texto_spec(historia, repos), encoding="utf-8")
+    return f"specs/{clave}/spec.md (borrador)"
+
+
+def desarrollar(clave: str) -> dict:
+    """Comprueba que se puede programar: spec aprobada y vigente, salvo Hotfix (su spec se completa al cerrar)."""
+    archivo = RAIZ / "trabajo" / clave / "hdu.json"
+    if not archivo.exists():
+        raise ErrorHdu(f"La historia {clave} no se tomó con /hdu.")
+    tomada = json.loads(archivo.read_text(encoding="utf-8"))
+    tipo = tipo_historia(tomada.get("tipo_incidencia"))
+    if tipo == "spike":
+        raise ErrorHdu("Un Spike no se desarrolla: su entregable es un ADR del producto.")
+    actual = git("branch", "--show-current", cwd=RAIZ)[1]
+    if tipo != "hotfix":
+        if actual == f"spec/{clave}":
+            codigo, salida = git("switch", "--quiet", RAMA_PRINCIPAL, cwd=RAIZ)
+            if codigo != 0:
+                raise ErrorHdu(f"No se pudo volver a {RAMA_PRINCIPAL}: {salida}")
+        elif actual != RAMA_PRINCIPAL:
+            raise ErrorHdu(f"El harness está en la rama {actual}. Volver a {RAMA_PRINCIPAL} y repetir.")
+        actualizar_harness()
+        if not spec_aprobada(clave):
+            raise ErrorHdu(f"La spec de {clave} no está aprobada: su MR debe integrarse en {RAMA_PRINCIPAL} antes de programar.")
+        errores = errores_spec(clave)
+        if errores:
+            raise ErrorHdu("La spec aprobada no es válida:\n  - " + "\n  - ".join(errores))
+    foco(tomada["repos"], [r["id"] for r in leer_json("repos.json")["repos"]])
+    return {"spec": ruta_spec(clave), "tipo": tipo, "ramas": tomada["ramas"]}
+
+
+def avisos_lenguaje(texto: str) -> list[str]:
+    archivo = RAIZ / "lenguaje.json"
+    if not archivo.exists():
+        return []
+    reglas = json.loads(archivo.read_text(encoding="utf-8"))
+    minusculas, avisos = texto.lower(), []
+    for palabra in reglas.get("voseo", []):
+        if re.search(rf"(?<![\wáéíóúñ]){re.escape(palabra.lower())}(?![\wáéíóúñ])", minusculas):
+            avisos.append(f"voseo: «{palabra}»")
+    normal = normalizar(texto)
+    for expresion in reglas.get("expresiones", []):
+        if re.search(rf"\b{re.escape(normalizar(expresion))}\b", normal):
+            avisos.append(f"expresión de relleno: «{expresion}»")
+    return avisos
+
+
 def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: dict[str, str], relacion: dict,
-                      documentos: list[dict], avisos: list[str]) -> Path:
+                      documentos: list[dict], avisos: list[str], spec: str) -> Path:
     carpeta = RAIZ / "trabajo" / historia["clave"]
     carpeta.mkdir(parents=True, exist_ok=True)
     lineas = [f"# {historia['clave']}: {historia['titulo']}", "",
@@ -282,7 +413,8 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
               + (f" · Tipo: {historia['tipo']}" if historia["tipo"] else "") + f" · Estado: {historia['estado']}",
               f"- Medición HU: {historia['medicion'] or 'vacía'} ({medicion})",
               f"- Repositorios: {', '.join(repos) or 'NO DETERMINADO'}",
-              f"- Reglas: harness versión {version_harness()}", ""]
+              f"- Reglas: harness versión {version_harness()}",
+              f"- Spec: {spec}", ""]
     lineas += [*[f"> {a}" for a in avisos], ""] if avisos else []
     if medicion == "sin medir":
         lineas += ["> HU sin medir: al terminar, `/listo` exige revisar la deuda técnica y operativa que deja.", ""]
@@ -316,6 +448,7 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
     (carpeta / "hdu.json").write_text(json.dumps({"clave": historia["clave"], "titulo": historia["titulo"],
                                                   "medicion": historia["medicion"], "evaluacion_medicion": medicion,
                                                   "repos": repos, "ramas": ramas, "fecha": date.today().isoformat(),
+                                                  "tipo_incidencia": historia["tipo_incidencia"],
                                                   "criterios": historia["criterios"]}, indent=2, ensure_ascii=False) + "\n",
                                       encoding="utf-8")
     return archivo
@@ -335,6 +468,7 @@ def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict
     repos = repos_pedidos or inferir_repos(historia, ids)
     if not repos:
         return {"historia": historia, "medicion": medicion, "tomada": False, "faltan_repos": ids}
+    spec = preparar_spec(historia, repos, crear_rama)
     nombre_rama = f"feature/{clave}-{slug(historia['titulo'])}"
     ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama (--sin-rama)")
              for r in repos_config if r["id"] in repos}
@@ -342,8 +476,9 @@ def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict
     contexto = json.loads((RAIZ / "contexto.json").read_text(encoding="utf-8")) if (RAIZ / "contexto.json").exists() else {}
     relacion = relacionado(historia, contexto, repos)
     avisos = avisos_arquitectura()
-    archivo = escribir_contexto(historia, medicion, repos, ramas, relacion, arquitectura_relacionada(historia, relacion), avisos)
-    return {"historia": historia, "medicion": medicion, "tomada": True, "repos": repos, "ramas": ramas, "contexto": archivo, "avisos": avisos}
+    archivo = escribir_contexto(historia, medicion, repos, ramas, relacion, arquitectura_relacionada(historia, relacion), avisos, spec)
+    return {"historia": historia, "medicion": medicion, "tomada": True, "repos": repos, "ramas": ramas, "contexto": archivo,
+            "avisos": avisos, "spec": spec}
 
 
 def main(argumentos: list[str] | None = None) -> int:
@@ -353,7 +488,24 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("clave")
     p.add_argument("--repos", default="")
     p.add_argument("--sin-rama", action="store_true")
+    for nombre in ("spec", "desarrollar"):
+        p = sub.add_parser(nombre)
+        p.add_argument("clave")
     o = parser.parse_args(argumentos)
+    if o.accion == "spec":
+        errores = errores_spec(o.clave.upper())
+        print("Spec válida: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
+        return 1 if errores else 0
+    if o.accion == "desarrollar":
+        try:
+            r = desarrollar(o.clave.upper())
+        except ErrorHdu as error:
+            print(f"ERROR: {error}")
+            return 1
+        print(f"Spec: {r['spec'].relative_to(RAIZ)}" + (" (Hotfix: se completa al cerrar)" if r["tipo"] == "hotfix" else " (aprobada)"))
+        for repo, estado in r["ramas"].items():
+            print(f"  {repo}: {estado}")
+        return 0
     try:
         r = tomar(o.clave.upper(), [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama)
     except ErrorHdu as error:
@@ -374,7 +526,7 @@ def main(argumentos: list[str] | None = None) -> int:
         print(f"  {repo}: {estado}")
     for aviso in r["avisos"]:
         print(f"Aviso: {aviso}")
-    print(f"Reglas: harness versión {version_harness()}.")
+    print(f"Reglas: harness versión {version_harness()}. Spec: {r['spec']}.")
     print(f"Criterios de aceptación: {len(h['criterios'])}. Contexto: {r['contexto'].relative_to(RAIZ)}")
     return 0
 

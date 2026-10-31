@@ -23,12 +23,22 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
    que aplican ya están en `.cursor/rules/generado/`. Abrir un texto completo de `.cursor/arquitectura/` solo
    si el extracto no alcanza o si otra regla rápida toca el cambio.
 
-3. **Proponer el plan** y pedir confirmación antes de implementar:
-   - versión de las reglas usada (está en el contexto);
-   - archivos y cambios por repositorio, citando `archivo:línea` de lo que se lee;
-   - **una prueba por criterio de aceptación**, con su nombre y qué verifica;
-   - documentos de arquitectura y decisiones que aplican (por su ID), con la sección citada, y hallazgos relacionados que conviene corregir de paso;
+3. **Completar la spec** `specs/<CLAVE>/spec.md` (una página como máximo; todavía no se programa):
+   - Objetivo, Diseño (cambios por repositorio, citando `archivo:línea`) y Fuera de alcance;
+   - **Pruebas:** una por criterio de aceptación, con su nombre y qué verifica;
+   - Reglas que aplican: documentos de arquitectura y decisiones (por su ID), con la sección citada, y la
+     versión de las reglas usada;
    - lo que no se sabe, como `NO DETERMINADO`, con la pregunta por resolver.
+
+   Mostrarla y pedir confirmación. Después:
+
+   ```sh
+   python3 herramientas/hdu.py spec <CLAVE>
+   ```
+
+   Si es válida, hacer commit en la rama `spec/<CLAVE>` del harness y push. El MR de la spec se abre en GitLab.
+   Al aprobarse e integrarse, seguir con `/desarrollar <CLAVE>`. **Hotfix:** no espera la aprobación: seguir con
+   `/desarrollar`; la spec se completa antes de `/listo` y se integra después.
 
    Si no hay criterios de aceptación reconocibles, decirlo y no inventarlos.
 

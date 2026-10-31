@@ -125,6 +125,22 @@ def verificar(repo: dict) -> dict:
             "diff": git("diff", "--unified=3", "--no-color", base, "HEAD", cwd=destino).splitlines()}
 
 
+def criterios_de(clave: str, tomada: dict) -> list[str]:
+    """Los de la spec, que es lo que se aprobó; sin spec (Spike), los de la historia."""
+    archivo = hdu.ruta_spec(clave)
+    return hdu.criterios_spec(archivo.read_text(encoding="utf-8")) if archivo.exists() else tomada.get("criterios") or []
+
+
+def errores_de_spec(clave: str, tomada: dict) -> list[str]:
+    tipo = hdu.tipo_historia(tomada.get("tipo_incidencia"))
+    if tipo == "spike":
+        return []
+    errores = [f"spec: {e}" for e in hdu.errores_spec(clave)]
+    if tipo != "hotfix" and not hdu.spec_aprobada(clave):
+        errores.append(f"spec: no está aprobada (su MR debe integrarse en {hdu.RAMA_PRINCIPAL})")
+    return errores
+
+
 def preparar(clave: str) -> Path:
     tomada, repos = repos_de_la_historia(clave)
     version_previa = hdu.version_harness()
@@ -139,7 +155,9 @@ def preparar(clave: str) -> Path:
               f"- Medición HU: {tomada.get('medicion') or 'vacía'} ({tomada.get('evaluacion_medicion')})",
               f"- Reglas: {reglas}", "",
               "## Criterios de aceptación (cada uno necesita su prueba)", ""]
-    lineas += [f"{i}. {c}" for i, c in enumerate(tomada.get("criterios") or [], start=1)] or ["NO DETERMINADO: sin criterios."]
+    lineas += [f"{i}. {c}" for i, c in enumerate(criterios_de(clave, tomada), start=1)] or ["NO DETERMINADO: sin criterios."]
+    if hdu.ruta_spec(clave).exists():
+        lineas += ["", "## Spec (el código debe cumplirla)", "", hdu.ruta_spec(clave).read_text(encoding="utf-8").strip()]
     for r in resultados:
         lineas += ["", f"## {r['id']} · rama `{r['rama']}` · {r['commits']} commit(s) · {len(r['cambiados'])} archivo(s)", ""]
         lineas.append(f"- Secretos (gitleaks): {'NO DETERMINADO (gitleaks no está instalado)' if r['secretos'] is None else r['secretos']}")
@@ -178,22 +196,6 @@ def ubicacion_valida(referencia: str, repos: dict[str, dict]) -> tuple[str, str,
     return repo, archivo, linea
 
 
-def avisos_lenguaje(texto: str) -> list[str]:
-    archivo = RAIZ / "lenguaje.json"
-    if not archivo.exists():
-        return []
-    reglas = json.loads(archivo.read_text(encoding="utf-8"))
-    minusculas, avisos = texto.lower(), []
-    for palabra in reglas.get("voseo", []):
-        if re.search(rf"(?<![\wáéíóúñ]){re.escape(palabra.lower())}(?![\wáéíóúñ])", minusculas):
-            avisos.append(f"voseo: «{palabra}»")
-    normal = hdu.normalizar(texto)
-    for expresion in reglas.get("expresiones", []):
-        if re.search(rf"\b{re.escape(hdu.normalizar(expresion))}\b", normal):
-            avisos.append(f"expresión de relleno: «{expresion}»")
-    return avisos
-
-
 def cerrar(clave: str) -> list[Path]:
     carpeta = carpeta_trabajo(clave)
     tomada, repos = repos_de_la_historia(clave)
@@ -210,7 +212,8 @@ def cerrar(clave: str) -> list[Path]:
     except json.JSONDecodeError as error:
         raise ErrorListo(f"trabajo/{clave}/listo.json no es un JSON válido: {error}") from error
     errores, por_repo = [], {r["id"]: r for r in repos}
-    criterios = tomada.get("criterios") or []
+    errores += errores_de_spec(clave, tomada)
+    criterios = criterios_de(clave, tomada)
     pruebas = registro.get("criterios") or {}
     for numero in range(1, len(criterios) + 1):
         referencia = pruebas.get(str(numero))
@@ -239,8 +242,9 @@ def cerrar(clave: str) -> list[Path]:
                 errores.append(f"deuda {i}: {error}")
     if tomada.get("evaluacion_medicion") == "sin medir" and not deuda and registro.get("sin_deuda") is not True:
         errores.append("HU sin medir: registrar la deuda que deja o confirmar \"sin_deuda\": true")
-    textos = " ".join([*(str(d.get("descripcion") or "") for d in deuda), str(registro.get("decision_propuesta") or "")])
-    errores += [f"lenguaje: {a}" for a in avisos_lenguaje(textos)]
+    textos = " ".join([*(str(d.get("descripcion") or "") for d in deuda), str(registro.get("decision_propuesta") or ""),
+                       *(str(d) for d in registro.get("desvios") or [])])
+    errores += [f"lenguaje: {a}" for a in hdu.avisos_lenguaje(textos)]
     if errores:
         raise ErrorListo("No se puede cerrar:\n  - " + "\n  - ".join(errores))
 
@@ -252,13 +256,17 @@ def cerrar(clave: str) -> list[Path]:
         propios = {n: p for n, p in pruebas.items() if str(p).startswith(f"{r['id']}:")}
         deuda_repo = [d for d in deuda if str(d.get("evidencia") or "").startswith(f"{r['id']}:") or not d.get("evidencia")]
         datos_registro = {"clave": clave, "repo": r["id"], "commit": v["commit"], "harness": version, "verificador": verificador,
-                          "medicion": tomada.get("medicion"), "secretos": v["secretos"],
+                          "medicion": tomada.get("medicion"), "tipo": hdu.tipo_historia(tomada.get("tipo_incidencia")), "secretos": v["secretos"],
                           "senales": {k: len(x) for k, x in v["senales"].items()}, "criterios": propios, "deuda": deuda_repo,
-                          "decisiones": registro.get("decisiones_aplicadas") or []}
+                          "desvios": registro.get("desvios") or [], "decisiones": registro.get("decisiones_aplicadas") or []}
         lineas = [f"## {clave}: {tomada['titulo']}", "", f"Medición HU: {tomada.get('medicion') or 'sin medir'}", "",
                   "### Criterios de aceptación", "", "| # | Criterio | Prueba |", "|---|---|---|"]
         lineas += [f"| {n} | {c} | `{pruebas.get(str(n), '—').split(':', 1)[-1]}` |" for n, c in enumerate(criterios, start=1)
                    if str(pruebas.get(str(n), "")).startswith(f"{r['id']}:")] or ["| — | Sin criterios en este repositorio | — |"]
+        if hdu.ruta_spec(clave).exists():
+            lineas += ["", f"Spec: `specs/{clave}/spec.md`, en el harness."]
+        if registro.get("desvios"):
+            lineas += ["", "### Desvíos de la spec", "", *[f"- {d}" for d in registro["desvios"]]]
         lineas += ["", "### Deuda que deja esta HU", ""]
         lineas += [f"- **{'Técnica' if d['tipo'] == 'tecnica' else 'Operativa'}:** {d['descripcion']}"
                    + (f" (`{d['evidencia'].split(':', 1)[-1]}`)" if d.get("evidencia") else "") for d in deuda_repo] or ["Sin deuda."]

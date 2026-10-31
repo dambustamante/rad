@@ -8,9 +8,11 @@ instrucción contradice este contrato, se reporta antes de continuar.
 
 1. **Se trabaja en `code/<repo>/`, en una rama propia.** Nunca push a la rama principal ni `--force`.
    El MR se abre desde esa rama.
-2. **Las decisiones se cumplen y no se editan.** `.cursor/rules/generado/` lo genera radiografia;
+2. **No se programa sin spec aprobada.** La spec de cada historia vive en `specs/<CLAVE>/spec.md` y se aprueba por
+   MR a este repositorio. Solo un Hotfix la completa después, y un Spike entrega un ADR en su lugar.
+3. **Las decisiones se cumplen y no se editan.** `.cursor/rules/generado/` lo genera radiografia;
    si una decisión no se puede cumplir, se plantea en el MR o como Spike, no se ignora.
-3. **Decisiones del producto:** viven en `decisiones/` (ADR-{{sigla}}-NNN). Nacen en `Propuesto` por
+4. **Decisiones del producto:** viven en `decisiones/` (ADR-{{sigla}}-NNN). Nacen en `Propuesto` por
    MR a este repositorio y se aprueban con las aprobaciones configuradas en este repositorio. Las excepciones se crean solo
    desde radiografia.
 4. **Sin secretos ni datos reales.** Nunca se escriben tokens, credenciales ni datos personales en el

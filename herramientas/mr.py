@@ -110,8 +110,9 @@ def bandeja(raiz: Path, producto: str | None = None, mios: bool = False, cliente
                     continue
                 filas.append({"producto": nombre, "repo": id_repo, "tipo": tipo, "numero": mr["numero"], "titulo": mr["titulo"],
                               "url": mr["url"], "autor": mr.get("autor"), "rama": mr.get("rama"),
-                              "listo": "ADR del producto" if tipo == "harness" else estado_listo(mr)})
-    prioridad = {"ADR del producto": 0, "sin /listo": 1, "registro de /listo ilegible": 1, "desactualizado": 2, "al día": 3}
+                              "listo": ("Spec" if str(mr.get("rama")).startswith("spec/") else "ADR del producto")
+                              if tipo == "harness" else estado_listo(mr)})
+    prioridad = {"Spec": -1, "ADR del producto": 0, "sin /listo": 1, "registro de /listo ilegible": 1, "desactualizado": 2, "al día": 3}
     return sorted(filas, key=lambda f: (prioridad.get(f.get("listo"), 9), f["producto"], f["repo"], f.get("numero", 0)))
 
 
@@ -157,6 +158,26 @@ def cambios_sensibles(clon: Path, base: str, commit: str) -> dict[str, list[str]
     return senales
 
 
+def texto_spec(raiz: Path, producto: str, registro: dict | None) -> str | None:
+    """Spec aprobada: la de la rama principal en la copia de radiografia."""
+    archivo = harness.ruta(raiz, producto) / "specs" / str((registro or {}).get("clave")) / "spec.md"
+    return archivo.read_text(encoding="utf-8") if archivo.exists() else None
+
+
+def contraste_spec(raiz: Path, producto: str, registro: dict) -> list[str]:
+    tipo, texto = registro.get("tipo"), texto_spec(raiz, producto, registro)
+    if texto is None:
+        if tipo in ("hotfix", "spike"):
+            return [f"/listo declaró tipo {tipo}: el MR llega sin spec aprobada. Comprobar el tipo en Jira."]
+        return [f"La spec de {registro.get('clave')} no está en la rama principal del harness: se programó sin spec aprobada."]
+    seccion = re.search(r"^## Criterios de aceptación[ \t]*\n(.*?)(?=^## |\Z)", texto, re.MULTILINE | re.DOTALL)
+    total = len(re.findall(r"^\d+\.\s", seccion.group(1), re.MULTILINE)) if seccion else 0
+    diferencias = [f"Criterio {n}: no existe en la spec aprobada." for n in sorted(registro.get("criterios") or {})
+                   if not str(n).isdigit() or not 1 <= int(n) <= total]
+    diferencias += [f"Desvío declarado respecto de la spec: {d}" for d in registro.get("desvios") or []]
+    return diferencias
+
+
 def contraste(raiz: Path, producto: str, estado: dict, mr: dict, automaticos: list[dict]) -> list[str]:
     """Diferencias entre lo que declaró /listo y lo que verifica radiografia."""
     registro = registro_listo(mr.get("descripcion", ""))
@@ -187,6 +208,7 @@ def contraste(raiz: Path, producto: str, estado: dict, mr: dict, automaticos: li
         if any(DEBILITADA.search(l) for l in cerca):
             diferencias.append(f"Criterio {numero}: la prueba `{archivo}:{linea}` está deshabilitada.")
     if harness.existe(raiz, producto):
+        diferencias += contraste_spec(raiz, producto, registro)
         version = json.loads((harness.ruta(raiz, producto) / "GENERADO.json").read_text(encoding="utf-8")).get("version")
         if registro.get("harness") not in (None, version):
             diferencias.append(f"/listo usó el harness versión {registro.get('harness')}; la vigente es {version}.")
@@ -234,6 +256,9 @@ def revisar(raiz: Path, producto: str, repo: str, numero: int, cliente=None) -> 
     lineas += ["", "## Contraste con /listo", "", "Lo que se declaró se contrasta con lo que verifica radiografia; "
                "no reemplaza la revisión.", ""]
     lineas += [f"- {d}" for d in diferencias]
+    spec = texto_spec(raiz, producto, registro_listo(mr.get("descripcion", "")))
+    if spec:
+        lineas += ["", "## Spec aprobada (contrastar el código con ella)", "", spec.strip()]
     if deuda:
         lineas += ["", f"Deuda declarada por la historia: {deuda} punto(s), registrados para `/crear {producto} tarea --deuda`."]
     with preparado["paquete"].open("a", encoding="utf-8") as archivo:

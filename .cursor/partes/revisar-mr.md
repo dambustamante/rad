@@ -20,8 +20,8 @@ da por cierto.
    .venv/bin/python herramientas/mr.py bandeja [--producto <producto>] [--mios]
    ```
 
-   Muestra los MR abiertos de cada producto y de su harness, con el estado de `/listo`: primero los ADR
-   del producto, después los MR sin `/listo`, los desactualizados y los al día. Preguntar cuál revisar.
+   Muestra los MR abiertos de cada producto y de su harness, con el estado de `/listo`: primero las specs
+   (se revisan y se aprueban en GitLab, antes de programar), después los ADR del producto, después los MR sin `/listo`, los desactualizados y los al día. Preguntar cuál revisar.
 
 2. **MR de un repositorio:**
 

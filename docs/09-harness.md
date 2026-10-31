@@ -100,6 +100,20 @@ la rama de trabajo ni descartar cambios.
 `--force`, aprobar o mergear MR con `glab` o `gh` y las escrituras HTTP directas. El resto del flujo de
 git funciona normalmente.
 
+## Flujo de una historia
+
+| Paso | Dónde | Qué pasa |
+|---|---|---|
+| 1. `/hdu <CLAVE>` | Harness | Crea la rama y el borrador de la spec |
+| 2. MR de la spec | Harness | Se revisa y se aprueba antes de programar |
+| 3. `/desarrollar <CLAVE>` | `code/<repo>/` | Se trabaja contra la spec aprobada |
+| 4. `/listo <CLAVE>` | Harness | Verifica que el código cumple la spec |
+| 5. MR del código | Repositorio del producto | Se revisa y se aprueba como siempre |
+| 6. `/revisar mr` | radiografia | Contrasta el MR con la spec y las reglas |
+
+**Aprobada** significa integrada en `main` del harness. Un Hotfix no espera la aprobación: su spec se completa
+antes de `/listo` y se integra después. Un Spike no lleva spec: entrega un ADR.
+
 ## `/hdu <CLAVE>`: tomar una historia
 
 ```sh
@@ -130,7 +144,16 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 7. **Arquitectura:** agrega al contexto hasta 3 extractos (máximo 1.500 caracteres cada uno) de los documentos
    que comparten más palabras con la historia. Se elige sin IA y se lee una sola vez. La regla rápida de todos
    los documentos sigue en `decisiones.mdc`; si una toca el cambio, se abre su texto completo.
-8. Cursor propone el plan, con la versión de las reglas usada, con **una prueba por criterio de aceptación**, y pide confirmación antes de implementar.
+8. **Spec:** crea la rama `spec/<CLAVE>` del harness y el borrador `specs/<CLAVE>/spec.md`, de una página como
+   máximo. Cursor lo completa, con **una prueba por criterio de aceptación**, y pide confirmación.
+   `hdu.py spec <CLAVE>` la valida antes de abrir su MR.
+
+## `/desarrollar <CLAVE>`: programar contra la spec
+
+`hdu.py desarrollar <CLAVE>` vuelve a `main`, actualiza el harness y se detiene si la spec no está aprobada. Cursor
+propone los pasos por criterio, pide confirmación en el plan y en los cambios delicados, implementa en
+`code/<repo>/` y ejecuta las pruebas. Un cambio menor se declara como desvío en `/listo`; un cambio de alcance o de
+diseño exige corregir la spec en un MR.
 
 **Spike:** el contexto indica que el entregable es un ADR del producto. Se crea con
 `python3 herramientas/harness.py adr --titulo "<decisión>" --historia FRAUD-126`, que toma el siguiente

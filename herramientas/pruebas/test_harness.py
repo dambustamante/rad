@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -29,6 +30,7 @@ GIT_PRUEBA = {"GIT_AUTHOR_NAME": "Prueba", "GIT_AUTHOR_EMAIL": "prueba@example.c
 
 
 def cargar(ruta: Path, nombre: str):
+    sys.modules.pop("hdu", None)  # listo.py importa hdu: que sea el del harness de esta prueba
     especificacion = importlib.util.spec_from_file_location(nombre, ruta)
     modulo = importlib.util.module_from_spec(especificacion)
     especificacion.loader.exec_module(modulo)
@@ -209,13 +211,57 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("`/listo` exige revisar la deuda", sin_medir["contexto"].read_text(encoding="utf-8"))
         spike = self.hdu("Óptima", "Spike").tomar("FRAUD-126", None, False)
         self.assertIn("## Entregable del Spike", spike["contexto"].read_text(encoding="utf-8"))
-        self.assertEqual(git("status", "--porcelain", cwd=self.destino), "", "trabajo/ y .cursorignore quedan fuera de git")
+        self.assertEqual({l[3:].split("/")[0] for l in git("status", "--porcelain", cwd=self.destino).splitlines()}, {"specs"},
+                         "trabajo/ y .cursorignore quedan fuera de git")
 
         modulo = self.hdu("Completa")
         modulo.foco(["fraude-core"], ["fraude-core", "fraude-backoffice"])
         self.assertIn("code/fraude-backoffice/", (self.destino / ".cursorignore").read_text(encoding="utf-8"))
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
+
+    def aprobar_spec(self, clave: str) -> None:
+        """Completa la spec e integra su rama en main, como lo haría su MR."""
+        archivo = self.destino / "specs" / clave / "spec.md"
+        archivo.write_text(re.sub(r"<completar[^>]*>", "Definido", archivo.read_text(encoding="utf-8")), encoding="utf-8")
+        git("add", "-A", cwd=self.destino)
+        git("commit", "--quiet", "-m", f"Spec de {clave}", cwd=self.destino)
+        git("switch", "--quiet", "main", cwd=self.destino)
+        git("merge", "--quiet", "--no-ff", "-m", f"Integra spec de {clave}", f"spec/{clave}", cwd=self.destino)
+
+    def test_no_se_programa_sin_spec_aprobada(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
+        modulo = self.hdu("Completa")
+        self.assertIn("borrador", modulo.tomar("FRAUD-123", None, True)["spec"])
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "spec/FRAUD-123")
+        self.assertIn("quedan partes por completar", modulo.errores_spec("FRAUD-123"))
+        self.assertIn("1. La consulta responde en menos de 800 ms.", modulo.ruta_spec("FRAUD-123").read_text(encoding="utf-8"))
+        with self.assertRaises(modulo.ErrorHdu) as error:
+            modulo.desarrollar("FRAUD-123")
+        self.assertIn("no está aprobada", str(error.exception))
+
+        git("switch", "--quiet", "spec/FRAUD-123", cwd=self.destino)
+        self.aprobar_spec("FRAUD-123")
+        self.assertEqual(modulo.errores_spec("FRAUD-123"), [])
+        self.assertEqual(modulo.desarrollar("FRAUD-123")["tipo"], "historia")
+        self.assertIn("ya aprobada", modulo.tomar("FRAUD-123", None, False)["spec"])
+
+        archivo = modulo.ruta_spec("FRAUD-123")
+        original = archivo.read_text(encoding="utf-8")
+        archivo.write_text(original.replace("| 2 |", "| x |"), encoding="utf-8")
+        self.assertIn("el criterio 2 no tiene prueba", modulo.errores_spec("FRAUD-123"))
+        archivo.write_text(original + "\n" * 100, encoding="utf-8")
+        self.assertIn("supera las 80 líneas", modulo.errores_spec("FRAUD-123"))
+        archivo.write_text(original, encoding="utf-8")
+
+        hotfix = self.hdu("Completa", "Hotfix")
+        self.assertIn("borrador", hotfix.tomar("FRAUD-127", None, False)["spec"])
+        self.assertEqual(hotfix.desarrollar("FRAUD-127")["tipo"], "hotfix", "un Hotfix no espera la aprobación")
+        spike = self.hdu("Completa", "Spike")
+        self.assertIn("sin spec", spike.tomar("FRAUD-128", None, False)["spec"])
+        with self.assertRaises(spike.ErrorHdu):
+            spike.desarrollar("FRAUD-128")
 
     def test_todo_producto_nace_con_su_harness(self) -> None:
         import productos
@@ -322,26 +368,37 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("- Pendientes: `src/main/java/BuroClient.java:3`", paquete)
         self.assertIn("1. La consulta responde en menos de 800 ms.", paquete)
 
+        self.assertIn("## Spec (el código debe cumplirla)", paquete)
+
         registro = self.destino / "trabajo" / "FRAUD-123" / "listo.json"
         registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3"}, "deuda": [],
                                         "decisiones_aplicadas": ["ADR-EQ-002"]}), encoding="utf-8")
         with self.assertRaises(listo.ErrorListo) as error:
             listo.cerrar("FRAUD-123")
         self.assertIn("el criterio 2 no tiene prueba", str(error.exception))
+        self.assertIn("spec: no está aprobada", str(error.exception))
+        self.aprobar_spec("FRAUD-123")
         registro.write_text(json.dumps({
             "criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3", "2": "fraude-core:src/test/java/BuroClientTest.java:5"},
             "deuda": [{"tipo": "tecnica", "descripcion": "El timeout del buró queda fijo en el código; falta llevarlo a configuración.",
                        "evidencia": "fraude-core:src/main/java/BuroClient.java:3"}],
+            "desvios": ["El timeout se definió en el cliente y no en el servicio."],
             "decisiones_aplicadas": ["ADR-EQ-002", "decisiones:ADR-010"]}), encoding="utf-8")
         archivos = listo.cerrar("FRAUD-123")
         descripcion = archivos[0].read_text(encoding="utf-8")
         self.assertIn("| 1 | La consulta responde en menos de 800 ms. | `src/test/java/BuroClientTest.java:3` |", descripcion)
         self.assertIn("- **Técnica:** El timeout del buró queda fijo en el código", descripcion)
+        self.assertIn("### Desvíos de la spec", descripcion)
         self.assertIn("<!-- radiografia:listo ", descripcion)
         import mr
         datos = mr.registro_listo(descripcion)
         self.assertEqual((datos["clave"], datos["repo"], datos["commit"]), ("FRAUD-123", "fraude-core", git("rev-parse", "HEAD", cwd=codigo_repo)))
         self.assertEqual(datos["senales"]["consola"], 1)
+        self.assertEqual(mr.contraste_spec(self.raiz, "motor-fraudes", datos),
+                         ["Desvío declarado respecto de la spec: El timeout se definió en el cliente y no en el servicio."])
+        self.assertIn("no está en la rama principal", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-9"})[0])
+        self.assertIn("Comprobar el tipo en Jira", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-9", "tipo": "hotfix"})[0])
+        self.assertIn("Criterio 9: no existe", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-123", "criterios": {"9": "x:y:1"}})[0])
 
         (codigo_repo / "src/test/java/BuroClientTest.java").write_text(
             "class BuroClientTest {\n  @Disabled\n  @Test\n  void respondeEnMenosDe800ms() {}\n  @Test\n  void quedaEnRevision() {}\n}\n",
