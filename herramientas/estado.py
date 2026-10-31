@@ -146,7 +146,7 @@ def que_sigue(estado: dict) -> list[str]:
             pasos.append(f"{p['nombre']}: sin harness para el equipo: `/producto {p['nombre']} harness`.")
         elif p["harness"] and p["harness"]["sin_subir"]:
             pasos.append(f"{p['nombre']}: el harness tiene {p['harness']['sin_subir']} commit(s) sin subir: "
-                         f"`git -C productos/{p['nombre']}/harness push`" + ("" if p["harness"]["remoto"] else " (falta configurar el remoto)") + ".")
+                         f"`harness.py subir {p['nombre']}`" + ("" if p["harness"]["remoto"] else " (falta configurar el remoto)") + ".")
         if p["terceros_incompletos"]:
             pasos.append(f"{p['nombre']}: fichas de terceros por completar ({', '.join(p['terceros_incompletos'])}): "
                          f"`/producto {p['nombre']}` → terceros.")

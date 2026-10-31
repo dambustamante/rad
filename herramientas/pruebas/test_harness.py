@@ -217,6 +217,57 @@ class PruebaHarness(unittest.TestCase):
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
 
+    def test_arquitectura_llega_a_hdu_con_poco_contexto(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        indice = json.loads((self.destino / "arquitectura.json").read_text(encoding="utf-8"))
+        documento = next(d for d in indice["documentos"] if d["clave"] == "decisiones:ADR-010")
+        self.assertTrue((self.destino / documento["archivo"]).exists(), "el texto completo queda en el harness")
+        self.assertLessEqual(len(documento["extracto"]), harness.MAXIMO_EXTRACTO + 4)
+        self.assertNotIn(documento["extracto"], (self.destino / ".cursor/rules/generado/decisiones.mdc").read_text(encoding="utf-8"))
+
+        modulo = self.hdu("Completa")
+        historia = {"titulo": "Llamada externa", "descripcion": "Definir el timeout obligatorio", "criterios": []}
+        self.assertEqual([d["clave"] for d in modulo.arquitectura_relacionada(historia, {})], ["decisiones:ADR-010"])
+        self.assertEqual(modulo.arquitectura_relacionada({**historia, "titulo": "Otro", "descripcion": "Reporte mensual"}, {}), [])
+        self.assertEqual(modulo.avisos_arquitectura(), [], "el harness tiene el último commit de arquitectura")
+
+        fuentes = indice["fuentes"]
+        fuentes["decisiones"]["commit"] = "0" * 40
+        (self.destino / "arquitectura.json").write_text(json.dumps({**indice, "fuentes": fuentes}), encoding="utf-8")
+        self.assertIn("no llegaron", modulo.avisos_arquitectura()[0])
+        fuentes["decisiones"]["url"] = str(self.raiz / "no-existe")
+        (self.destino / "arquitectura.json").write_text(json.dumps({**indice, "fuentes": fuentes}), encoding="utf-8")
+        self.assertIn("NO DETERMINADO", modulo.avisos_arquitectura()[0])
+
+    def test_subir_retiene_sin_coherencia_y_hdu_trae_lo_nuevo(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        remoto = Path(self.temporal.name) / "harness-remoto.git"
+        subprocess.run(["git", "init", "--quiet", "--bare", "-b", "main", str(remoto)], check=True)
+        git("remote", "add", "origin", str(remoto), cwd=self.destino)
+        git("push", "--quiet", "-u", "origin", "main", cwd=self.destino)
+        copia = Path(self.temporal.name) / "harness-persona"
+        subprocess.run(["git", "clone", "--quiet", str(remoto), str(copia)], check=True)
+
+        with mock.patch.object(harness, "pares_pendientes", return_value=2):
+            r = harness.subir(self.raiz, "motor-fraudes", True)
+        self.assertEqual(r["resultado"], "retenido")
+        with mock.patch.object(harness, "pares_pendientes", return_value=0):
+            self.assertEqual(harness.subir(self.raiz, "motor-fraudes", False)["resultado"], "al dia")
+            (self.destino / "repos.json").write_text("{}\n", encoding="utf-8")
+            git("commit", "--quiet", "-am", "Cambio local", cwd=self.destino)
+            self.assertEqual(harness.subir(self.raiz, "motor-fraudes", False)["resultado"], "por subir")
+            self.assertEqual(git("rev-parse", "main", cwd=remoto) == git("rev-parse", "HEAD", cwd=self.destino), False,
+                             "la vista previa no sube nada")
+            self.assertEqual(harness.subir(self.raiz, "motor-fraudes", True)["resultado"], "subido")
+        self.assertEqual(git("rev-parse", "main", cwd=remoto), git("rev-parse", "HEAD", cwd=self.destino))
+
+        modulo = cargar(copia / "herramientas" / "hdu.py", "hdu_copia")
+        self.assertEqual(modulo.actualizar_harness(), "actualizado")
+        self.assertEqual(git("rev-parse", "HEAD", cwd=copia), git("rev-parse", "main", cwd=remoto), "/hdu llega con lo último")
+        git("switch", "--quiet", "-c", "propuesta", cwd=copia)
+        with self.assertRaises(modulo.ErrorHdu):
+            modulo.actualizar_harness()
+
     def test_adr_desde_el_harness_y_enlazar_clones(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         herramienta = str(self.destino / "herramientas" / "harness.py")

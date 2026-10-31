@@ -32,6 +32,9 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 MARCA = ("# hdu:inicio (generado por /hdu; no editar este bloque)", "# hdu:fin")
 SEVERIDADES_SIEMPRE = ("bloqueante", "alta")
+MAXIMO_DOCUMENTOS = 3
+COINCIDENCIAS_MINIMAS = 2
+ESPERA_ARQUITECTURA = 15
 
 
 class ErrorHdu(Exception):
@@ -180,11 +183,65 @@ def relacionado(historia: dict, contexto: dict, repos: list[str]) -> dict[str, d
     return resultado
 
 
+def arquitectura_relacionada(historia: dict, relacion: dict) -> list[dict]:
+    """Hasta MAXIMO_DOCUMENTOS documentos de arquitectura que comparten más palabras con la historia y sus tecnologías."""
+    archivo = RAIZ / "arquitectura.json"
+    documentos = json.loads(archivo.read_text(encoding="utf-8")).get("documentos", []) if archivo.exists() else []
+    tecnologias = [c["tecnologia"] or "" for datos in relacion.values() for c in datos["componentes"]]
+    claves = palabras(" ".join([historia["titulo"], historia["descripcion"], *historia["criterios"], *tecnologias]))
+    puntajes = [(len(claves & palabras(f"{d['titulo']} {d['regla_rapida'] or ''}")), d["clave"], d) for d in documentos]
+    elegidos = sorted((p for p in puntajes if p[0] >= COINCIDENCIAS_MINIMAS), key=lambda p: (-p[0], p[1]))
+    return [d for _, _, d in elegidos[:MAXIMO_DOCUMENTOS]]
+
+
 # --- Espacio de trabajo ------------------------------------------------------------------------
 
 def git(*argumentos: str, cwd: Path) -> tuple[int, str]:
     r = subprocess.run(["git", *argumentos], cwd=cwd, capture_output=True, text=True)
     return r.returncode, (r.stdout or r.stderr).strip()
+
+
+def actualizar_harness() -> str:
+    """Trae las reglas vigentes antes de trabajar; sin ellas no se sigue."""
+    if git("remote", "get-url", "origin", cwd=RAIZ)[0] != 0:
+        return "sin remoto"
+    codigo, salida = git("pull", "--quiet", "--ff-only", cwd=RAIZ)
+    if codigo != 0:
+        raise ErrorHdu(f"No se pudo actualizar el harness: {salida}. Dejarlo en su rama principal, sin cambios en conflicto, y repetir.")
+    return "actualizado"
+
+
+def version_harness() -> int | str:
+    archivo = RAIZ / "GENERADO.json"
+    return json.loads(archivo.read_text(encoding="utf-8")).get("version", "NO DETERMINADO") if archivo.exists() else "NO DETERMINADO"
+
+
+def commit_remoto(url: str, ref: str) -> str | None:
+    entorno = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        r = subprocess.run(["git", "ls-remote", url, ref, f"{ref}^{{}}"], capture_output=True, text=True,
+                           timeout=ESPERA_ARQUITECTURA, env=entorno, cwd=RAIZ)
+    except subprocess.TimeoutExpired:
+        return None
+    referencias = {l.split("\t")[1]: l.split("\t")[0] for l in r.stdout.splitlines() if "\t" in l} if r.returncode == 0 else {}
+    for candidata in (f"refs/tags/{ref}^{{}}", f"refs/tags/{ref}", f"refs/heads/{ref}", ref):
+        if candidata in referencias:
+            return referencias[candidata]
+    return None
+
+
+def avisos_arquitectura() -> list[str]:
+    """Fuentes de arquitectura con commits que todavía no llegaron a este harness."""
+    archivo = RAIZ / "arquitectura.json"
+    fuentes = json.loads(archivo.read_text(encoding="utf-8")).get("fuentes", {}) if archivo.exists() else {}
+    avisos = []
+    for nombre, fuente in fuentes.items():
+        remoto = commit_remoto(re.sub(r"//[^/@]+@", "//", fuente["url"]), fuente["ref"])
+        if remoto is None:
+            avisos.append(f"Arquitectura `{nombre}`: NO DETERMINADO - no se pudo consultar la fuente.")
+        elif remoto != fuente["commit"]:
+            avisos.append(f"Arquitectura `{nombre}` tiene commits que no llegaron a este harness: pueden faltar reglas nuevas.")
+    return avisos
 
 
 def foco(visibles: list[str] | None, todos: list[str]) -> None:
@@ -216,20 +273,29 @@ def preparar_rama(repo: dict, nombre: str) -> str:
     return f"rama {nombre} creada desde origin/{repo['rama']}" if codigo == 0 else f"ERROR: {salida}"
 
 
-def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: dict[str, str], relacion: dict) -> Path:
+def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: dict[str, str], relacion: dict,
+                      documentos: list[dict], avisos: list[str]) -> Path:
     carpeta = RAIZ / "trabajo" / historia["clave"]
     carpeta.mkdir(parents=True, exist_ok=True)
     lineas = [f"# {historia['clave']}: {historia['titulo']}", "",
               f"- [Jira]({historia['url']}) · {historia['tipo_incidencia'] or 'tipo NO DETERMINADO'}"
               + (f" · Tipo: {historia['tipo']}" if historia["tipo"] else "") + f" · Estado: {historia['estado']}",
               f"- Medición HU: {historia['medicion'] or 'vacía'} ({medicion})",
-              f"- Repositorios: {', '.join(repos) or 'NO DETERMINADO'}", ""]
+              f"- Repositorios: {', '.join(repos) or 'NO DETERMINADO'}",
+              f"- Reglas: harness versión {version_harness()}", ""]
+    lineas += [*[f"> {a}" for a in avisos], ""] if avisos else []
     if medicion == "sin medir":
         lineas += ["> HU sin medir: al terminar, `/listo` exige revisar la deuda técnica y operativa que deja.", ""]
     lineas += ["## Criterios de aceptación", ""]
     lineas += [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or \
         ["NO DETERMINADO: la historia no tiene una sección de criterios de aceptación reconocible."]
     lineas += ["", "## Descripción", "", historia["descripcion"].strip() or "(vacía)", ""]
+    lineas += ["## Arquitectura relacionada", "", "Elegida por palabras en común. Las reglas rápidas de todos los documentos "
+               "están en `.cursor/rules/generado/decisiones.mdc`.", ""]
+    for documento in documentos:
+        lineas += [documento["extracto"], "", f"Texto completo: `{documento['archivo']}`", ""]
+    if not documentos:
+        lineas += ["Ningún documento coincide por palabras: revisar las reglas rápidas.", ""]
     for repo in repos:
         datos = relacion.get(repo, {})
         lineas += [f"## {repo}", "", f"- {ramas.get(repo, 'sin rama')}"]
@@ -256,6 +322,7 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
 
 
 def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict:
+    actualizar_harness()
     config, repos_config = leer_json("config.json"), leer_json("repos.json")["repos"]
     ids = [r["id"] for r in repos_config]
     historia = leer_historia(clave, cargar_env(), config)
@@ -273,8 +340,10 @@ def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict
              for r in repos_config if r["id"] in repos}
     foco(repos, ids)
     contexto = json.loads((RAIZ / "contexto.json").read_text(encoding="utf-8")) if (RAIZ / "contexto.json").exists() else {}
-    archivo = escribir_contexto(historia, medicion, repos, ramas, relacionado(historia, contexto, repos))
-    return {"historia": historia, "medicion": medicion, "tomada": True, "repos": repos, "ramas": ramas, "contexto": archivo}
+    relacion = relacionado(historia, contexto, repos)
+    avisos = avisos_arquitectura()
+    archivo = escribir_contexto(historia, medicion, repos, ramas, relacion, arquitectura_relacionada(historia, relacion), avisos)
+    return {"historia": historia, "medicion": medicion, "tomada": True, "repos": repos, "ramas": ramas, "contexto": archivo, "avisos": avisos}
 
 
 def main(argumentos: list[str] | None = None) -> int:
@@ -303,6 +372,9 @@ def main(argumentos: list[str] | None = None) -> int:
         return 3
     for repo, estado in r["ramas"].items():
         print(f"  {repo}: {estado}")
+    for aviso in r["avisos"]:
+        print(f"Aviso: {aviso}")
+    print(f"Reglas: harness versión {version_harness()}.")
     print(f"Criterios de aceptación: {len(h['criterios'])}. Contexto: {r['contexto'].relative_to(RAIZ)}")
     return 0
 

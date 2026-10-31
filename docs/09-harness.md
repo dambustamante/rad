@@ -17,9 +17,11 @@ harness-motor-fraudes/
 ├── repos.json                            repositorios del producto (generado)
 ├── config.json                           sigla y campos de Jira: Medición HU y valores aceptados (generado)
 ├── contexto.json                         hallazgos, componentes y terceros de cada repositorio, para /hdu (generado)
+├── arquitectura.json                     extractos de arquitectura y commits de sus fuentes, para /hdu (generado)
 ├── GENERADO.json                         versión de lo generado, huellas de lo generado y de la plantilla
 ├── .env.example                          conexión a Jira (solo lectura)
 ├── .cursor/
+│   ├── arquitectura/<clave>.md               texto completo de los documentos vigentes (generado; se abre solo si hace falta)
 │   ├── rules/00-general.mdc              remite a AGENTS.md
 │   ├── rules/generado/decisiones.mdc     lo que el código debe cumplir (generado; se aplica siempre)
 │   ├── rules/generado/repo-<id>.mdc      contexto de cada repositorio (generado; se aplica al trabajar en code/<id>/)
@@ -66,7 +68,15 @@ harness-motor-fraudes/
 | `harness-traer` | antes de la coherencia | `git pull` de la copia local, para evaluar los ADR propuestos por MR |
 | `harness-generar` | al final | regenera lo generado; si algo cambió, sube la versión y hace commit local |
 
-El push es manual. `/estado` avisa cuando el harness tiene commits sin subir.
+**Subirlos.** `harness.py subir` trae, regenera y muestra la vista previa de todos los harness; con
+`--confirmar` hace el push. `/actualizar` y `/revisar mr` lo incluyen, así que un ADR nuevo llega en la
+siguiente revisión diaria, sin procesos programados. Un harness con pares de coherencia por evaluar queda
+retenido: una decisión en choque no se entrega antes de suspenderse. `/estado` avisa cuando hay commits sin
+subir. La rama principal del harness debe permitir este push directo a quien administra radiografia.
+
+**Qué llega a `/hdu`.** Un ADR de arquitectura o de equipo está disponible para `/hdu` cuando se subió el
+harness. `/hdu` no puede saber que un ADR-EQ se aprobó y aún no se sube. Sí detecta, con `git ls-remote`, si
+una fuente de arquitectura tiene commits más nuevos, y lo avisa sin detener el trabajo.
 
 **Archivos nuevos de la plantilla.** Cuando la plantilla de radiografia agrega un archivo (por ejemplo un
 comando nuevo), `harness-generar` lo **agrega** al harness. Nunca pisa un archivo que el equipo ya tiene:
@@ -100,6 +110,8 @@ git funciona normalmente.
 python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 ```
 
+0. **Actualiza el harness** (`git pull --ff-only`). Si no puede, se detiene: no se propone código con reglas
+   viejas. Sin remoto, sigue.
 1. Lee la historia de Jira en solo lectura, con el token personal: título, descripción, tipo, estado,
    **Medición HU** y criterios de aceptación (la sección "Criterios de aceptación" de la descripción).
 2. Decide con la Medición HU, sin IA:
@@ -119,7 +131,10 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 6. Escribe `trabajo/<CLAVE>/contexto.md`: criterios numerados, descripción y, por repositorio, la rama,
    los terceros, los componentes y los hallazgos abiertos relacionados (siempre los bloqueantes y altos;
    del resto, los que comparten palabras con la historia).
-7. Cursor propone el plan, con **una prueba por criterio de aceptación**, y pide confirmación antes de implementar.
+7. **Arquitectura:** agrega al contexto hasta 3 extractos (máximo 1.500 caracteres cada uno) de los documentos
+   que comparten más palabras con la historia. Se elige sin IA y se lee una sola vez. La regla rápida de todos
+   los documentos sigue en `decisiones.mdc`; si una toca el cambio, se abre su texto completo.
+8. Cursor propone el plan, con la versión de las reglas usada, con **una prueba por criterio de aceptación**, y pide confirmación antes de implementar.
 
 **Spike:** el contexto indica que el entregable es un ADR del producto. Se crea con
 `python3 herramientas/harness.py adr --titulo "<decisión>" --historia FRAUD-126`, que toma el siguiente
@@ -128,7 +143,8 @@ harness.
 
 ## `/listo <CLAVE>`: antes del MR
 
-1. **Preparar** (sin IA): `python3 herramientas/listo.py preparar FRAUD-123`. Exige todo en commits y, por
+1. **Preparar** (sin IA): `python3 herramientas/listo.py preparar FRAUD-123`. Trae la última versión de las
+   reglas e indica si cambiaron desde `/hdu`; si no puede traerlas, lo deja como `NO DETERMINADO`. Exige todo en commits y, por
    cada repositorio de la historia, compara la rama con su rama principal:
 
    | Verificación | Qué busca |

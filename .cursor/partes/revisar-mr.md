@@ -3,6 +3,17 @@
 Revisión de los MR abiertos. Solo se revisan MR; lo que se declaró en `/listo` se contrasta, nunca se
 da por cierto.
 
+0. **Reglas al día** (sin IA, salvo coherencia pendiente):
+
+   ```sh
+   make harness-al-dia
+   .venv/bin/python herramientas/harness.py subir
+   ```
+
+   Si hay un harness `retenido`, evaluar los pares con el paso 2 de `.cursor/commands/actualizar.md` y repetir
+   `subir`. Si hay alguno `por subir`, mostrar la vista previa y, con la confirmación del usuario, ejecutar
+   `harness.py subir --confirmar`. Sin cambios, seguir sin comentarios.
+
 1. **Bandeja** (sin IA):
 
    ```sh

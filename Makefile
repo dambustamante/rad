@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv estado doctor sync-arquitectura harness-traer coherencia repos terceros historias harness-generar indices actualizar revisar semanal test
+.PHONY: help venv estado doctor sync-arquitectura harness-traer coherencia repos terceros historias harness-generar harness-al-dia indices actualizar revisar semanal test
 
 help: ## Lista los comandos disponibles
 	@echo "Uso habitual:"
@@ -45,8 +45,10 @@ historias: $(ENTORNO) #- Sincroniza las historias de usuario de los productos qu
 harness-traer: $(ENTORNO) #- Trae la última versión de cada harness de producto (git pull de la copia local)
 	-@$(PYTHON) herramientas/harness.py traer
 
-harness-generar: $(ENTORNO) #- Regenera lo generado en cada harness y hace commit local si cambió (el push es manual)
+harness-generar: $(ENTORNO) #- Regenera lo generado en cada harness y hace commit local si cambió (el push es con confirmación)
 	-@$(PYTHON) herramientas/harness.py generar
+
+harness-al-dia: sync-arquitectura harness-traer coherencia harness-generar #- Reglas de arquitectura y de equipo al día en cada harness, sin subirlas
 
 indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py

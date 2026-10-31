@@ -5,14 +5,16 @@ Uso:
   python herramientas/harness.py traer [<producto>]       git pull de la copia local (antes de la coherencia)
   python herramientas/harness.py generar [<producto>]     regenera lo generado y hace commit si cambió
   python herramientas/harness.py guardar <producto> --mensaje TEXTO   commit de los ADR de decisiones/
+  python herramientas/harness.py subir [<producto>] [--confirmar]   vista previa o push de lo generado
   python herramientas/harness.py estado [<producto>]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
 La copia de radiografia vive en productos/<producto>/harness/ (fuera de git de radiografia) y es un repositorio
-propio. radiografia escribe ahí y hace commit; el push es manual. Dueños de cada parte:
+propio. radiografia escribe ahí y hace commit; el push se hace solo con `subir --confirmar`. Dueños de cada parte:
 
-- generado por radiografia (se regenera; no se edita): .cursor/rules/generado/, repos.json, GENERADO.json,
+- generado por radiografia (se regenera; no se edita): .cursor/rules/generado/, .cursor/arquitectura/,
+  arquitectura.json, repos.json, GENERADO.json,
   decisiones/INDICE.md y decisiones/COHERENCIA.md;
 - del equipo (se crean una vez desde la plantilla y después se mantienen por MR): AGENTS.md, README.md,
   Makefile, herramientas/, .cursor/hooks.json y los ADR de decisiones/.
@@ -32,14 +34,17 @@ from pathlib import Path
 import hallazgos as registro_hallazgos
 import productos
 import terceros
+import coherencia as coherencia_decisiones
 from coherencia import leer_arquitectura_vigente, leer_decisiones_producto, sigla_de, suspendidos as criterios_suspendidos
 from comun import RAIZ, ErrorRadiografia, git, leer_json, normalizar
 from revisar import decisiones_con_criterios
 
 PLANTILLA = Path(__file__).resolve().parent / "plantilla_harness"
-GENERADOS = ("repos.json", "config.json", "contexto.json", "lenguaje.json", "GENERADO.json", ".cursor/rules/generado/")
+GENERADOS = ("repos.json", "config.json", "contexto.json", "lenguaje.json", "GENERADO.json", "arquitectura.json",
+             ".cursor/rules/generado/", ".cursor/arquitectura/")
 MAXIMO_HALLAZGOS = 15
 LARGO_RESUMEN = 700
+MAXIMO_EXTRACTO = 1500
 ORDEN_SEVERIDAD = {"bloqueante": 0, "alta": 1, "media": 2, "baja": 3}
 PREFIJO_ID = re.compile(r"^[A-Z]+-[0-9]+:\s*")
 COMO_CODIGO = ("automática", "revisión de código", "automática + revisión de código")
@@ -69,7 +74,9 @@ def texto_decisiones(raiz: Path, producto: str) -> str:
     lineas = ["---", f"description: Decisiones que el código de {producto} debe cumplir (generado por radiografia; no se edita)",
               "alwaysApply: true", "---", "", f"# Decisiones que aplican a {producto}", "",
               "Generado por radiografia: no se edita. Las decisiones en `propuesta` todavía se están calibrando: "
-              "conviene cumplirlas, pero no bloquean el MR.", "", "## Arquitectura (obligatorio)", ""]
+              "conviene cumplirlas, pero no bloquean el MR.", "", "## Arquitectura (obligatorio)", "",
+              "/hdu trae los extractos relacionados con la historia. Si una regla toca el cambio y no está en el contexto, "
+              "leer `.cursor/arquitectura/<clave>.md` (los `:` de la clave se escriben `--`).", ""]
     lineas += [f"- `{clave}` {PREFIJO_ID.sub('', d['titulo'])}: {d['regla_rapida'] or 'ver el documento'}"
                for clave, d in sorted(leer_arquitectura_vigente(raiz).items())] or ["Sin documentos de arquitectura vigentes."]
     for titulo, decisiones in (("Equipo", decisiones_con_criterios(raiz)),
@@ -104,6 +111,35 @@ def seccion_asis(texto: str, nombre: str) -> str:
     coincidencia = re.search(rf"^## {re.escape(nombre)}\s*\n(.*?)(?=^## |\Z)", texto, re.MULTILINE | re.DOTALL)
     resumen = " ".join(coincidencia.group(1).split()) if coincidencia else ""
     return (resumen[:LARGO_RESUMEN] + "…") if len(resumen) > LARGO_RESUMEN else resumen
+
+
+def archivo_arquitectura(clave: str) -> str:
+    return f".cursor/arquitectura/{re.sub(r'[^A-Za-z0-9._-]+', '--', clave)}.md"
+
+
+def extracto_arquitectura(raiz: Path, clave: str, documento: dict) -> str:
+    """Decisión, regla rápida y criterios, con un máximo de caracteres; sin esas secciones, solo los títulos."""
+    texto = coherencia_decisiones.extracto(raiz, clave).replace(f" ({documento['archivo']})", "")
+    if "(sin secciones" in texto:
+        titulos = [l for l in documento["texto"].splitlines() if l.startswith("#")]
+        texto = "\n".join([f"# {clave}: {documento['titulo']}", "Sin secciones Decisión, Regla rápida ni Criterios. Títulos:", *titulos])
+    if len(texto) > MAXIMO_EXTRACTO:
+        texto = texto[:MAXIMO_EXTRACTO].rstrip() + " […]"
+    return texto
+
+
+def indice_arquitectura(raiz: Path, vigentes: dict[str, dict]) -> str:
+    """Lo que /hdu cruza con la historia, y los commits de arquitectura con los que se generó."""
+    fuentes = leer_json(raiz / "arquitectura" / "estado" / "fuentes.lock")
+    return json.dumps({
+        "fuentes": {f: {"url": d["url"], "ref": d["ref"], "commit": d["commit"]} for f, d in sorted(fuentes.items())},
+        "documentos": [{"clave": c, "titulo": d["titulo"], "regla_rapida": d["regla_rapida"], "archivo": archivo_arquitectura(c),
+                        "extracto": extracto_arquitectura(raiz, c, d)} for c, d in sorted(vigentes.items())]},
+        indent=2, ensure_ascii=False) + "\n"
+
+
+def sin_regla_rapida(raiz: Path) -> list[str]:
+    return sorted(c for c, d in leer_arquitectura_vigente(raiz).items() if not d["regla_rapida"])
 
 
 def texto_repo(raiz: Path, producto: str, repo: dict, registro: dict) -> str:
@@ -156,6 +192,9 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
             indent=2, ensure_ascii=False) + "\n",
         ".cursor/rules/generado/decisiones.mdc": texto_decisiones(raiz, producto),
     }
+    vigentes = leer_arquitectura_vigente(raiz)
+    archivos["arquitectura.json"] = indice_arquitectura(raiz, vigentes)
+    archivos.update({archivo_arquitectura(c): d["texto"] for c, d in vigentes.items()})
     for repo in activos:
         archivos[f".cursor/rules/generado/repo-{repo['id']}.mdc"] = texto_repo(raiz, producto, repo, registro)
     from jira import config_jira
@@ -351,6 +390,39 @@ def generar(raiz: Path, producto: str) -> dict:
     return {"cambiados": cambiados + agregados, "commit": hecho, "version": version, "avisos": avisos}
 
 
+def pares_pendientes(raiz: Path, producto: str) -> int:
+    return sum(coherencia_decisiones.preparar(ambito)["total_pares"]
+               for ambito in (coherencia_decisiones.ambito_equipo(raiz), coherencia_decisiones.ambito_producto(raiz, producto)))
+
+
+def subir(raiz: Path, producto: str, confirmar: bool) -> dict:
+    """Trae, regenera y muestra (o sube, con confirmación) lo que falta. Retiene el harness con coherencia pendiente."""
+    destino = ruta(raiz, producto)
+    traido = traer(raiz, producto)
+    if traido != "actualizado":
+        return {"resultado": "bloqueado", "detalle": traido}
+    pendientes = pares_pendientes(raiz, producto)
+    if pendientes:
+        return {"resultado": "retenido", "detalle": f"{pendientes} par(es) de coherencia por evaluar: evaluarlos con /actualizar antes de subir"}
+    generar(raiz, producto)
+    e = estado(raiz, producto)
+    if not e["sin_subir"]:
+        return {"resultado": "al dia", "detalle": f"versión {e['version']}"}
+    if e["rama"] not in ("main", "master"):
+        return {"resultado": "bloqueado", "detalle": f"la copia está en la rama {e['rama']}: se sube solo desde la rama principal"}
+    try:
+        cambios = git("diff", "--stat", "@{u}..HEAD", cwd=destino)
+    except ErrorRadiografia:
+        cambios = "primer push: todo el repositorio"
+    if not confirmar:
+        return {"resultado": "por subir", "detalle": f"versión {e['version']}, {e['sin_subir']} commit(s)\n{cambios}"}
+    try:
+        git("push", "--quiet", "-u", "origin", "HEAD", cwd=destino)
+    except ErrorRadiografia as error:
+        return {"resultado": "bloqueado", "detalle": f"el push falló: {error}"}
+    return {"resultado": "subido", "detalle": f"versión {e['version']}, {e['sin_subir']} commit(s)"}
+
+
 def guardar(raiz: Path, producto: str, mensaje: str) -> bool:
     destino = ruta(raiz, producto)
     indices_decisiones(raiz, producto)
@@ -383,6 +455,9 @@ def main(argumentos: list[str] | None = None) -> int:
     for nombre in ("traer", "generar", "estado"):
         p = sub.add_parser(nombre)
         p.add_argument("producto", nargs="?")
+    p = sub.add_parser("subir")
+    p.add_argument("producto", nargs="?")
+    p.add_argument("--confirmar", action="store_true", help="hace el push; sin esto solo muestra la vista previa")
     p = sub.add_parser("guardar")
     p.add_argument("producto")
     p.add_argument("--mensaje", required=True)
@@ -408,6 +483,15 @@ def main(argumentos: list[str] | None = None) -> int:
                 print(f"  harness-{nombre}: {detalle}")
                 for aviso in r["avisos"]:
                     print(f"    La plantilla cambió {aviso}: revisar si el cambio se lleva al harness (por MR).")
+            faltantes = sin_regla_rapida(raiz)
+            if faltantes:
+                print(f"  Documentos de arquitectura vigentes sin regla rápida: {', '.join(faltantes)}")
+        elif o.accion == "subir":
+            resultados = {nombre: subir(raiz, nombre, o.confirmar) for nombre in con_harness(raiz, o.producto)}
+            for nombre, r in resultados.items():
+                print(f"  harness-{nombre}: {r['resultado']} ({r['detalle']})")
+            if any(r["resultado"] in ("bloqueado", "retenido") for r in resultados.values()):
+                return 1
         elif o.accion == "guardar":
             print("Commit hecho en decisiones/." if guardar(raiz, o.producto, o.mensaje) else "Sin cambios en decisiones/.")
         elif o.accion == "estado":

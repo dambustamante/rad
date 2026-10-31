@@ -2,7 +2,7 @@
 
 Cerrar una historia antes de abrir su MR. Uso: `/listo <CLAVE>`.
 
-1. **Preparar** (sin IA; exige todo en commits):
+1. **Preparar** (sin IA; exige todo en commits; primero trae la última versión de las reglas):
 
    ```sh
    python3 herramientas/listo.py preparar <CLAVE>

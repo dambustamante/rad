@@ -127,9 +127,17 @@ def verificar(repo: dict) -> dict:
 
 def preparar(clave: str) -> Path:
     tomada, repos = repos_de_la_historia(clave)
+    version_previa = hdu.version_harness()
+    try:
+        hdu.actualizar_harness()
+        reglas = f"harness versión {hdu.version_harness()}" + (f" (cambió desde la versión {version_previa}: contrastar con las reglas nuevas)"
+                                                               if hdu.version_harness() != version_previa else "")
+    except hdu.ErrorHdu as error:
+        reglas = f"NO DETERMINADO - {error}"
     resultados = [verificar(r) for r in repos]
     lineas = [f"# /listo de {clave}: {tomada['titulo']}", "",
-              f"- Medición HU: {tomada.get('medicion') or 'vacía'} ({tomada.get('evaluacion_medicion')})", "",
+              f"- Medición HU: {tomada.get('medicion') or 'vacía'} ({tomada.get('evaluacion_medicion')})",
+              f"- Reglas: {reglas}", "",
               "## Criterios de aceptación (cada uno necesita su prueba)", ""]
     lineas += [f"{i}. {c}" for i, c in enumerate(tomada.get("criterios") or [], start=1)] or ["NO DETERMINADO: sin criterios."]
     for r in resultados:

@@ -16,8 +16,7 @@ no tiene fuentes, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
 
    Si falla en el paso de herramientas (`doctor`), informar qué falta y cómo instalarlo, y
    detenerse. Si la sincronización informa errores, informarlos y continuar con lo disponible.
-   Si algún harness de producto tuvo cambios generados, recordar que el commit es local: el push lo
-   hace el usuario (`git -C productos/<producto>/harness push`).
+   Si algún harness de producto tuvo cambios generados, el commit es local: se suben en el paso 3.
 
 2. **Coherencia.** La salida tiene una sección por ámbito: `[equipo]` (ADR-EQ frente a arquitectura)
    y `[<producto>]` (ADR de producto frente a arquitectura y a los ADR-EQ, que aparecen como
@@ -66,7 +65,10 @@ no tiene fuentes, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
    listan todos los errores. Copiar la cita de nuevo desde el documento, nunca reformularla. Al
    registrar, el script regenera el `COHERENCIA.md` del ámbito e informa los pares que quedan.
 
-3. **Responder** con este formato:
+3. **Subir los harness.** Ejecutar `.venv/bin/python herramientas/harness.py subir` (vista previa). Con la
+   confirmación del usuario, repetir con `--confirmar`. Un harness con coherencia pendiente queda retenido.
+
+4. **Responder** con este formato:
 
    ```markdown
    ## Resultado de /actualizar
@@ -83,10 +85,11 @@ no tiene fuentes, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
    duplicación con su recomendación>
 
    ### Requiere atención
-   <documentos NO DETERMINADO con su motivo y la acción sugerida; errores de sincronización>
+   <documentos NO DETERMINADO con su motivo y la acción sugerida; documentos vigentes sin regla rápida;
+   errores de sincronización>
    ```
 
-4. Para cada documento `NO DETERMINADO` por un estado desconocido, sugerir agregar ese valor a la
+5. Para cada documento `NO DETERMINADO` por un estado desconocido, sugerir agregar ese valor a la
    lista que corresponda en `arquitectura.estados` de `harness.yaml`. No modificar `harness.yaml`
    sin confirmación del usuario.
 

@@ -41,8 +41,10 @@ Abrir **esta carpeta** en Cursor, no la de un repositorio.
 
 ## Qué no se edita a mano
 
-`.cursor/rules/generado/`, los `.json` de la raíz y los índices de `decisiones/` los genera radiografia
+`.cursor/rules/generado/`, `.cursor/arquitectura/`, los `.json` de la raíz y los índices de `decisiones/` los genera radiografia
 y llegan con `make actualizar`. El resto se cambia por MR a este repositorio.
+
+`/hdu` y `/listo` traen solas la última versión de las reglas antes de empezar.
 
 La guardia (`.cursor/hooks.json`) bloquea el push a `main`, el `--force` y aprobar o mergear MR desde
 Cursor.

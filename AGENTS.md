@@ -26,7 +26,7 @@ guía paso a paso: [README.md](README.md) y [docs/](docs/README.md).
 
 1. **Solo lectura sobre lo ajeno.** `productos/*/repos/`, `.cache/ramas/` y `arquitectura/` no se editan.
    La copia del harness de cada producto (`productos/*/harness/`) sí se escribe, con commit local: el
-   push lo hace el usuario.
+   push se hace solo con `harness.py subir --confirmar`, después de la vista previa.
    Nunca commit, push, merge, MR ni PR en los repositorios de los productos. Lo único que se escribe en
    la plataforma git es el comentario de una revisión de rama en su MR o PR.
 2. **Nada sale sin confirmación.** Nada hacia la plataforma git, Sonar o Jira sin vista previa y
