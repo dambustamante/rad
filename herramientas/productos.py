@@ -46,7 +46,7 @@ nombre: {nombre}
 descripcion: ""
 # heredado (se recibe de otro equipo y se toma el control) | nuevo (se construye desde el inicio)
 origen: {origen}
-# Sigla para numerar los ADR del producto (ADR-{sigla}-001). Se cambia con `productos.py sigla` mientras no haya ADR.
+# Sigla para numerar los ADR del producto (ADR-{sigla}-001). Queda fija al crear el producto.
 sigla: {sigla}
 
 # Ubicación del C4 del producto (ADR-EQ-006), en formato <id-repo>:<ruta>. null si aún no existe.
@@ -117,6 +117,8 @@ def asignar_sigla(raiz: Path, producto: str, sigla: str) -> None:
         raise ErrorRadiografia(f"La sigla '{sigla}' ya está en uso o reservada.")
     if any(carpeta_decisiones_producto(raiz, producto).glob("ADR-*.md")):
         raise ErrorRadiografia("El producto ya tiene ADR: su sigla no se puede cambiar.")
+    if (raiz / "productos" / producto / "harness" / ".git").exists():
+        raise ErrorRadiografia("El producto ya tiene harness: su sigla no se puede cambiar.")
     datos = leer_yaml_conservador(archivo)
     datos["sigla"] = sigla
     escribir_yaml_conservador(archivo, datos)
@@ -408,6 +410,15 @@ def sincronizar(raiz: Path, producto: str | None = None) -> list[dict]:
 
 # --- Programa principal ------------------------------------------------------------------------
 
+def crear_harness(raiz: Path, producto: str) -> None:
+    """Todo producto nace con su harness."""
+    import harness  # import local: harness.py usa este módulo
+    relativa = harness.crear(raiz, producto)["ruta"].relative_to(raiz)
+    print(f"Harness creado en {relativa} (commit inicial en main).\n"
+          f"  Para subirlo: crear el repositorio harness-{producto} en GitLab y ejecutar\n"
+          f"    git -C {relativa} remote add origin <url> && git -C {relativa} push -u origin main")
+
+
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Administra los productos y sus repositorios.")
     parser.add_argument("--raiz", type=Path, default=RAIZ, help="raíz de radiografia (para pruebas)")
@@ -422,8 +433,6 @@ def main(argumentos: list[str] | None = None) -> int:
     p_agregar.add_argument("--rama", required=True)
     p_agregar.add_argument("--tipo", required=True, choices=TIPOS_REPO)
     p_agregar.add_argument("--sonar")
-    p_agregar.add_argument("--descripcion", help="descripción del producto; se usa solo al crearlo")
-    p_agregar.add_argument("--origen", default="heredado", choices=ORIGENES, help="se usa solo al crear el producto")
     p_crear = sub.add_parser("crear", help="crea un producto sin repositorios")
     p_crear.add_argument("--producto", required=True)
     p_crear.add_argument("--origen", required=True, choices=ORIGENES)
@@ -456,16 +465,16 @@ def main(argumentos: list[str] | None = None) -> int:
         elif opciones.accion == "inspeccionar":
             print(json.dumps(inspeccionar(opciones.url, raiz), indent=2, ensure_ascii=False))
         elif opciones.accion == "agregar":
-            creado = agregar(raiz, opciones.producto, opciones.id, opciones.url, opciones.rama, opciones.tipo,
-                             opciones.sonar, opciones.descripcion, opciones.origen)
-            if creado:
-                sigla = leer_productos(raiz)[opciones.producto].get("sigla")
-                print(f"Producto '{opciones.producto}' creado con la sigla {sigla} (se puede cambiar mientras no tenga ADR).")
+            validar_nombre(opciones.producto, "nombre de producto")
+            if not archivo_producto(raiz, opciones.producto).exists():
+                raise ErrorRadiografia(f"No existe el producto '{opciones.producto}'. Crearlo primero con: productos.py crear")
+            agregar(raiz, opciones.producto, opciones.id, opciones.url, opciones.rama, opciones.tipo, opciones.sonar, None)
             print(f"Repositorio '{opciones.id}' agregado al producto '{opciones.producto}'.")
         elif opciones.accion == "crear":
             crear(raiz, opciones.producto, opciones.descripcion, opciones.origen, opciones.sigla)
             sigla = leer_productos(raiz)[opciones.producto].get("sigla")
             print(f"Producto '{opciones.producto}' ({opciones.origen}) creado con la sigla {sigla}, sin repositorios.")
+            crear_harness(raiz, opciones.producto)
         elif opciones.accion == "retirar":
             retirar(raiz, opciones.producto, opciones.id, opciones.motivo)
             print(f"Repositorio '{opciones.id}' retirado del producto '{opciones.producto}'.")

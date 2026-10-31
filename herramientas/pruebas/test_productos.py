@@ -9,6 +9,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -69,6 +70,8 @@ class PruebaProductos(unittest.TestCase):
         return codigo, salida.getvalue()
 
     def agregar(self, producto: str, id_repo: str, url: Path | str, rama: str, *extra: str) -> tuple[int, str]:
+        if producto.islower() and not productos.archivo_producto(self.raiz, producto).exists():
+            productos.crear(self.raiz, producto, None, "heredado")
         return self.ejecutar("agregar", "--producto", producto, "--id", id_repo, "--url", str(url),
                              "--rama", rama, "--tipo", "propio", *extra)
 
@@ -91,11 +94,13 @@ class PruebaProductos(unittest.TestCase):
         self.assertEqual(datos["stack"], ["Node.js", "TypeScript", "NestJS"])
         self.assertIsNone(datos["sonar_detectado"])
 
-    def test_agregar_crea_el_producto_y_valida(self) -> None:
-        codigo, salida = self.agregar("motor-fraudes", "fraude-core", self.java, "main",
-                                      "--sonar", "banco_fraude-core", "--descripcion", "Motor de fraudes")
+    def test_agregar_exige_el_producto_y_valida(self) -> None:
+        codigo, salida = self.ejecutar("agregar", "--producto", "motor-fraudes", "--id", "fraude-core", "--url", str(self.java),
+                                       "--rama", "main", "--tipo", "propio")
+        self.assertEqual(codigo, 1)
+        self.assertIn("Crearlo primero", salida)
+        codigo, salida = self.agregar("motor-fraudes", "fraude-core", self.java, "main", "--sonar", "banco_fraude-core")
         self.assertEqual(codigo, 0, salida)
-        self.assertIn("Producto 'motor-fraudes' creado con la sigla MF", salida)
         codigo, salida = self.agregar("motor-fraudes", "fraude-backoffice", self.node, "rama-inexistente")
         self.assertEqual(codigo, 1)
         self.assertIn("La ref 'rama-inexistente' no existe", salida)
@@ -104,7 +109,6 @@ class PruebaProductos(unittest.TestCase):
 
         texto = (self.raiz / "productos" / "motor-fraudes" / "producto.yaml").read_text(encoding="utf-8")
         self.assertIn("# Producto motor-fraudes. Se administra con el comando /producto", texto)
-        self.assertIn("Motor de fraudes", texto)
         self.assertIn("c4: null", texto)
         self.assertIn("sonar: null", texto, "un valor vacío se escribe como null explícito")
         self.assertIn("sonar: banco_fraude-core", texto)
@@ -121,20 +125,21 @@ class PruebaProductos(unittest.TestCase):
         self.assertEqual(codigo, 1)
         self.assertIn("debe ir en minúsculas", salida)
 
-    def test_crear_sin_repositorios_origen_y_portafolio(self) -> None:
+    @mock.patch.object(productos, "crear_harness")
+    def test_crear_sin_repositorios_origen_y_portafolio(self, crear_harness: mock.Mock) -> None:
         codigo, salida = self.ejecutar("crear", "--producto", "motor-fraude", "--origen", "nuevo",
                                        "--descripcion", "Motor de fraude propio", "--sigla", "MF")
         self.assertEqual(codigo, 0, salida)
         self.assertIn("Producto 'motor-fraude' (nuevo) creado con la sigla MF, sin repositorios.", salida)
         datos = productos.leer_productos(self.raiz)["motor-fraude"]
         self.assertEqual((datos["origen"], datos["sigla"], len(datos["repos"])), ("nuevo", "MF", 0))
+        crear_harness.assert_called_once_with(self.raiz.resolve(), "motor-fraude")
         self.assertEqual(self.ejecutar("crear", "--producto", "motor-fraude", "--origen", "nuevo", "--descripcion", "x")[0], 1)
         codigo, salida = self.ejecutar("crear", "--producto", "3ds", "--origen", "heredado", "--descripcion", "3DS", "--sigla", "MF")
         self.assertIn("ya está en uso", salida)
         self.assertEqual(self.ejecutar("crear", "--producto", "3ds", "--origen", "heredado", "--descripcion", "3DS",
                                        "--sigla", "TDS")[0], 0)
-        self.ejecutar("agregar", "--producto", "odin", "--id", "odin-core", "--url", str(self.java), "--rama", "main", "--tipo", "propio")
-        self.assertEqual(productos.leer_productos(self.raiz)["odin"]["origen"], "heredado", "al agregar el primer repo, heredado por defecto")
+        self.agregar("odin", "odin-core", self.java, "main")
         portafolio = (self.raiz / "productos" / "INDICE.md").read_text(encoding="utf-8")
         self.assertIn("| [motor-fraude](motor-fraude/INDICE.md) | nuevo | MF | 0 | 0/0 | — | sin revisar | 0 |", portafolio)
         self.assertIn("| [3ds](3ds/INDICE.md) | heredado | TDS |", portafolio)

@@ -88,7 +88,6 @@ equipo/                       nivel 3: decisiones del equipo
 productos/INDICE.md           portafolio: una fila por producto
 productos/<producto>/
 ├── INDICE.md · producto.yaml
-├── decisiones/               ADR-<SIGLA>-NNN (nivel 4), solo si el producto todavía no tiene harness
 ├── terceros/<id>/            ficha.yaml y docs/; terceros/INDICE.md
 ├── historias/                INDICE.md y borradores/ para Jira
 ├── as-is/                    <repo>.md y PRODUCTO.md

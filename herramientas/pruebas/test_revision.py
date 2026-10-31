@@ -72,6 +72,7 @@ class PruebaRevision(unittest.TestCase):
         crear_repo(core, "main", {"README.md": README, "src/main/java/EvaluacionController.java": CONTROLADOR})
         with contextlib.redirect_stdout(io.StringIO()):
             sync_arquitectura.main(["--raiz", str(self.raiz)])
+            productos.crear(self.raiz, "motor-fraudes", None, "heredado")
             productos.main(["--raiz", str(self.raiz), "agregar", "--producto", "motor-fraudes", "--id", "fraude-core",
                             "--url", str(core), "--rama", "main", "--tipo", "propio"])
             self.automatica = revisar.revisar(self.raiz, "motor-fraudes", usar_sonar=False)

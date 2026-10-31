@@ -1,8 +1,7 @@
 # /producto
 
-Crea un producto o administra sus repositorios: agregar repositorios nuevos o retirar uno.
-Uso: `/producto <nombre>` (por ejemplo `/producto motor-fraudes`), o `/producto <nombre> harness` para crear el
-harness del producto (ver "Harness del producto").
+Crea un producto con su harness o administra sus repositorios: agregar repositorios nuevos o retirar uno.
+Uso: `/producto <nombre>` (por ejemplo `/producto motor-fraudes`).
 
 La parte determinista la hace `herramientas/productos.py`. Nunca editar `producto.yaml` a mano en
 este comando: siempre mediante el script.
@@ -28,10 +27,10 @@ este comando: siempre mediante el script.
      .venv/bin/python herramientas/productos.py crear --producto <producto> --origen <heredado|nuevo> --descripcion "<frase>" [--sigla <SIGLA>]
      ```
 
-     Un producto nuevo puede quedar sin repositorios hasta que tenga código. La sigla se cambia con
-     `productos.py sigla <producto> --asignar <SIGLA>` mientras el producto no tenga ADR.
+     El script crea también el harness: seguir `.cursor/partes/producto-harness.md` para subirlo. Un producto
+     nuevo puede quedar sin repositorios hasta que tenga código. La sigla queda fija al crearlo.
    - Producto **heredado**: seguir con los repositorios y, al terminar, sugerir la toma de control con
-     `/revisar <producto>` (un repositorio por chat) y después `/producto <producto> harness`.
+     `/revisar <producto>` (un repositorio por chat).
 
 2. **Para agregar**, pedir los repositorios, uno por línea. Se aceptan URL SSH o HTTPS de GitLab
    o GitHub y rutas de carpetas locales con un repositorio git.
@@ -64,10 +63,10 @@ este comando: siempre mediante el script.
 5. **Agregar los repositorios confirmados**, uno por uno:
 
    ```sh
-   .venv/bin/python herramientas/productos.py agregar --producto <producto> --id <id> --url "<url>" --rama <rama> --tipo <tipo> [--sonar <clave>] [--descripcion "<descripción>"]
+   .venv/bin/python herramientas/productos.py agregar --producto <producto> --id <id> --url "<url>" --rama <rama> --tipo <tipo> [--sonar <clave>]
    ```
 
-   `--descripcion` se usa solo con el primer repositorio de un producto nuevo. Si el script rechaza
+   Si el script rechaza
    un repositorio, mostrar el motivo y pedir la corrección.
 
 6. **Para retirar**, pedir el motivo, confirmar y ejecutar:
@@ -84,18 +83,16 @@ este comando: siempre mediante el script.
    .venv/bin/python herramientas/productos.py sincronizar --producto <producto>
    ```
 
-8. **Cerrar** con la tabla final del producto y el resultado de la descarga, y sugerir
+8. **Actualizar el harness:** `.venv/bin/python herramientas/harness.py generar <producto>`, para que reciba
+   los repositorios nuevos o retirados.
+
+9. **Cerrar** con la tabla final del producto y el resultado de la descarga, y sugerir
    `/revisar <producto>` para obtener la línea base AS IS de los repositorios nuevos.
 
 ## Terceros
 
 Para registrar o completar el producto comprado y las integraciones, leer y seguir
 `.cursor/partes/producto-terceros.md`.
-
-## Harness del producto (`/producto <nombre> harness`)
-
-Para crear el espacio de trabajo del producto (`harness-<producto>`), leer y seguir
-`.cursor/partes/producto-harness.md`.
 
 ## Reglas
 

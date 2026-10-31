@@ -135,6 +135,7 @@ class PruebaRevisar(unittest.TestCase):
         crear_repo(self.config, "main", {"application-prod.properties": f"aws.key={SECRETO_FALSO}\n"})
 
         with contextlib.redirect_stdout(io.StringIO()):
+            productos.crear(self.raiz, "motor-fraudes", None, "heredado")
             productos.main(["--raiz", str(self.raiz), "agregar", "--producto", "motor-fraudes", "--id", "fraude-core",
                             "--url", str(self.core), "--rama", "main", "--tipo", "propio", "--sonar", "banco_fraude-core"])
             productos.main(["--raiz", str(self.raiz), "agregar", "--producto", "motor-fraudes", "--id", "fraude-config",

@@ -7,7 +7,7 @@
 ```
 
 1. Si el producto no existe, Cursor pide una descripción de una frase, el **origen** y la **sigla**,
-   y lo crea en `productos/motor-fraudes/producto.yaml`:
+   y lo crea en `productos/motor-fraudes/producto.yaml`, junto con su harness:
 
    ```sh
    .venv/bin/python herramientas/productos.py crear --producto motor-fraude --origen nuevo \
@@ -16,15 +16,11 @@
 
    | Origen | Qué es | Cómo sigue |
    |---|---|---|
-   | `heredado` | se recibe de otro equipo | toma de control: repositorios, terceros, línea base con `/revisar` y harness |
-   | `nuevo` | se construye desde el inicio | puede quedar sin repositorios hasta tener código; conviene crear su harness temprano |
+   | `heredado` | se recibe de otro equipo | toma de control: repositorios, terceros y línea base con `/revisar` |
+   | `nuevo` | se construye desde el inicio | puede quedar sin repositorios hasta tener código |
 
-2. La **sigla** numera sus ADR (`MF` → `ADR-MF-001`). Si no se indica, el script propone una. Se puede
-   cambiar mientras el producto no tenga ADR:
-
-   ```sh
-   .venv/bin/python herramientas/productos.py sigla motor-fraude --asignar MFR
-   ```
+2. La **sigla** numera sus ADR (`MF` → `ADR-MF-001`). Si no se indica, el script propone una. Queda fija al
+   crear el producto, porque el harness la usa.
 
 3. Todos los productos aparecen en **`productos/INDICE.md`**, el portafolio generado: origen, sigla,
    repositorios, línea base, harness, veredicto y hallazgos bloqueantes o altos abiertos.

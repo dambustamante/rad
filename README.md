@@ -1,56 +1,72 @@
 # radiografia
 
-Herramienta para gobernar productos de software desde [Cursor](https://cursor.com). Mira el código tal
-como está hoy, lo compara con las reglas decididas y deja por escrito, con evidencia, qué se cumple y
-qué no.
+Muestra el estado real de cada producto y de sus repositorios: qué hacen, cómo están construidos, qué
+componentes e integraciones tienen y qué reglas cumplen o no, con evidencia. También entrega esas reglas
+al repositorio donde se desarrolla cada producto. Nunca modifica el código que revisa.
 
-Las reglas tienen un orden de autoridad. Cuando dos hablan de lo mismo, manda la de arriba:
+```text
+Entra
+  ADR de arquitectura
+  Estándares de arquitectura
+  ADR de equipo
+  ADR de producto
+  Código, documentación y MR de los productos
+  Sonar
+  Historias de Jira
+  Documentos de terceros
+        │
+        ▼
+ ┌─────────────┐
+ │ radiografia │
+ └─────────────┘
+        │
+        ▼
+Sale
+  Estado de cada producto y repositorio
+  Reglas para cada harness
+  Comentario en el MR
+  Tareas, Spikes, Errores y Hotfix en Jira
+```
 
-1. ADR de arquitectura
-2. Estándares de arquitectura
-3. Decisiones del equipo (ADR-EQ): aplican a todos los productos
-4. Decisiones del producto (ADR-\<SIGLA\>): aplican a un producto y no contradicen las del equipo
-5. Sonar
+El estado queda en radiografia. Lo que se publica fuera (reglas, comentarios y Jira) necesita
+confirmación. Los documentos de terceros se copian a mano en
+`productos/<producto>/terceros/<id>/docs/`.
 
-> Un **ADR** es un documento corto que registra una decisión técnica y la regla que deja. Un
-> **hallazgo** es un incumplimiento concreto, con archivo y línea. Un **MR** es la propuesta de cambio
-> que se revisa antes de integrarla. Más términos en [Conceptos](docs/02-conceptos.md).
+## Términos
 
-## Dos repositorios
+| Término | Qué es |
+|---|---|
+| **ADR** | Documento corto que registra una decisión técnica y la regla que deja |
+| **Hallazgo** | Incumplimiento concreto de una regla, con archivo y línea |
+| **MR** | Merge Request: propuesta de cambio que se revisa antes de integrarla |
+| **Harness** | Repositorio donde se desarrolla un producto. Hay uno por producto |
+
+Más términos en [Conceptos](docs/02-conceptos.md).
+
+## Dos repositorios distintos
 
 | | radiografia | harness-\<producto\> |
 |---|---|---|
-| Para qué | gobernar: decisiones, estado del código, revisión de MR y deuda | desarrollar las historias de Jira de un producto |
-| Cuántos | uno | uno por producto, generado por radiografia |
-| Repositorios del producto | copias de solo lectura | se desarrollan en `code/` |
-| Comandos | `/estado` `/actualizar` `/producto` `/revisar` `/triar` `/crear` | `/hdu` `/listo` |
+| **Para qué sirve** | Mostrar el estado real, publicar las reglas y revisar MR | Desarrollar las historias de Jira |
+| **Cuántos hay** | Uno | Uno por producto |
+| **Código de los productos** | Copias de solo lectura | Se modifica en `code/` |
+| **Comandos** | `/estado` `/actualizar` `/producto` `/revisar` `/triar` `/crear` | `/hdu` `/listo` |
 
-```mermaid
-flowchart LR
-    ARQ["Arquitectura<br/>ADR y estándares"] -->|se descarga| RAD
-    subgraph RAD["radiografia"]
-        DEC["Decisiones y coherencia"]
-        ASIS["Estado de cada repositorio"]
-        REV["Revisión de MR y deuda"]
-    end
-    subgraph HAR["harness-producto"]
-        REGLAS["Reglas generadas"]
-        HDU["/hdu toma una historia"]
-        CODE["code/"]
-        LISTO["/listo verifica y arma el MR"]
-    end
-    DEC & ASIS -->|compilan| REGLAS --> HDU --> CODE --> LISTO --> MR["MR"] -->|revisión| REV
-    JIRA["Jira"] -->|historia| HDU
-    REV -->|deuda, con confirmación| JIRA
-    CODE -.->|solo lectura| ASIS
-```
+Este documento explica radiografia. El harness tiene [su propio README](herramientas/plantilla_harness/README.md).
 
-radiografia no modifica el código que revisa, no inventa (toda afirmación lleva evidencia) y no escribe
-nada fuera sin vista previa y confirmación. Detalle en [Cómo gobierna](docs/09-harness.md).
+## Qué regla manda
+
+Si dos reglas tratan lo mismo, se aplica la de número menor:
+
+1. ADR de arquitectura
+2. Estándares de arquitectura
+3. Decisiones del equipo (`ADR-EQ`): aplican a todos los productos
+4. Decisiones del producto (`ADR-<SIGLA>`): aplican a un producto
+5. Sonar
 
 ## Empezar
 
-Requisitos: Python 3.11, `git`, `make`, Cursor y `gitleaks`; acceso de lectura a los repositorios y un
+Se necesita Python 3.11, `git`, `make`, Cursor, `gitleaks`, acceso de lectura a los repositorios y un
 token de Sonar.
 
 ```sh
@@ -63,20 +79,36 @@ Abrir la carpeta en Cursor y escribir `/estado`: indica qué hacer a continuaci�
 
 ## Comandos
 
-| Comando | Cuándo | Qué hace |
+| Comando | Para qué sirve |
+|---|---|
+| `/estado` | Ver qué está pendiente y qué sigue |
+| `/estado semanal` | Ver qué cambió en la semana |
+| `/actualizar` | Traer las reglas nuevas de arquitectura y publicarlas en los harness |
+| `/actualizar fuentes` | Agregar o retirar un repositorio de arquitectura |
+| `/producto <nombre>` | Registrar un producto y crear su harness |
+| `/revisar <producto>` | Revisar un repositorio del producto y dejar su estado y sus hallazgos |
+| `/revisar mr` | Revisar los MR abiertos |
+| `/triar <producto>` | Decidir qué hacer con cada hallazgo |
+| `/crear <producto>` | Crear un ADR o una incidencia de Jira |
+
+## Una semana de ejemplo
+
+Esta semana se recibe el producto `motor-fraudes`.
+
+| Cuándo | Qué se necesita | Comando |
 |---|---|---|
-| `/estado [semanal]` | al empezar | qué hay pendiente y qué sigue; con `semanal`, qué cambió en la semana |
-| `/actualizar [fuentes]` | cada semana | descarga arquitectura, verifica la coherencia de las decisiones y actualiza los harness |
-| `/producto <nombre> [harness]` | al recibir o iniciar un producto | registra el producto, sus repositorios y sus terceros; con `harness`, crea su harness |
-| `/revisar <producto> [repo]` | al tomar el control y cuando el código cambia | revisa un repositorio y deja su estado, hallazgos y veredicto. Un chat por repositorio |
-| `/revisar mr` | cada día | bandeja de MR abiertos: revisa uno o la coherencia de un ADR propuesto |
-| `/triar <producto>` | después de revisar | decide qué hacer con cada hallazgo |
-| `/crear <producto>` | cuando hace falta | un ADR, una excepción, o una Tarea, un Spike, un Error o un Hotfix para Jira |
+| **Todos los días** | Saber qué sigue | `/estado` |
+| | Revisar los MR abiertos | `/revisar mr` |
+| **Lunes** | Ver qué cambió | `/estado semanal` |
+| | Traer las reglas nuevas | `/actualizar` |
+| **Martes** | Registrar el producto y crear su harness | `/producto motor-fraudes` |
+| | Revisar sus repositorios, un chat por cada uno | `/revisar motor-fraudes` |
+| **Miércoles** | Decidir qué hacer con los hallazgos | `/triar motor-fraudes` |
+| | Crear las Tareas en Jira | `/crear motor-fraudes` |
 
-**Primera vez:** `/actualizar fuentes` → `/actualizar` → `/producto` → `/revisar` → `/triar` →
-`/producto <nombre> harness`. **Después:** `/revisar mr` cada día y `/estado semanal` cada semana.
+Antes de la primera semana, se ejecuta una vez `/actualizar fuentes`.
 
-## Resultados
+## Dónde ver los resultados
 
 | Qué | Dónde |
 |---|---|
@@ -85,8 +117,15 @@ Abrir la carpeta en Cursor y escribir `/estado`: indica qué hacer a continuaci�
 | Decisiones del equipo y su coherencia | `equipo/INDICE.md` y `equipo/COHERENCIA.md` |
 | Decisiones de un producto | `decisiones/` de su harness |
 
-## Documentación
+## Garantías
 
-Guía paso a paso en [docs/](docs/README.md). Contrato de trabajo para Cursor en [AGENTS.md](AGENTS.md).
-Decisiones del equipo en [equipo/](equipo/README.md). README de cada harness en
-[herramientas/plantilla_harness/](herramientas/plantilla_harness/README.md).
+- No modifica el código de los productos.
+- Toda afirmación lleva evidencia. Lo que no se pudo verificar queda como `NO DETERMINADO`.
+- Nada sale hacia GitLab, Jira o Sonar sin vista previa y confirmación.
+
+## Más información
+
+- [Guía paso a paso](docs/README.md)
+- [Cómo se gobierna cada harness](docs/09-harness.md)
+- [Decisiones del equipo](equipo/README.md)
+- [Contrato de trabajo para Cursor](AGENTS.md)

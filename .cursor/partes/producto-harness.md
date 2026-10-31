@@ -4,16 +4,9 @@
 `code/`, las decisiones compiladas y los ADR del producto. radiografia lo crea y mantiene en
 `productos/<producto>/harness/`; el primer push lo hace el usuario; los siguientes, `harness.py subir --confirmar`.
 
-1. **Antes de crearlo**, conviene que el producto tenga al menos una revisión de código: lo generado lleva
-   el AS IS, los componentes y los hallazgos de cada repositorio.
-2. **Crear:**
-
-   ```sh
-   .venv/bin/python herramientas/harness.py crear <producto>
-   ```
-
-   Genera la estructura, mueve los ADR del producto a `decisiones/` del harness, hace `git init` y el
-   primer commit. Mostrar qué se movió.
+1. **Se crea con el producto:** `productos.py crear` genera la estructura, hace `git init` y el primer commit.
+2. **Contenido:** lleva las reglas desde el inicio. El AS IS, los componentes y los hallazgos llegan después de
+   `/revisar`, con la siguiente publicación.
 3. **Subirlo** (lo hace el usuario): crear el repositorio `harness-<producto>` en GitLab y ejecutar los
    dos comandos que muestra el script (`remote add` y `push`). Configurar en GitLab que los MR del
    harness necesiten la aprobación de un par dev y del TL.

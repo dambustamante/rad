@@ -44,16 +44,12 @@ harness-motor-fraudes/
 
 ## Crear el harness
 
-```
-/producto motor-fraudes harness
-```
+Todo producto nace con su harness: `/producto motor-fraudes` crea los dos.
 
-1. Conviene tener antes al menos una revisión de código del producto: lo generado lleva su AS IS,
-   componentes y hallazgos.
-2. `harness.py crear motor-fraudes`:
+1. El harness lleva las reglas desde el inicio. El AS IS, los componentes y los hallazgos llegan después de
+   `/revisar`, con la siguiente publicación.
+2. `productos.py crear` llama a `harness.py crear`, que:
    - crea `productos/motor-fraudes/harness/` desde la plantilla (`herramientas/plantilla_harness/`);
-   - **mueve** los ADR del producto de `productos/motor-fraudes/decisiones/` a `decisiones/` del
-     harness: desde ahí los leen la coherencia, `/revisar` y `/crear`;
    - genera las reglas, `repos.json` y los índices;
    - hace `git init` y el primer commit en `main`.
 3. Se crea el repositorio `harness-motor-fraudes` en GitLab, se sube con los dos comandos que muestra

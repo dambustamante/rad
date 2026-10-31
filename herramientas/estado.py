@@ -142,8 +142,8 @@ def que_sigue(estado: dict) -> list[str]:
                              f"(EQ-008.8): `/crear {p['nombre']} adr` con {t['clave']} en Historias de origen.")
         for clave in p["deuda_sin_tarea"]:
             pasos.append(f"{p['nombre']}: {clave} declaró deuda en /listo y no tiene Tarea: `/crear {p['nombre']} tarea --deuda {clave}`.")
-        if p["harness"] is None and p["con_revision"]:
-            pasos.append(f"{p['nombre']}: sin harness para el equipo: `/producto {p['nombre']} harness`.")
+        if p["harness"] is None:
+            pasos.append(f"{p['nombre']}: sin harness: `harness.py crear {p['nombre']}`.")
         elif p["harness"] and p["harness"]["sin_subir"]:
             pasos.append(f"{p['nombre']}: el harness tiene {p['harness']['sin_subir']} commit(s) sin subir: "
                          f"`harness.py subir {p['nombre']}`" + ("" if p["harness"]["remoto"] else " (falta configurar el remoto)") + ".")

@@ -70,7 +70,7 @@ class PruebaHarness(unittest.TestCase):
 
     def test_crear_genera_estructura_y_mueve_los_adr(self) -> None:
         pasos = " ".join(estado.que_sigue(estado.revisar_estado(self.raiz)))
-        self.assertIn("sin harness para el equipo: `/producto motor-fraudes harness`", pasos)
+        self.assertIn("sin harness: `harness.py crear motor-fraudes`", pasos)
         r = harness.crear(self.raiz, "motor-fraudes")
         self.assertEqual(r["movidos"], [self.adr_previo.name])
         self.assertFalse((self.raiz / "productos" / "motor-fraudes" / "decisiones").exists(), "los ADR dejan radiografia")
@@ -216,6 +216,18 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("code/fraude-backoffice/", (self.destino / ".cursorignore").read_text(encoding="utf-8"))
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
+
+    def test_todo_producto_nace_con_su_harness(self) -> None:
+        import productos
+        salida = io.StringIO()
+        with contextlib.redirect_stdout(salida):
+            codigo = productos.main(["--raiz", str(self.raiz), "crear", "--producto", "motor-nuevo", "--origen", "nuevo",
+                                     "--descripcion", "Producto nuevo", "--sigla", "MN"])
+            self.assertEqual(codigo, 0, salida.getvalue())
+            self.assertTrue(harness.existe(self.raiz, "motor-nuevo"))
+            self.assertIn("Para subirlo", salida.getvalue())
+            self.assertEqual(productos.main(["--raiz", str(self.raiz), "sigla", "motor-nuevo", "--asignar", "MNX"]), 1,
+                             "con harness, la sigla queda fija")
 
     def test_arquitectura_llega_a_hdu_con_poco_contexto(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
