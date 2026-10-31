@@ -4,8 +4,8 @@ Repositorio de trabajo para desarrollar **{{producto}}** con [Cursor](https://cu
 repositorios del producto en `code/` y las reglas que el código debe cumplir. Lo genera y lo revisa
 **radiografia**.
 
-Una historia se desarrolla en una **Tarea** de Jira, que lleva la spec, el código y las pruebas. La Tarea se crea
-con `/tarea <HISTORIA>` o a mano, enlazada a su historia. `<CLAVE>` es la clave de la Tarea.
+Una historia se desarrolla en una **Tarea** de Jira, que lleva la spec, el código y las pruebas. Las Tareas cuelgan de
+la historia, que puede tener varias, y se crean con `/tarea <HISTORIA>` o a mano. `<CLAVE>` es la clave de la Tarea.
 
 | Paso | Dónde | Qué pasa |
 |---|---|---|
@@ -38,7 +38,7 @@ Abrir **esta carpeta** en Cursor, no la de un repositorio.
 
 | Comando | Cuándo | Qué hace |
 |---|---|---|
-| `/tarea <HISTORIA>` | si la Tarea no existe | crea en Jira la Tarea enlazada a la historia, con vista previa y confirmación |
+| `/tarea <HISTORIA>` | si la Tarea no existe | crea en Jira una Tarea que cuelga de la historia, con vista previa y confirmación |
 | `/hdu <CLAVE>` | al empezar una Tarea | Medición HU, ramas, foco, contexto y borrador de la spec |
 | `/desarrollar <CLAVE>` | con la spec aprobada | comprueba la aprobación y desarrolla contra la spec |
 | `/listo <CLAVE>` | antes del MR | verificaciones, pruebas por criterio, deuda y descripción del MR |

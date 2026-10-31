@@ -16,8 +16,9 @@ Error, un Hotfix o un Spike. Una historia no se toma directo: se desarrolla en u
    - **No se toma** (salida 2) si la Medición HU no es una de las aceptadas: mostrar el motivo y sugerir
      qué falta completar en la historia. No seguir.
    - **Sin repositorios** (salida 3): preguntar cuáles toca y repetir con `--repos`.
-   - **Medición y criterios:** vienen de la historia enlazada a la Tarea. Una Tarea sin historia usa sus propios
-     criterios y queda sin medir.
+   - **Medición y criterios:** vienen de la historia de la que cuelga la Tarea. Una Tarea sin historia usa sus
+     propios criterios y queda sin medir. Si la historia tiene varias Tareas, dejar en la spec solo los criterios que
+     cubre esta.
    - **HU sin medir:** se toma, pero avisar que `/listo` va a exigir la revisión de la deuda que deja.
    - Crea la rama `<tipo>/<CLAVE>-…` en cada repositorio (salvo cambios sin commit o `--sin-rama`) y deja visibles
      en Cursor solo esos repositorios. El tipo es `fix` para un Error o un Hotfix, `chore` para una Tarea de deuda y

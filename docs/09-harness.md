@@ -102,9 +102,9 @@ git funciona normalmente.
 
 ## Flujo de una historia
 
-Una historia se desarrolla en una **Tarea** de Jira con el campo Tipo en `Producto`. `/tarea <HISTORIA>` la crea y la
-enlaza, con vista previa y confirmación; es el único comando del harness que escribe en Jira. También se puede crear
-a mano. Una historia ya no se toma directo con `/hdu`.
+Una historia se desarrolla en una o varias **Tareas** de Jira que cuelgan de ella, con el campo Tipo en `Producto`.
+`/tarea <HISTORIA>` crea una, con vista previa y confirmación; es el único comando del harness que escribe en Jira.
+También se puede crear a mano. Cada Tarea tiene su spec, con los criterios de la historia que cubre. Una historia ya no se toma directo con `/hdu`.
 
 | Paso | Dónde | Qué pasa |
 |---|---|---|
@@ -126,7 +126,7 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 
 0. **Actualiza el harness** (`git pull --ff-only`). Si no puede, se detiene: no se propone código con reglas
    viejas. Sin remoto, sigue.
-1. Lee la Tarea de Jira y su historia enlazada: de ahí salen la Medición HU, los criterios y la descripción. Una Tarea
+1. Lee la Tarea de Jira y la historia de la que cuelga: de ahí salen la Medición HU, los criterios y la descripción. Una Tarea
    sin historia usa los suyos y queda sin medir. Lo hace en solo lectura, con el token personal: título, descripción, tipo, estado,
    **Medición HU** y criterios de aceptación (la sección "Criterios de aceptación" de la descripción).
 2. Decide con la Medición HU, sin IA:

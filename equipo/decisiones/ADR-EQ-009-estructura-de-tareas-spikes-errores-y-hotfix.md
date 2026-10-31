@@ -33,8 +33,8 @@ Toda Tarea, Spike, Error o Hotfix tiene:
 | Hotfix | Bau/Incidentes |
 | Spike | Spike |
 
-Una **Tarea de Producto** es el desarrollo de una historia. Su contenido ya está en la historia y en la spec, así que
-lleva solo un resumen, el enlace a la historia y la ubicación de la spec. No aplican los puntos 2 y 3.
+Una **Tarea de Producto** es una parte del desarrollo de una historia y cuelga de ella. Una historia puede tener varias.
+Su contenido ya está en la historia y en la spec, así que lleva solo un resumen y la ubicación de la spec. No aplican los puntos 2 y 3.
 
 Un **Hotfix** es la corrección urgente de algo que falla en producción y no puede esperar: se
 escribe con lo mínimo para actuar ya, y la causa y la prueba que reproduce la falla se documentan
@@ -94,8 +94,8 @@ Operativa, "la tarea manual deja de ser necesaria", indicando cómo se verifica.
 
 | Sección | Contenido |
 |---|---|
-| Resumen | Qué historia desarrolla |
-| Trazabilidad | Enlace a la historia en Jira y ubicación de la spec |
+| Resumen | Qué parte de la historia desarrolla |
+| Trazabilidad | Historia de la que cuelga y ubicación de la spec |
 
 **Error (Bau/Incidentes)**
 
@@ -156,8 +156,8 @@ Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md`, `equipo/
 ## 11. Regla rápida
 
 > Toda Tarea de deuda, Spike, Error o Hotfix tiene Como/Quiero/Para, criterios de aceptación verificables, la
-> evidencia del problema y las secciones de su tipo, en lenguaje técnico y claro. Una Tarea de Producto lleva un
-> resumen, el enlace a su historia y la ubicación de su spec.
+> evidencia del problema y las secciones de su tipo, en lenguaje técnico y claro. Una Tarea de Producto cuelga de su
+> historia y lleva un resumen y la ubicación de su spec.
 
 ## 12. Relación con arquitectura
 

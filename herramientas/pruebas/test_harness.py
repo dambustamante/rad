@@ -177,8 +177,8 @@ class PruebaHarness(unittest.TestCase):
             {"type": "bulletList", "content": [
                 {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "La consulta responde en menos de 800 ms."}]}]},
                 {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Si el buró falla, la transacción queda en revisión."}]}]}]}]}
-        enlaces = [{"type": {"name": "Relates"}, "outwardIssue": {"key": "FRAUD-100", "fields": {"issuetype": {"name": "Historia"}}}}] if enlazada else []
-        campos = {"issuelinks": enlaces, "summary": "Consultar el buró en la evaluación", "description": descripcion, "issuetype": {"name": tipo},
+        padre = {"key": "FRAUD-100", "fields": {"issuetype": {"name": "Historia"}}} if enlazada else None
+        campos = {"parent": padre, "subtasks": [{"key": "FRAUD-200"}] if tipo == "Historia" else [], "summary": "Consultar el buró en la evaluación", "description": descripcion, "issuetype": {"name": tipo},
                   "status": {"name": "Por hacer"}, "labels": [], "components": [{"name": "fraude-core"}],
                   "customfield_1": {"value": medicion} if medicion else None, "customfield_2": {"value": "Producto"}}
         return {"fields": campos}
@@ -225,7 +225,7 @@ class PruebaHarness(unittest.TestCase):
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
 
-    def test_tarea_enlazada_a_su_historia(self) -> None:
+    def test_tarea_cuelga_de_su_historia(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         modulo = self.hdu("Completa")
         self.assertTrue(modulo.tomar("FRAUD-100", None, False)["es_historia"], "una historia se desarrolla en una Tarea")
@@ -241,14 +241,16 @@ class PruebaHarness(unittest.TestCase):
             enviados.append((ruta, cuerpo))
             return {"key": "FRAUD-300"}
         modulo.enviar = enviar
-        previa = modulo.crear_tarea("FRAUD-100", False)
+        previa = modulo.crear_tarea("FRAUD-100", False, "Desarrollar la consulta al buró")
+        self.assertEqual(previa["existentes"], ["FRAUD-200"], "una historia puede tener varias Tareas")
+        self.assertEqual(previa["solicitud"]["fields"]["summary"], "Desarrollar la consulta al buró")
         self.assertEqual(enviados, [], "sin confirmar no escribe en Jira")
         campos = previa["solicitud"]["fields"]
         self.assertEqual((campos["issuetype"]["name"], campos["customfield_2"], campos["customfield_3"], campos["project"]["key"]),
                          ("Tarea", {"value": "Producto"}, [{"value": "Back"}], "FRAUD"))
         self.assertEqual(modulo.crear_tarea("FRAUD-100", True)["clave"], "FRAUD-300")
-        self.assertEqual([r for r, _ in enviados], ["/rest/api/3/issue", "/rest/api/3/issueLink"])
-        self.assertEqual(enviados[1][1]["outwardIssue"], {"key": "FRAUD-100"})
+        self.assertEqual([r for r, _ in enviados], ["/rest/api/3/issue"])
+        self.assertEqual(enviados[0][1]["fields"]["parent"], {"key": "FRAUD-100"})
         with self.assertRaises(modulo.ErrorHdu):
             modulo.crear_tarea("FRAUD-200", False)
         rechazada = self.hdu("Incompleta")
