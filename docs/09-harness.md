@@ -19,7 +19,7 @@ harness-motor-fraudes/
 ├── contexto.json                         hallazgos, componentes y terceros de cada repositorio, para /hdu (generado)
 ├── arquitectura.json                     extractos de arquitectura y commits de sus fuentes, para /hdu (generado)
 ├── GENERADO.json                         versión de lo generado, huellas de lo generado y de la plantilla
-├── .env.example                          conexión a Jira (solo lectura)
+├── .env.example                          conexión a Jira
 ├── .cursor/
 │   ├── arquitectura/<clave>.md               texto completo de los documentos vigentes (generado; se abre solo si hace falta)
 │   ├── rules/00-general.mdc              remite a AGENTS.md

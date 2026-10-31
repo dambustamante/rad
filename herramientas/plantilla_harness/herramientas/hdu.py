@@ -3,7 +3,7 @@
 Uso:
   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]
 
-1. Lee la historia de Jira (solo lectura, con JIRA_URL, JIRA_EMAIL y JIRA_TOKEN de .env).
+1. Lee la Tarea de Jira y su historia enlazada (lectura, con JIRA_URL, JIRA_EMAIL y JIRA_TOKEN de .env).
 2. Revisa su Medición HU: con un valor aceptado (config.json) se toma; vacía, se toma y queda marcada para
    revisar la deuda que deja; con cualquier otro valor no se toma.
 3. Identifica los repositorios que toca (componentes, etiquetas o menciones en la historia, o --repos).
@@ -74,7 +74,7 @@ def cargar_env() -> dict[str, str]:
     return env
 
 
-# --- Jira (solo lectura) -----------------------------------------------------------------------
+# --- Jira ------------------------------------------------------------------------------------
 
 def pedir(env: dict, ruta: str, parametros: dict | None = None):
     faltantes = [v for v in ("JIRA_URL", "JIRA_EMAIL", "JIRA_TOKEN") if not env.get(v)]
