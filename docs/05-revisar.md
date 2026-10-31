@@ -174,7 +174,7 @@ producto**, generado desde esos componentes. Además muestra tres cruces:
 
 ## Revisión de MR (`/revisar mr`)
 
-Solo se revisan MR. radiografia revisa cada MR **por su cuenta**: lo que el dev declaró en `/listo` se
+Solo se revisan MR. radiografia revisa cada MR **por su cuenta**: lo que se declaró en `/listo` se
 contrasta, nunca se da por cierto.
 
 ### Paso 1: bandeja (sin IA)
@@ -189,7 +189,7 @@ de `/listo`:
 | Estado | Qué significa |
 |---|---|
 | ADR del producto | MR del harness: revisar su coherencia antes de aprobarlo (paso 5) |
-| sin /listo | el dev no cerró la historia con `/listo` |
+| sin /listo | la historia no se cerró con `/listo` |
 | registro de /listo ilegible | el registro al final de la descripción está alterado |
 | desactualizado | hay commits después de `/listo` |
 | al día | `/listo` se ejecutó sobre el commit de cabeza |
@@ -203,7 +203,7 @@ de `/listo`:
 ```
 
 1. Hace lo mismo que una revisión de rama: trae la rama del MR a `.cache/ramas/`, calcula el diff con su
-   destino y corre las verificaciones y gitleaks **con el código de radiografia**, no con el del dev.
+   destino y corre las verificaciones y gitleaks **con el código de radiografia**, no con el de la rama.
 2. Detecta los **cambios sensibles**, la señal típica de que se debilitó el control:
 
    | Señal | Ejemplos |
@@ -246,5 +246,5 @@ de código ni valores de secretos, y la regla de lenguaje bloquea la publicació
 
 Trae la rama del MR del harness a una copia de solo lectura, valida los ADR que cambia y prepara su
 coherencia con arquitectura y con el equipo. Los pares se evalúan en un lote, como en `/actualizar`, con
-`coherencia.py --decisiones <carpeta> lote <archivo>`. El ADR se puede aprobar (un par dev y el TL, en
-GitLab) solo sin choques ni pares pendientes.
+`coherencia.py --decisiones <carpeta> lote <archivo>`. El ADR se puede aprobar (con las aprobaciones
+configuradas en el harness) solo sin choques ni pares pendientes.

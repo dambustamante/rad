@@ -10,7 +10,7 @@ nivel más alto en que aparece.
 | 1 | ADR de arquitectura vigentes | `arquitectura/decisiones/` | arquitectura (se descarga, no se edita) |
 | 2 | Estándares de arquitectura vigentes | `arquitectura/estandares/` | arquitectura (se descarga, no se edita) |
 | 3 | Decisiones del equipo (ADR-EQ): aplican a todos los productos | `equipo/decisiones/` | el equipo |
-| 4 | Decisiones del producto (ADR-<SIGLA>): no relajan ni contradicen las del equipo | `decisiones/` del harness del producto | el equipo del producto, con aprobación del TL |
+| 4 | Decisiones del producto (ADR-<SIGLA>): no relajan ni contradicen las del equipo | `decisiones/` del harness del producto | el equipo del producto, con las aprobaciones configuradas en el harness |
 | 5 | Sonar | API de Sonar | análisis de Sonar (solo lectura) |
 
 - Arquitectura prevalece siempre. Si una decisión del equipo choca con arquitectura, sus criterios

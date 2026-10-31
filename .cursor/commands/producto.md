@@ -94,7 +94,7 @@ Para registrar o completar el producto comprado y las integraciones, leer y segu
 
 ## Harness del producto (`/producto <nombre> harness`)
 
-Para crear el espacio de trabajo de los devs (`harness-<producto>`), leer y seguir
+Para crear el espacio de trabajo del producto (`harness-<producto>`), leer y seguir
 `.cursor/partes/producto-harness.md`.
 
 ## Reglas

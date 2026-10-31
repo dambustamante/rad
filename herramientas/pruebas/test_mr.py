@@ -105,7 +105,7 @@ class PruebaMR(unittest.TestCase):
 
     def test_sin_listo_y_registro_alterado(self) -> None:
         r = mr.revisar(self.raiz, "motor-fraudes", "fraude-core", 7, ClienteMR([self.mr(None)]))
-        self.assertEqual(r["contraste"], ["El MR no tiene registro de /listo: revisión completa sin declaración del dev."])
+        self.assertEqual(r["contraste"], ["El MR no tiene registro de /listo: revisión completa sin declaración."])
         alterado = {**self.mr(None), "descripcion": "<!-- radiografia:listo {no es json} -->"}
         self.assertEqual(mr.revisar(self.raiz, "motor-fraudes", "fraude-core", 7, ClienteMR([alterado]))["contraste"],
                          ["El registro de /listo del MR está alterado o mal formado."])

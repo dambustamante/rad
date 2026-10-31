@@ -1,6 +1,6 @@
 # /revisar mr
 
-Revisión de los MR abiertos. Solo se revisan MR; lo que el dev declaró en `/listo` se contrasta, nunca se
+Revisión de los MR abiertos. Solo se revisan MR; lo que se declaró en `/listo` se contrasta, nunca se
 da por cierto.
 
 1. **Bandeja** (sin IA):
@@ -38,7 +38,7 @@ da por cierto.
    resolver y repetir con `--incluir`. Publicar solo si el usuario confirma la vista previa: repetir con
    `--confirmar` (un solo comentario en el MR, que se edita en las publicaciones siguientes).
 
-4. **MR del harness con ADR del producto** (el TL aprueba después de un par dev):
+4. **MR del harness con ADR del producto** (se aprueba con las aprobaciones configuradas en el harness):
 
    ```sh
    .venv/bin/python herramientas/mr.py adr <producto> <número>

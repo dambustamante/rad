@@ -36,7 +36,7 @@
    3. ¿Quién la hace y qué riesgo tiene hacerla a mano?
    4. ¿Qué repositorios estarían involucrados en automatizarla?
 
-   **Tarea desde la deuda de una historia** (`--deuda <CLAVE>`): la deuda que el dev declaró en `/listo`
+   **Tarea desde la deuda de una historia** (`--deuda <CLAVE>`): la deuda que se declaró en `/listo`
    y que se registró al revisar sus MR. El contexto la lista; solo confirmar el título y si conviene una
    Tarea por cada punto o una para todos.
 

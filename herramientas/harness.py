@@ -10,7 +10,7 @@ Uso:
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
 La copia de radiografia vive en productos/<producto>/harness/ (fuera de git de radiografia) y es un repositorio
-propio. radiografia escribe ahí y hace commit; el push lo hace el TL. Dueños de cada parte:
+propio. radiografia escribe ahí y hace commit; el push es manual. Dueños de cada parte:
 
 - generado por radiografia (se regenera; no se edita): .cursor/rules/generado/, repos.json, GENERADO.json,
   decisiones/INDICE.md y decisiones/COHERENCIA.md;

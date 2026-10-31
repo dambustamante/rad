@@ -1,6 +1,6 @@
 # /producto: harness del producto
 
-`harness-<producto>` es el repositorio de trabajo de los devs: reúne los repositorios del producto en
+`harness-<producto>` es el repositorio de trabajo del producto: reúne los repositorios del producto en
 `code/`, las decisiones compiladas y los ADR del producto. radiografia lo crea y mantiene en
 `productos/<producto>/harness/`; el push lo hace el usuario.
 

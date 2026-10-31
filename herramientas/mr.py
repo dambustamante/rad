@@ -10,7 +10,7 @@ Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 `bandeja` lista los MR abiertos de los repositorios de cada producto y de su harness, con el estado de su
 registro de /listo (al día, desactualizado o sin /listo). `revisar` prepara la revisión del MR (la misma de
 rama.py: diff, verificaciones con el código de radiografia, gitleaks) y agrega, sin IA, los **cambios
-sensibles** y el **contraste con /listo**: lo que el dev declaró se trata como declaración, nunca como prueba.
+sensibles** y el **contraste con /listo**: lo que se declaró se trata como declaración, nunca como prueba.
 También registra la deuda que declaró la historia. `adr` deja la rama del MR del harness en una copia de
 solo lectura y prepara la coherencia de sus ADR antes de aprobarlo.
 """
@@ -161,7 +161,7 @@ def contraste(raiz: Path, producto: str, estado: dict, mr: dict, automaticos: li
     """Diferencias entre lo que declaró /listo y lo que verifica radiografia."""
     registro = registro_listo(mr.get("descripcion", ""))
     if registro is None:
-        return ["El MR no tiene registro de /listo: revisión completa sin declaración del dev."]
+        return ["El MR no tiene registro de /listo: revisión completa sin declaración."]
     if registro.get("invalido"):
         return ["El registro de /listo del MR está alterado o mal formado."]
     diferencias = []
@@ -192,7 +192,7 @@ def contraste(raiz: Path, producto: str, estado: dict, mr: dict, automaticos: li
             diferencias.append(f"/listo usó el harness versión {registro.get('harness')}; la vigente es {version}.")
         listo = harness.ruta(raiz, producto) / "herramientas" / "listo.py"
         if listo.exists() and registro.get("verificador") not in (None, hashlib.sha256(listo.read_bytes()).hexdigest()[:16]):
-            diferencias.append("El listo.py que usó el dev no es el de la rama principal del harness.")
+            diferencias.append("El listo.py usado no es el de la rama principal del harness.")
     return diferencias or ["Sin diferencias entre /listo y lo que verifica radiografia."]
 
 
@@ -231,7 +231,7 @@ def revisar(raiz: Path, producto: str, repo: str, numero: int, cliente=None) -> 
     con_senal = {k: v for k, v in sensibles.items() if v}
     lineas += [f"- **{k}:** {', '.join(f'`{x}`' for x in v[:10])}" + (f" y {len(v) - 10} más" if len(v) > 10 else "")
                for k, v in con_senal.items()] or ["Ninguno."]
-    lineas += ["", "## Contraste con /listo", "", "Lo que el dev declaró se contrasta con lo que verifica radiografia; "
+    lineas += ["", "## Contraste con /listo", "", "Lo que se declaró se contrasta con lo que verifica radiografia; "
                "no reemplaza la revisión.", ""]
     lineas += [f"- {d}" for d in diferencias]
     if deuda:
