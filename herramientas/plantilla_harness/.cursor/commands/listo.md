@@ -11,7 +11,7 @@ Cerrar una historia antes de abrir su MR. Uso: `/listo <CLAVE>`.
 2. **Revisar** `trabajo/<CLAVE>/listo-paquete.md`: el diff de cada repositorio y lo que encontraron las
    verificaciones (secretos, salida a consola, TODO, APIs sin contrato, integraciones, pruebas
    debilitadas). Contrastar el diff con la spec y con las decisiones de `.cursor/rules/generado/`: lo que no cumple se
-   corrige antes del MR. Si se corrige algo, hacer commit y volver al paso 1.
+   corrige antes del MR, igual que una rama o un commit que no sigan ADR-EQ-010. Si se corrige algo, hacer commit y volver al paso 1.
 
 3. **Registrar** `trabajo/<CLAVE>/listo.json`:
    - `criterios`: la prueba de cada criterio de aceptación, como `<repo>:<archivo>:<línea>`;

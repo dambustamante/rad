@@ -6,7 +6,7 @@ paso 3; sus criterios pueden ser `automática` o `revisión de código`.
 
 Si el producto tiene harness, sus ADR viven en `productos/<producto>/harness/decisiones/` (la copia local
 de `harness-<producto>`): los comandos de abajo escriben ahí. Al terminar, guardar en el harness con
-`.venv/bin/python herramientas/harness.py guardar <producto> --mensaje "<ADR y qué cambió>"`; el push y el MR
+`.venv/bin/python herramientas/harness.py guardar <producto> --mensaje "docs: <ADR y qué cambió>"`; el push y el MR
 los hace el usuario. Un ADR de producto se aprueba por MR al harness, con las aprobaciones configuradas allí.
 
 1. **Mostrar lo que hay** con `.venv/bin/python herramientas/adr.py listar <producto>` (ADR, tipo,

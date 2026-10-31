@@ -93,6 +93,8 @@ class PruebaMR(unittest.TestCase):
         paquete = r["paquete"].read_text(encoding="utf-8")
         self.assertIn("## Cambios sensibles (foco de la revisión)", paquete)
         self.assertIn("## Contraste con /listo", paquete)
+        self.assertIn("## Rama y commits (ADR-EQ-010)", paquete)
+        self.assertIn("La rama `feature/buro` no sigue", " ".join(r["convencion"]))
         self.assertEqual(r["deuda"], 1)
 
         pasos = " ".join(estado.que_sigue(estado.revisar_estado(self.raiz)))

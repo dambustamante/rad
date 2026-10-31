@@ -108,10 +108,10 @@ class PruebaAdrProducto(unittest.TestCase):
         codigo, salida = self.ejecutar("nuevo", "equipo", "--tipo", "decision", "--titulo", "Versionado de APIs")
         self.assertEqual(codigo, 0, salida)
         archivo = self.raiz / salida.split("Creado: ")[1].strip().splitlines()[0]
-        self.assertEqual(archivo.name, "ADR-EQ-010-versionado-de-apis.md", "toma el siguiente número libre del equipo")
+        self.assertEqual(archivo.name, "ADR-EQ-011-versionado-de-apis.md", "toma el siguiente número libre del equipo")
         texto = archivo.read_text(encoding="utf-8")
-        self.assertTrue(texto.startswith("# ADR-EQ-010: Versionado de APIs"))
-        self.assertIn("| `EQ-010.1` | | `automática` \\| `revisión de código` |", texto)
+        self.assertTrue(texto.startswith("# ADR-EQ-011: Versionado de APIs"))
+        self.assertIn("| `EQ-011.1` | | `automática` \\| `revisión de código` |", texto)
         self.assertNotIn("## 14.", texto, "la sección 14 es solo de los productos")
         self.assertNotIn("ÁMBITO", texto)
         self.assertEqual(self.ejecutar("nuevo", "equipo", "--tipo", "excepcion", "--titulo", "x")[0], 1)

@@ -230,7 +230,7 @@ empeora, con evidencia en archivos del cambio. Un cambio sensible sin motivo cla
 ### Paso 4: registrar, elegir y publicar
 
 ```sh
-.venv/bin/python herramientas/rama.py publicar motor-fraudes fraude-core feature/consulta-buro [--incluir H-0041]
+.venv/bin/python herramientas/rama.py publicar motor-fraudes fraude-core feat/consulta-buro [--incluir H-0041]
 ```
 
 Registra el lote, muestra el veredicto y la vista previa del comentario. Se publican los hallazgos

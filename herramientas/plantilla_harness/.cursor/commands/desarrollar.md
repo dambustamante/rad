@@ -15,7 +15,8 @@ Programar una historia contra su spec aprobada. Uso: `/desarrollar <CLAVE>`.
 3. **Proponer los pasos**, cada uno ligado a un criterio de aceptación y a su prueba, y pedir confirmación. Volver a
    pedirla en los cambios delicados.
 
-4. **Implementar** en `code/<repo>/`, en la rama de la historia, y ejecutar las pruebas.
+4. **Implementar** en `code/<repo>/`, en la rama de la historia, y ejecutar las pruebas. Los commits siguen Conventional Commits
+   (ADR-EQ-010).
 
 5. **Si algo no calza con la spec:** no cambiar el alcance. Un cambio menor se anota para `desvios` de `/listo`. Un
    cambio de alcance o de diseño se detiene y se propone corregir la spec en un MR.

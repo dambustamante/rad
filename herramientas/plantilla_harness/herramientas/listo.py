@@ -116,7 +116,9 @@ def verificar(repo: dict) -> dict:
             api_cambiada = api_cambiada or (bool(API.search(texto)) and not es_prueba)
     senales["pruebas debilitadas"] += [f"{b} (prueba borrada)" for b in borrados if PRUEBAS.search(b)]
     contrato = any(c.startswith("docs/contratos/") for c in cambiados)
-    return {"id": repo["id"], "rama": git("branch", "--show-current", cwd=destino), "base": base,
+    rama = git("branch", "--show-current", cwd=destino)
+    mensajes = git("log", "--no-merges", "--format=%s", f"{base}..HEAD", cwd=destino).splitlines()
+    return {"id": repo["id"], "rama": rama, "base": base, "convencion": hdu.avisos_convencion(rama, mensajes),
             "commit": git("rev-parse", "HEAD", cwd=destino), "commits": int(git("rev-list", "--count", f"{base}..HEAD", cwd=destino)),
             "cambiados": cambiados, "borrados": borrados, "pruebas": [c for c in cambiados if PRUEBAS.search(c)],
             "secretos": secretos(destino, base), "senales": senales,
@@ -167,6 +169,7 @@ def preparar(clave: str) -> Path:
             lineas.append("- La API cambió y el contrato de `docs/contratos/` no (EQ-004).")
         if r["senales"]["integraciones"] and not r["c4_cambiado"]:
             lineas.append("- Hay integraciones en el cambio y el C4 no se actualizó: revisar timeout (EQ-002.1), ficha del tercero y C4 (EQ-006.6).")
+        lineas += [f"- {a}" for a in r["convencion"]]
         lineas.append(f"- Pruebas cambiadas: {', '.join(f'`{p}`' for p in r['pruebas']) or 'ninguna'}")
         lineas += ["", "```diff", *r["diff"][:MAXIMO_LINEAS_DIFF], "```"]
         if len(r["diff"]) > MAXIMO_LINEAS_DIFF:

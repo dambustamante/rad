@@ -134,7 +134,8 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 
 3. Identifica los repositorios que toca por los componentes, las etiquetas o las menciones de la
    historia. Si no surgen, Cursor pregunta y repite con `--repos`.
-4. Crea la rama `feature/<CLAVE>-<título>` en cada repositorio, desde su rama principal. No cambia de
+4. Crea la rama `<tipo>/<CLAVE>-<título>` en cada repositorio (ADR-EQ-010): `fix` para un Error o un Hotfix, `chore`
+   para una Tarea y `feat` para el resto; `--tipo` lo cambia. La crea desde su rama principal. No cambia de
    rama un repositorio con cambios sin commit.
 5. **Foco:** escribe `.cursorignore` para que Cursor vea solo esos repositorios, lo que ahorra tokens en
    búsquedas e índice. `make foco` lo restaura.
@@ -144,7 +145,7 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 7. **Arquitectura:** agrega al contexto hasta 3 extractos (máximo 1.500 caracteres cada uno) de los documentos
    que comparten más palabras con la historia. Se elige sin IA y se lee una sola vez. La regla rápida de todos
    los documentos sigue en `decisiones.mdc`; si una toca el cambio, se abre su texto completo.
-8. **Spec:** crea la rama `spec/<CLAVE>` del harness y el borrador `specs/<CLAVE>/spec.md`, de una página como
+8. **Spec:** crea la rama `docs/<CLAVE>-spec` del harness y el borrador `specs/<CLAVE>/spec.md`, de una página como
    máximo. Cursor lo completa, con **una prueba por criterio de aceptación**, y pide confirmación.
    `hdu.py spec <CLAVE>` la valida antes de abrir su MR.
 

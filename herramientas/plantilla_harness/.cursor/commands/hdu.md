@@ -5,7 +5,7 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
 1. **Tomar:**
 
    ```sh
-   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]
+   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama] [--tipo feat|fix|docs|chore|test|refactor]
    ```
 
    - **Actualiza primero el harness.** Si no puede, se detiene (salida 1): mostrar el motivo. No seguir con
@@ -15,8 +15,9 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
      qué falta completar en la historia. No seguir.
    - **Sin repositorios** (salida 3): preguntar cuáles toca y repetir con `--repos`.
    - **HU sin medir:** se toma, pero avisar que `/listo` va a exigir la revisión de la deuda que deja.
-   - Crea la rama `feature/<CLAVE>-…` en cada repositorio (salvo cambios sin commit o `--sin-rama`) y deja
-     visibles en Cursor solo esos repositorios.
+   - Crea la rama `<tipo>/<CLAVE>-…` en cada repositorio (salvo cambios sin commit o `--sin-rama`) y deja visibles
+     en Cursor solo esos repositorios. El tipo es `fix` para un Error o un Hotfix, `chore` para una Tarea y `feat`
+     para el resto. Si el cambio es de otro tipo, indicarlo con `--tipo` (ADR-EQ-010).
 
 2. **Leer** `trabajo/<CLAVE>/contexto.md`: criterios de aceptación, descripción, extractos de arquitectura
    relacionados y, por repositorio, terceros, componentes y hallazgos abiertos relacionados. Las decisiones
@@ -36,7 +37,7 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
    python3 herramientas/hdu.py spec <CLAVE>
    ```
 
-   Si es válida, hacer commit en la rama `spec/<CLAVE>` del harness y push. El MR de la spec se abre en GitLab.
+   Si es válida, hacer commit en la rama `docs/<CLAVE>-spec` del harness y push. El MR de la spec se abre en GitLab.
    Al aprobarse e integrarse, seguir con `/desarrollar <CLAVE>`. **Hotfix:** no espera la aprobación: seguir con
    `/desarrollar`; la spec se completa antes de `/listo` y se integra después.
 

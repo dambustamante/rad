@@ -360,7 +360,7 @@ def crear(raiz: Path, producto: str) -> dict:
     git("init", "--quiet", "-b", "main", cwd=destino)
     escribir_generados(raiz, producto, {r: huella(x) for r, x in plantilla.items()})
     indices_decisiones(raiz, producto)
-    commit(destino, f"Crea el harness de {producto} desde radiografia")
+    commit(destino, f"chore: crea el harness de {producto} desde radiografia")
     return {"ruta": destino, "movidos": movidos}
 
 
@@ -385,7 +385,7 @@ def generar(raiz: Path, producto: str) -> dict:
     cambiados = escribir_generados(raiz, producto, huellas)
     indices_decisiones(raiz, producto)
     rutas = [r for r in (*GENERADOS, *agregados, "decisiones/INDICE.md", "decisiones/COHERENCIA.md") if (destino / r).exists()]
-    hecho = commit(destino, "Actualiza lo generado desde radiografia", rutas)
+    hecho = commit(destino, "chore: actualiza lo generado desde radiografia", rutas)
     version = leer_json(destino / "GENERADO.json")["version"]
     return {"cambiados": cambiados + agregados, "commit": hecho, "version": version, "avisos": avisos}
 

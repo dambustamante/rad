@@ -39,6 +39,10 @@ RAMA_PRINCIPAL = "main"
 SECCIONES_SPEC = ("Objetivo", "Criterios de aceptación", "Diseño", "Pruebas", "Reglas que aplican", "Fuera de alcance")
 PENDIENTE_SPEC = "<completar"
 MAXIMO_LINEAS_SPEC = 80
+TIPOS_CAMBIO = ("feat", "fix", "docs", "chore", "test", "refactor")
+RAMA_VALIDA = re.compile(rf"^({'|'.join(TIPOS_CAMBIO)})/[A-Za-z0-9][A-Za-z0-9._-]*$")
+COMMIT_VALIDO = re.compile(rf"^({'|'.join(TIPOS_CAMBIO)})(\([\w./-]+\))?!?: \S")
+TIPO_RAMA = {"error": "fix", "hotfix": "fix", "tarea": "chore"}
 
 
 class ErrorHdu(Exception):
@@ -283,6 +287,16 @@ def tipo_historia(tipo_incidencia: str | None) -> str:
     return normalizar(tipo_incidencia or "")
 
 
+def rama_spec(clave: str) -> str:
+    return f"docs/{clave}-spec"
+
+
+def avisos_convencion(rama: str, mensajes: list[str]) -> list[str]:
+    """Rama y commits que no siguen ADR-EQ-010."""
+    avisos = [f"La rama `{rama}` no sigue `<tipo>/<CLAVE>-<descripción>` (EQ-010.1)."] if not RAMA_VALIDA.match(rama) else []
+    return avisos + [f"El commit «{m}» no sigue Conventional Commits (EQ-010.2)." for m in mensajes if not COMMIT_VALIDO.match(m)]
+
+
 def ruta_spec(clave: str) -> Path:
     return RAIZ / "specs" / clave / "spec.md"
 
@@ -339,14 +353,14 @@ def spec_aprobada(clave: str) -> bool:
 
 
 def preparar_spec(historia: dict, repos: list[str], crear_rama: bool) -> str:
-    """Rama spec/<CLAVE> del harness y borrador. Un Spike no lleva spec: su entregable es un ADR."""
+    """Rama docs/<CLAVE>-spec del harness y borrador. Un Spike no lleva spec: su entregable es un ADR."""
     clave = historia["clave"]
     if tipo_historia(historia["tipo_incidencia"]) == "spike":
         return "sin spec: el entregable del Spike es un ADR"
     if spec_aprobada(clave):
         return f"specs/{clave}/spec.md (ya aprobada)"
     if crear_rama:
-        nombre, actual = f"spec/{clave}", git("branch", "--show-current", cwd=RAIZ)[1]
+        nombre, actual = rama_spec(clave), git("branch", "--show-current", cwd=RAIZ)[1]
         if actual not in (RAMA_PRINCIPAL, nombre):
             raise ErrorHdu(f"El harness está en la rama {actual}. Volver a {RAMA_PRINCIPAL} y repetir.")
         if actual == RAMA_PRINCIPAL:
@@ -372,7 +386,7 @@ def desarrollar(clave: str) -> dict:
         raise ErrorHdu("Un Spike no se desarrolla: su entregable es un ADR del producto.")
     actual = git("branch", "--show-current", cwd=RAIZ)[1]
     if tipo != "hotfix":
-        if actual == f"spec/{clave}":
+        if actual == rama_spec(clave):
             codigo, salida = git("switch", "--quiet", RAMA_PRINCIPAL, cwd=RAIZ)
             if codigo != 0:
                 raise ErrorHdu(f"No se pudo volver a {RAMA_PRINCIPAL}: {salida}")
@@ -454,7 +468,7 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
     return archivo
 
 
-def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict:
+def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool, tipo_rama: str | None = None) -> dict:
     actualizar_harness()
     config, repos_config = leer_json("config.json"), leer_json("repos.json")["repos"]
     ids = [r["id"] for r in repos_config]
@@ -469,7 +483,8 @@ def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict
     if not repos:
         return {"historia": historia, "medicion": medicion, "tomada": False, "faltan_repos": ids}
     spec = preparar_spec(historia, repos, crear_rama)
-    nombre_rama = f"feature/{clave}-{slug(historia['titulo'])}"
+    tipo_cambio = tipo_rama or TIPO_RAMA.get(tipo_historia(historia["tipo_incidencia"]), "feat")
+    nombre_rama = f"{tipo_cambio}/{clave}-{slug(historia['titulo'])}"
     ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama (--sin-rama)")
              for r in repos_config if r["id"] in repos}
     foco(repos, ids)
@@ -488,6 +503,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("clave")
     p.add_argument("--repos", default="")
     p.add_argument("--sin-rama", action="store_true")
+    p.add_argument("--tipo", choices=TIPOS_CAMBIO, help="tipo de cambio de la rama (ADR-EQ-010); por defecto, según la historia")
     for nombre in ("spec", "desarrollar"):
         p = sub.add_parser(nombre)
         p.add_argument("clave")
@@ -507,7 +523,7 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"  {repo}: {estado}")
         return 0
     try:
-        r = tomar(o.clave.upper(), [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama)
+        r = tomar(o.clave.upper(), [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama, o.tipo)
     except ErrorHdu as error:
         print(f"ERROR: {error}")
         return 1

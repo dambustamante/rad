@@ -200,7 +200,7 @@ class PruebaHarness(unittest.TestCase):
         self.assertEqual(r["historia"]["criterios"], ["La consulta responde en menos de 800 ms.",
                                                       "Si el buró falla, la transacción queda en revisión."])
         self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"),
-                         "feature/FRAUD-123-consultar-el-buro-en-la-evaluacion")
+                         "feat/FRAUD-123-consultar-el-buro-en-la-evaluacion")
         contexto = r["contexto"].read_text(encoding="utf-8")
         self.assertIn("1. La consulta responde en menos de 800 ms.", contexto)
         self.assertIn("decisiones:ADR-010 · alta: Llamada sin timeout", contexto, "los hallazgos altos del repo siempre se muestran")
@@ -227,21 +227,21 @@ class PruebaHarness(unittest.TestCase):
         git("add", "-A", cwd=self.destino)
         git("commit", "--quiet", "-m", f"Spec de {clave}", cwd=self.destino)
         git("switch", "--quiet", "main", cwd=self.destino)
-        git("merge", "--quiet", "--no-ff", "-m", f"Integra spec de {clave}", f"spec/{clave}", cwd=self.destino)
+        git("merge", "--quiet", "--no-ff", "-m", f"Integra spec de {clave}", f"docs/{clave}-spec", cwd=self.destino)
 
     def test_no_se_programa_sin_spec_aprobada(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
         modulo = self.hdu("Completa")
         self.assertIn("borrador", modulo.tomar("FRAUD-123", None, True)["spec"])
-        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "spec/FRAUD-123")
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "docs/FRAUD-123-spec")
         self.assertIn("quedan partes por completar", modulo.errores_spec("FRAUD-123"))
         self.assertIn("1. La consulta responde en menos de 800 ms.", modulo.ruta_spec("FRAUD-123").read_text(encoding="utf-8"))
         with self.assertRaises(modulo.ErrorHdu) as error:
             modulo.desarrollar("FRAUD-123")
         self.assertIn("no está aprobada", str(error.exception))
 
-        git("switch", "--quiet", "spec/FRAUD-123", cwd=self.destino)
+        git("switch", "--quiet", "docs/FRAUD-123-spec", cwd=self.destino)
         self.aprobar_spec("FRAUD-123")
         self.assertEqual(modulo.errores_spec("FRAUD-123"), [])
         self.assertEqual(modulo.desarrollar("FRAUD-123")["tipo"], "historia")
@@ -369,6 +369,11 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("1. La consulta responde en menos de 800 ms.", paquete)
 
         self.assertIn("## Spec (el código debe cumplirla)", paquete)
+        self.assertIn("El commit «Cliente del buró» no sigue Conventional Commits (EQ-010.2).", paquete)
+        modulo = self.hdu("Completa")
+        self.assertEqual(modulo.avisos_convencion("fix/FRAUD-1-timeout", ["fix(buro): define el timeout", "refactor!: cambia el contrato"]), [])
+        self.assertEqual(len(modulo.avisos_convencion("feature/x", ["wip", "build: x"])), 3)
+        self.assertEqual(modulo.TIPO_RAMA["hotfix"], "fix")
 
         registro = self.destino / "trabajo" / "FRAUD-123" / "listo.json"
         registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3"}, "deuda": [],

@@ -13,5 +13,6 @@
 | [ADR-EQ-007](decisiones/ADR-EQ-007-readme-estandar.md) | README estándar en español neutro y técnico | Propuesto | 5 | sin evaluar |
 | [ADR-EQ-008](decisiones/ADR-EQ-008-definicion-de-terminado.md) | Definición de terminado | Propuesto | 9 | sin evaluar |
 | [ADR-EQ-009](decisiones/ADR-EQ-009-estructura-de-tareas-spikes-errores-y-hotfix.md) | Estructura de Tareas, Spikes, Errores y Hotfix | Propuesto | 6 | sin evaluar |
+| [ADR-EQ-010](decisiones/ADR-EQ-010-nombres-de-ramas-y-mensajes-de-commit.md) | Nombres de ramas y mensajes de commit | Propuesto | 3 | sin evaluar |
 
 Detalle de la coherencia con arquitectura: [COHERENCIA.md](COHERENCIA.md). Cómo se crean y aprueban: [README.md](README.md).

@@ -32,6 +32,10 @@ import rama
 from comun import RAIZ, ErrorRadiografia, cargar_env, git, slug
 from plataforma import proyecto_de
 
+TIPOS_CAMBIO = "feat|fix|docs|chore|test|refactor"
+RAMA_VALIDA = re.compile(rf"^({TIPOS_CAMBIO})/[A-Za-z0-9][A-Za-z0-9._-]*$")
+COMMIT_VALIDO = re.compile(rf"^({TIPOS_CAMBIO})(\([\w./-]+\))?!?: \S")
+
 MARCA_REGISTRO = re.compile(r"<!--\s*radiografia:listo\s+(\{.*?\})\s*-->", re.DOTALL)
 PRUEBAS = re.compile(r"(^|/)(test|tests|__tests__|spec)(/|$)|(Test|Tests|IT)\.(java|kt)$|\.(test|spec)\.[jt]sx?$|(^|/)test_[^/]+\.py$")
 DEBILITADA = re.compile(r"@(Disabled|Ignore)\b|\b(xit|xdescribe|it\.skip|describe\.skip|test\.skip)\(|pytest\.mark\.skip|assert(True)?\(\s*true\s*\)")
@@ -110,7 +114,7 @@ def bandeja(raiz: Path, producto: str | None = None, mios: bool = False, cliente
                     continue
                 filas.append({"producto": nombre, "repo": id_repo, "tipo": tipo, "numero": mr["numero"], "titulo": mr["titulo"],
                               "url": mr["url"], "autor": mr.get("autor"), "rama": mr.get("rama"),
-                              "listo": ("Spec" if str(mr.get("rama")).startswith("spec/") else "ADR del producto")
+                              "listo": ("Spec" if re.fullmatch(r"docs/.+-spec", str(mr.get("rama"))) else "ADR del producto")
                               if tipo == "harness" else estado_listo(mr)})
     prioridad = {"Spec": -1, "ADR del producto": 0, "sin /listo": 1, "registro de /listo ilegible": 1, "desactualizado": 2, "al día": 3}
     return sorted(filas, key=lambda f: (prioridad.get(f.get("listo"), 9), f["producto"], f["repo"], f.get("numero", 0)))
@@ -156,6 +160,13 @@ def cambios_sensibles(clon: Path, base: str, commit: str) -> dict[str, list[str]
             linea += 1
     senales["Aserciones quitadas"] = [f"{a} ({n} menos)" for a, n in sorted(quitadas.items()) if n > 0]
     return senales
+
+
+def convencion(clon: Path, base: str, commit: str, nombre_rama: str) -> list[str]:
+    """Rama y commits del MR que no siguen ADR-EQ-010."""
+    mensajes = git("log", "--no-merges", "--format=%s", f"{base}..{commit}", cwd=clon).splitlines()
+    avisos = [f"La rama `{nombre_rama}` no sigue `<tipo>/<CLAVE>-<descripción>` (EQ-010.1)."] if not RAMA_VALIDA.match(nombre_rama) else []
+    return avisos + [f"El commit «{m}» no sigue Conventional Commits (EQ-010.2)." for m in mensajes if not COMMIT_VALIDO.match(m)]
 
 
 def texto_spec(raiz: Path, producto: str, registro: dict | None) -> str | None:
@@ -253,6 +264,9 @@ def revisar(raiz: Path, producto: str, repo: str, numero: int, cliente=None) -> 
     con_senal = {k: v for k, v in sensibles.items() if v}
     lineas += [f"- **{k}:** {', '.join(f'`{x}`' for x in v[:10])}" + (f" y {len(v) - 10} más" if len(v) > 10 else "")
                for k, v in con_senal.items()] or ["Ninguno."]
+    avisos_convencion = convencion(clon, estado["base"], estado["commit"], mr["rama"])
+    lineas += ["", "## Rama y commits (ADR-EQ-010)", ""]
+    lineas += [f"- {a}" for a in avisos_convencion] or ["Cumplen."]
     lineas += ["", "## Contraste con /listo", "", "Lo que se declaró se contrasta con lo que verifica radiografia; "
                "no reemplaza la revisión.", ""]
     lineas += [f"- {d}" for d in diferencias]
@@ -267,7 +281,7 @@ def revisar(raiz: Path, producto: str, repo: str, numero: int, cliente=None) -> 
     estado_guardado = registro["ramas"][rama.clave_rama(repo, mr["rama"])]
     estado_guardado.update({"sensibles": con_senal, "contraste": diferencias, "numero_mr": mr["numero"]})
     registro_hallazgos.guardar(raiz, producto, registro)
-    return {**preparado, "mr": mr, "sensibles": con_senal, "contraste": diferencias, "deuda": deuda}
+    return {**preparado, "mr": mr, "sensibles": con_senal, "contraste": diferencias, "deuda": deuda, "convencion": avisos_convencion}
 
 
 # --- ADR propuestos en el harness --------------------------------------------------------------

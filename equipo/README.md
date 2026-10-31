@@ -26,6 +26,7 @@ Los ADR-EQ están numerados por importancia, según el riesgo que cubren:
 | 007 | Documentación | README |
 | 008 | Forma de trabajar | Definición de terminado |
 | 009 | Forma de trabajar | Estructura de Tareas, Spikes, Errores y Hotfix |
+| 010 | Forma de trabajar | Nombres de ramas y mensajes de commit |
 
 Una decisión nueva toma el siguiente número libre; la numeración no se cambia después de aprobar.
 
