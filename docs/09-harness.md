@@ -102,6 +102,10 @@ git funciona normalmente.
 
 ## Flujo de una historia
 
+Una historia se desarrolla en una **Tarea** de Jira con el campo Tipo en `Producto`. `/tarea <HISTORIA>` la crea y la
+enlaza, con vista previa y confirmación; es el único comando del harness que escribe en Jira. También se puede crear
+a mano. Una historia ya no se toma directo con `/hdu`.
+
 | Paso | Dónde | Qué pasa |
 |---|---|---|
 | 1. `/hdu <CLAVE>` | Harness | Crea la rama y el borrador de la spec |
@@ -122,7 +126,8 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 
 0. **Actualiza el harness** (`git pull --ff-only`). Si no puede, se detiene: no se propone código con reglas
    viejas. Sin remoto, sigue.
-1. Lee la historia de Jira en solo lectura, con el token personal: título, descripción, tipo, estado,
+1. Lee la Tarea de Jira y su historia enlazada: de ahí salen la Medición HU, los criterios y la descripción. Una Tarea
+   sin historia usa los suyos y queda sin medir. Lo hace en solo lectura, con el token personal: título, descripción, tipo, estado,
    **Medición HU** y criterios de aceptación (la sección "Criterios de aceptación" de la descripción).
 2. Decide con la Medición HU, sin IA:
 
@@ -135,7 +140,7 @@ python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
 3. Identifica los repositorios que toca por los componentes, las etiquetas o las menciones de la
    historia. Si no surgen, Cursor pregunta y repite con `--repos`.
 4. Crea la rama `<tipo>/<CLAVE>-<título>` en cada repositorio (ADR-EQ-010): `fix` para un Error o un Hotfix, `chore`
-   para una Tarea y `feat` para el resto; `--tipo` lo cambia. La crea desde su rama principal. No cambia de
+   para una Tarea de deuda y `feat` para el resto; `--tipo` lo cambia. La crea desde su rama principal. No cambia de
    rama un repositorio con cambios sin commit.
 5. **Foco:** escribe `.cursorignore` para que Cursor vea solo esos repositorios, lo que ahorra tokens en
    búsquedas e índice. `make foco` lo restaura.

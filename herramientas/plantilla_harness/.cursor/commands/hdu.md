@@ -1,6 +1,7 @@
 # /hdu
 
-Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo `/hdu FRAUD-123`).
+Tomar una Tarea de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo `/hdu FRAUD-200`). También acepta un
+Error, un Hotfix o un Spike. Una historia no se toma directo: se desarrolla en una Tarea.
 
 1. **Tomar:**
 
@@ -11,13 +12,16 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
    - **Actualiza primero el harness.** Si no puede, se detiene (salida 1): mostrar el motivo. No seguir con
      reglas viejas.
    - **Aviso de arquitectura:** si hay commits que no llegaron, mostrarlo al inicio del plan.
+   - **Es una historia** (salida 4): indicar que se cree su Tarea con `/tarea` o a mano. No seguir.
    - **No se toma** (salida 2) si la Medición HU no es una de las aceptadas: mostrar el motivo y sugerir
      qué falta completar en la historia. No seguir.
    - **Sin repositorios** (salida 3): preguntar cuáles toca y repetir con `--repos`.
+   - **Medición y criterios:** vienen de la historia enlazada a la Tarea. Una Tarea sin historia usa sus propios
+     criterios y queda sin medir.
    - **HU sin medir:** se toma, pero avisar que `/listo` va a exigir la revisión de la deuda que deja.
    - Crea la rama `<tipo>/<CLAVE>-…` en cada repositorio (salvo cambios sin commit o `--sin-rama`) y deja visibles
-     en Cursor solo esos repositorios. El tipo es `fix` para un Error o un Hotfix, `chore` para una Tarea y `feat`
-     para el resto. Si el cambio es de otro tipo, indicarlo con `--tipo` (ADR-EQ-010).
+     en Cursor solo esos repositorios. El tipo es `fix` para un Error o un Hotfix, `chore` para una Tarea de deuda y
+     `feat` para el resto. Si el cambio es de otro tipo, indicarlo con `--tipo` (ADR-EQ-010).
 
 2. **Leer** `trabajo/<CLAVE>/contexto.md`: criterios de aceptación, descripción, extractos de arquitectura
    relacionados y, por repositorio, terceros, componentes y hallazgos abiertos relacionados. Las decisiones

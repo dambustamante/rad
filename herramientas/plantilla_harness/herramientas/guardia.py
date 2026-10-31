@@ -34,6 +34,8 @@ def evaluar(comando: str) -> tuple[str, str]:
         return "deny", "Aprobar, mergear o cerrar MR no se hace desde aquí: se hace en GitLab, con su revisión."
     if HTTP_ESCRITURA.search(comando):
         return "deny", "No se escribe por HTTP directamente desde el harness."
+    if re.search(r"(^|\s)--confirmar(\s|$)", comando):
+        return "ask", "Este comando crea una Tarea en Jira. Aprobarlo solo si ya se revisó la vista previa."
     return "allow", ""
 
 

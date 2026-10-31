@@ -28,10 +28,13 @@ Toda Tarea, Spike, Error o Hotfix tiene:
 
 | Tipo de incidencia | Campo "Tipo" permitido |
 |---|---|
-| Tarea | Deuda Técnica, Deuda Operativa |
+| Tarea | Deuda Técnica, Deuda Operativa, Producto |
 | Error | Bau/Incidentes |
 | Hotfix | Bau/Incidentes |
 | Spike | Spike |
+
+Una **Tarea de Producto** es el desarrollo de una historia. Su contenido ya está en la historia y en la spec, así que
+lleva solo un resumen, el enlace a la historia y la ubicación de la spec. No aplican los puntos 2 y 3.
 
 Un **Hotfix** es la corrección urgente de algo que falla en producción y no puede esperar: se
 escribe con lo mínimo para actuar ya, y la causa y la prueba que reproduce la falla se documentan
@@ -86,6 +89,13 @@ Todas las Tareas, Spikes, Errores y Hotfix que crea el equipo Back.
 
 Criterio fijo: en Deuda Técnica, "la revisión ya no reporta los hallazgos de origen"; en Deuda
 Operativa, "la tarea manual deja de ser necesaria", indicando cómo se verifica.
+
+**Tarea (Producto)**
+
+| Sección | Contenido |
+|---|---|
+| Resumen | Qué historia desarrolla |
+| Trazabilidad | Enlace a la historia en Jira y ubicación de la spec |
 
 **Error (Bau/Incidentes)**
 
@@ -145,8 +155,9 @@ Plantillas: `equipo/plantillas/tarea.md`, `equipo/plantillas/spike.md`, `equipo/
 
 ## 11. Regla rápida
 
-> Toda Tarea, Spike, Error o Hotfix tiene Como/Quiero/Para, criterios de aceptación verificables, la
-> evidencia del problema y las secciones de su tipo, en lenguaje técnico y claro.
+> Toda Tarea de deuda, Spike, Error o Hotfix tiene Como/Quiero/Para, criterios de aceptación verificables, la
+> evidencia del problema y las secciones de su tipo, en lenguaje técnico y claro. Una Tarea de Producto lleva un
+> resumen, el enlace a su historia y la ubicación de su spec.
 
 ## 12. Relación con arquitectura
 
@@ -157,8 +168,8 @@ Se verifica automáticamente con `/actualizar` y se registra en [COHERENCIA.md](
 | Criterio | Qué se verifica | Cómo | Severidad |
 |---|---|---|---|
 | `EQ-009.1` | Equipos = Back y combinación válida de tipo de incidencia y campo Tipo | automática | alta |
-| `EQ-009.2` | Tiene Como, Quiero y Para, y el Para no repite el Quiero | automática + revisión de la historia | media |
-| `EQ-009.3` | Tiene al menos un criterio de aceptación medible | automática + revisión de la historia | alta |
+| `EQ-009.2` | Tiene Como, Quiero y Para, y el Para no repite el Quiero (salvo una Tarea de Producto) | automática + revisión de la historia | media |
+| `EQ-009.3` | Tiene al menos un criterio de aceptación medible (en una Tarea de Producto, en su historia) | automática + revisión de la historia | alta |
 | `EQ-009.4` | Tiene las secciones obligatorias de su tipo de incidencia | automática | media |
 | `EQ-009.5` | Un Spike tiene una sola pregunta, duración máxima y ADR como entregable | automática | alta |
 | `EQ-009.6` | Cumple las reglas de lenguaje | automática + revisión de la historia | baja |

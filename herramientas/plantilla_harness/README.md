@@ -4,6 +4,9 @@ Repositorio de trabajo para desarrollar **{{producto}}** con [Cursor](https://cu
 repositorios del producto en `code/` y las reglas que el código debe cumplir. Lo genera y lo revisa
 **radiografia**.
 
+Una historia se desarrolla en una **Tarea** de Jira, que lleva la spec, el código y las pruebas. La Tarea se crea
+con `/tarea <HISTORIA>` o a mano, enlazada a su historia. `<CLAVE>` es la clave de la Tarea.
+
 | Paso | Dónde | Qué pasa |
 |---|---|---|
 | 1. `/hdu <CLAVE>` | Harness | Crea la rama y el borrador de la spec |
@@ -14,14 +17,14 @@ repositorios del producto en `code/` y las reglas que el código debe cumplir. L
 | 6. `/revisar mr` | radiografia | Contrasta el MR con la spec y las reglas |
 
 Una **spec** es una página que dice qué se construirá, cómo se probará y qué reglas aplican. Vive en
-`specs/<CLAVE>/spec.md`. `/hdu` solo toma una historia si su **Medición HU** es Óptima, Completa o Adecuada,
-o está vacía.
+`specs/<CLAVE>/spec.md`. `/hdu` solo toma una Tarea si la **Medición HU** de su historia es Óptima, Completa o
+Adecuada, o está vacía.
 
 Un Hotfix no espera la aprobación: su spec se completa antes de `/listo`. Un Spike no lleva spec: entrega un ADR.
 
 ## Empezar
 
-Requisitos: Python 3.11, `git`, `make`, Cursor, `gitleaks` y un token de Jira con lectura.
+Requisitos: Python 3.11, `git`, `make`, Cursor, `gitleaks` y un token de Jira con lectura. `/tarea` también necesita permiso para crear incidencias.
 
 ```sh
 cp .env.example .env    # JIRA_URL, JIRA_EMAIL y JIRA_TOKEN
@@ -35,7 +38,8 @@ Abrir **esta carpeta** en Cursor, no la de un repositorio.
 
 | Comando | Cuándo | Qué hace |
 |---|---|---|
-| `/hdu <CLAVE>` | al empezar una historia | Medición HU, ramas, foco, contexto y borrador de la spec |
+| `/tarea <HISTORIA>` | si la Tarea no existe | crea en Jira la Tarea enlazada a la historia, con vista previa y confirmación |
+| `/hdu <CLAVE>` | al empezar una Tarea | Medición HU, ramas, foco, contexto y borrador de la spec |
 | `/desarrollar <CLAVE>` | con la spec aprobada | comprueba la aprobación y desarrolla contra la spec |
 | `/listo <CLAVE>` | antes del MR | verificaciones, pruebas por criterio, deuda y descripción del MR |
 | `make actualizar` | al empezar el día | trae la última versión del harness y de los repositorios |

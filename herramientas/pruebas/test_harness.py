@@ -141,7 +141,8 @@ class PruebaHarness(unittest.TestCase):
         casos = {"git -C code/fraude-core push origin main": "deny", "git push --force origin feature/x": "deny",
                  "git push origin +feature/x": "deny", "glab mr merge 12": "deny",
                  "git -C code/fraude-core push -u origin feature/FRAUD-123": "allow",
-                 "git -C code/fraude-core commit -m 'Agrega timeout'": "allow"}
+                 "git -C code/fraude-core commit -m 'Agrega timeout'": "allow",
+                 "python3 herramientas/hdu.py tarea FRAUD-100 --confirmar": "ask"}
         for comando, esperado in casos.items():
             self.assertEqual(guardia_dev.evaluar(comando)[0], esperado, comando)
         self.assertEqual(guardia.evaluar("git -C productos/motor-fraudes/harness push origin main")[0], "ask",
@@ -169,24 +170,28 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("decisiones:ADR-010", [h["criterio"] for h in contexto["fraude-core"]["hallazgos"]])
         self.assertTrue((self.destino / ".env.example").exists())
 
-    def historia(self, medicion: str | None, tipo: str = "Historia") -> dict:
+    def historia(self, medicion: str | None, tipo: str = "Tarea", enlazada: bool = False) -> dict:
         descripcion = {"type": "doc", "content": [
             {"type": "paragraph", "content": [{"type": "text", "text": "Como analista quiero que la evaluación consulte el buró."}]},
             {"type": "heading", "content": [{"type": "text", "text": "Criterios de aceptación"}]},
             {"type": "bulletList", "content": [
                 {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "La consulta responde en menos de 800 ms."}]}]},
                 {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Si el buró falla, la transacción queda en revisión."}]}]}]}]}
-        campos = {"summary": "Consultar el buró en la evaluación", "description": descripcion, "issuetype": {"name": tipo},
+        enlaces = [{"type": {"name": "Relates"}, "outwardIssue": {"key": "FRAUD-100", "fields": {"issuetype": {"name": "Historia"}}}}] if enlazada else []
+        campos = {"issuelinks": enlaces, "summary": "Consultar el buró en la evaluación", "description": descripcion, "issuetype": {"name": tipo},
                   "status": {"name": "Por hacer"}, "labels": [], "components": [{"name": "fraude-core"}],
                   "customfield_1": {"value": medicion} if medicion else None, "customfield_2": {"value": "Producto"}}
         return {"fields": campos}
 
-    def hdu(self, medicion: str | None, tipo: str = "Historia"):
+    def hdu(self, medicion: str | None, tipo: str = "Tarea", enlazada: bool = True):
         modulo = cargar(self.destino / "herramientas" / "hdu.py", "hdu_prueba")
         def pedir(env, ruta, parametros=None):
             if ruta.endswith("/field"):
-                return [{"id": "customfield_1", "name": "Medición HU"}, {"id": "customfield_2", "name": "Tipo"}]
-            return self.historia(medicion, tipo)
+                return [{"id": "customfield_1", "name": "Medición HU"}, {"id": "customfield_2", "name": "Tipo"},
+                        {"id": "customfield_3", "name": "Equipos", "schema": {"type": "array"}}]
+            if "FRAUD-100" in ruta:
+                return self.historia(medicion, "Historia")
+            return self.historia(None if tipo == "Tarea" else medicion, tipo, enlazada and tipo == "Tarea")
         modulo.pedir = pedir
         modulo.cargar_env = lambda: {"JIRA_URL": "https://jira.example", "JIRA_EMAIL": "e", "JIRA_TOKEN": "t"}
         return modulo
@@ -220,6 +225,36 @@ class PruebaHarness(unittest.TestCase):
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
 
+    def test_tarea_enlazada_a_su_historia(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        modulo = self.hdu("Completa")
+        self.assertTrue(modulo.tomar("FRAUD-100", None, False)["es_historia"], "una historia se desarrolla en una Tarea")
+        r = modulo.tomar("FRAUD-200", None, False)
+        self.assertEqual((r["historia"]["medicion"], r["historia"]["historia_origen"]), ("Completa", "FRAUD-100"))
+        self.assertIn("- Historia: FRAUD-100", r["contexto"].read_text(encoding="utf-8"))
+        self.assertFalse(self.hdu("Incompleta").tomar("FRAUD-201", None, False)["tomada"], "manda la medición de la historia")
+        self.assertEqual(self.hdu("Completa", enlazada=False).tomar("FRAUD-202", None, False)["medicion"], "sin medir")
+
+        modulo = self.hdu("Completa")
+        enviados = []
+        def enviar(env, ruta, cuerpo):
+            enviados.append((ruta, cuerpo))
+            return {"key": "FRAUD-300"}
+        modulo.enviar = enviar
+        previa = modulo.crear_tarea("FRAUD-100", False)
+        self.assertEqual(enviados, [], "sin confirmar no escribe en Jira")
+        campos = previa["solicitud"]["fields"]
+        self.assertEqual((campos["issuetype"]["name"], campos["customfield_2"], campos["customfield_3"], campos["project"]["key"]),
+                         ("Tarea", {"value": "Producto"}, [{"value": "Back"}], "FRAUD"))
+        self.assertEqual(modulo.crear_tarea("FRAUD-100", True)["clave"], "FRAUD-300")
+        self.assertEqual([r for r, _ in enviados], ["/rest/api/3/issue", "/rest/api/3/issueLink"])
+        self.assertEqual(enviados[1][1]["outwardIssue"], {"key": "FRAUD-100"})
+        with self.assertRaises(modulo.ErrorHdu):
+            modulo.crear_tarea("FRAUD-200", False)
+        rechazada = self.hdu("Incompleta")
+        with self.assertRaises(rechazada.ErrorHdu):
+            rechazada.crear_tarea("FRAUD-100", False)
+
     def aprobar_spec(self, clave: str) -> None:
         """Completa la spec e integra su rama en main, como lo haría su MR."""
         archivo = self.destino / "specs" / clave / "spec.md"
@@ -244,7 +279,7 @@ class PruebaHarness(unittest.TestCase):
         git("switch", "--quiet", "docs/FRAUD-123-spec", cwd=self.destino)
         self.aprobar_spec("FRAUD-123")
         self.assertEqual(modulo.errores_spec("FRAUD-123"), [])
-        self.assertEqual(modulo.desarrollar("FRAUD-123")["tipo"], "historia")
+        self.assertEqual(modulo.desarrollar("FRAUD-123")["tipo"], "tarea")
         self.assertIn("ya aprobada", modulo.tomar("FRAUD-123", None, False)["spec"])
 
         archivo = modulo.ruta_spec("FRAUD-123")

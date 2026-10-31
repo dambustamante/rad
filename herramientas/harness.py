@@ -202,7 +202,9 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
     archivos["config.json"] = json.dumps({
         "producto": producto, "sigla": sigla_de(raiz, producto),
         "jira": {"campo_medicion": jira["campo_medicion"], "medicion_aceptada": jira["medicion_aceptada"],
-                 "campo_tipo": jira["campo_tipo"]}}, indent=2, ensure_ascii=False) + "\n"
+                 "campo_tipo": jira["campo_tipo"], "campo_equipos": jira["campo_equipos"], "equipos": jira["equipos"],
+                 "tipos_incidencia": jira["tipos_incidencia"], "tipo_tarea_desarrollo": jira["tipo_tarea_desarrollo"],
+                 "enlace_historia": jira["enlace_historia"]}}, indent=2, ensure_ascii=False) + "\n"
     import lenguaje
     reglas = lenguaje.cargar_reglas(raiz)
     archivos["lenguaje.json"] = json.dumps({"voseo": reglas["voseo"], "expresiones": [e["texto"] for e in reglas["expresiones"]]},
