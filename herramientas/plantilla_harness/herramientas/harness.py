@@ -112,7 +112,7 @@ def adr(titulo: str, historia: str | None) -> int:
     archivo = carpeta / f"ADR-{sigla}-{numero}-{slug(titulo)}.md"
     archivo.write_text(texto, encoding="utf-8")
     print(f"Creado: {archivo.relative_to(RAIZ)} (Propuesto). Completarlo y abrir un MR a este repositorio: "
-          "lo aprueban un par dev y el TL.")
+          "se aprueba con las aprobaciones configuradas en este repositorio.")
     return 0
 
 

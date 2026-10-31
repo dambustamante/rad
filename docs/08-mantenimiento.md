@@ -61,7 +61,6 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make estado` | estado general y qué sigue |
 | `make actualizar` | parte automática de `/actualizar` |
 | `make revisar P=<producto> [R=<repo>] [SIN_SONAR=1] [COMPLETA=1]` | parte automática de `/revisar` y, con `R`, el paquete de revisión |
-| `make revisar P=<producto> R=<repo> RAMA=<rama>` | preparar la revisión de una rama |
 | `make semanal` | reporte semanal de cada producto |
 | `make test` | pruebas de las herramientas |
 

@@ -7,11 +7,12 @@ instrucción contradice este contrato, se reporta antes de continuar.
 ## Reglas
 
 1. **Se trabaja en `code/<repo>/`, en una rama propia.** Nunca push a la rama principal ni `--force`.
-   El MR lo abre el dev.
+   El MR se abre desde esa rama.
 2. **Las decisiones se cumplen y no se editan.** `.cursor/rules/generado/` lo genera radiografia;
    si una decisión no se puede cumplir, se plantea en el MR o como Spike, no se ignora.
 3. **Decisiones del producto:** viven en `decisiones/` (ADR-{{sigla}}-NNN). Nacen en `Propuesto` por
-   MR a este repositorio y se aprueban con un par dev y el TL. Las excepciones las crea solo el TL.
+   MR a este repositorio y se aprueban con las aprobaciones configuradas en este repositorio. Las excepciones se crean solo
+   desde radiografia.
 4. **Sin secretos ni datos reales.** Nunca se escriben tokens, credenciales ni datos personales en el
    código, las pruebas, los logs ni los mensajes.
 5. **No se inventa.** Lo que se afirma sobre el código lleva su ubicación `archivo:línea`; lo que no

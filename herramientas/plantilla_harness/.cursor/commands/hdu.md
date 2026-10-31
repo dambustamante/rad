@@ -9,8 +9,8 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
    ```
 
    - **No se toma** (salida 2) si la Medición HU no es una de las aceptadas: mostrar el motivo y sugerir
-     qué pedir al PO. No seguir.
-   - **Sin repositorios** (salida 3): preguntar al dev cuáles toca y repetir con `--repos`.
+     qué falta completar en la historia. No seguir.
+   - **Sin repositorios** (salida 3): preguntar cuáles toca y repetir con `--repos`.
    - **HU sin medir:** se toma, pero avisar que `/listo` va a exigir la revisión de la deuda que deja.
    - Crea la rama `feature/<CLAVE>-…` en cada repositorio (salvo cambios sin commit o `--sin-rama`) y deja
      visibles en Cursor solo esos repositorios.
@@ -19,11 +19,11 @@ Tomar una historia de Jira para desarrollarla. Uso: `/hdu <CLAVE>` (por ejemplo 
    terceros, componentes y hallazgos abiertos relacionados. Las decisiones que aplican ya están en
    `.cursor/rules/generado/`.
 
-3. **Proponer el plan** y esperar el OK del dev antes de implementar:
+3. **Proponer el plan** y pedir confirmación antes de implementar:
    - archivos y cambios por repositorio, citando `archivo:línea` de lo que se lee;
    - **una prueba por criterio de aceptación**, con su nombre y qué verifica;
    - decisiones que aplican (por su ID) y hallazgos relacionados que conviene corregir de paso;
-   - lo que no se sabe, como `NO DETERMINADO`, con la pregunta para el PO o el TL.
+   - lo que no se sabe, como `NO DETERMINADO`, con la pregunta por resolver.
 
    Si no hay criterios de aceptación reconocibles, decirlo y no inventarlos.
 

@@ -9,8 +9,8 @@ compara la rama con su rama principal y verifica, sin IA: secretos (gitleaks), s
 agregados, APIs cambiadas sin contrato, integraciones nuevas y pruebas debilitadas. Escribe
 trabajo/<CLAVE>/listo-paquete.md con el diff para la revisión de Cursor.
 
-`cerrar` valida lo que registró Cursor con el dev (criterio -> prueba, deuda que deja la historia) y escribe
-trabajo/<CLAVE>/mr-<repo>.md con la descripción del MR, que incluye un registro para la revisión del TL.
+`cerrar` valida lo que registró Cursor (criterio -> prueba, deuda que deja la historia) y escribe
+trabajo/<CLAVE>/mr-<repo>.md con la descripción del MR, que incluye un registro para la revisión.
 """
 
 from __future__ import annotations
@@ -261,7 +261,7 @@ def cerrar(clave: str) -> list[Path]:
                    "- [ ] Aprobado por otra persona",
                    f"- Decisiones que aplican: {', '.join(registro.get('decisiones_aplicadas') or []) or '—'}"]
         if registro.get("decision_propuesta"):
-            lineas += ["", f"**Decisión propuesta para el TL:** {registro['decision_propuesta']}"]
+            lineas += ["", f"**Decisión propuesta:** {registro['decision_propuesta']}"]
         lineas += ["", f"<!-- {MARCA_REGISTRO} {json.dumps(datos_registro, ensure_ascii=False)} -->"]
         archivo = carpeta / f"mr-{r['id']}.md"
         archivo.write_text("\n".join(lineas) + "\n", encoding="utf-8")

@@ -293,8 +293,8 @@ def main(argumentos: list[str] | None = None) -> int:
     h = r["historia"]
     print(f"{h['clave']}: {h['titulo']} · Medición HU: {h['medicion'] or 'vacía'} ({r['medicion']})")
     if r["medicion"] == "rechazada":
-        print(f"No se toma: la Medición HU debe ser una de las aceptadas. Pedir al PO que complete la historia "
-              f"(criterios de aceptación medibles, Como/Quiero/Para) y que se vuelva a medir.")
+        print(f"No se toma: la Medición HU debe ser una de las aceptadas. Completar la historia "
+              f"(criterios de aceptación medibles, Como/Quiero/Para) y volver a medirla.")
         return 2
     if not h["campo_medicion_existe"]:
         print("Aviso: no se encontró el campo de Medición HU en Jira (revisar config.json).")

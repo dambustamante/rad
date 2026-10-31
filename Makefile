@@ -45,7 +45,7 @@ historias: $(ENTORNO) #- Sincroniza las historias de usuario de los productos qu
 harness-traer: $(ENTORNO) #- Trae la última versión de cada harness de producto (git pull de la copia local)
 	-@$(PYTHON) herramientas/harness.py traer
 
-harness-generar: $(ENTORNO) #- Regenera lo generado en cada harness y hace commit local si cambió (el push lo hace el TL)
+harness-generar: $(ENTORNO) #- Regenera lo generado en cada harness y hace commit local si cambió (el push es manual)
 	-@$(PYTHON) herramientas/harness.py generar
 
 indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
@@ -53,14 +53,9 @@ indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 
 actualizar: doctor sync-arquitectura harness-traer coherencia repos terceros historias harness-generar indices ## Ejecuta la parte automática de /actualizar
 
-revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1] [COMPLETA=1]
-	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [RAMA=<rama>] [SIN_SONAR=1]"; exit 1)
-ifdef RAMA
-	@test -n "$(R)" || (echo "Para revisar una rama se indica el repositorio: make revisar P=<producto> R=<repo> RAMA=<rama>"; exit 1)
-	@$(PYTHON) herramientas/rama.py preparar $(P) $(R) $(RAMA)
-else
+revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1] [COMPLETA=1]
+	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)
 	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar) $(if $(COMPLETA),--completa)
-endif
 
 semanal: repos ## Reporte semanal de cada producto (actualiza antes las copias de los repositorios)
 	@$(PYTHON) herramientas/estado.py semanal

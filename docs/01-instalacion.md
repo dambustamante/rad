@@ -38,11 +38,11 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `SONAR_ORGANIZACION` | solo SonarCloud | clave de la organización |
 | `SONAR_TOKEN` | sí | token con permiso de lectura (Browse) sobre los proyectos |
 | `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix |
-| `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar ramas con su MR o PR, publicar el comentario y contar MR en el reporte semanal |
+| `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar MR o PR y publicar el comentario |
 
 Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer
-historias ni crear incidencias. Sin la plataforma git, una rama se revisa contra la rama principal y
-no se puede publicar el comentario. El resto funciona igual.
+historias ni crear incidencias. Sin la plataforma git, no se revisan MR ni se publica el
+comentario. El resto funciona igual.
 
 Permisos de los tokens de la plataforma: en GitLab, `api`; en GitHub, pull requests de lectura y
 escritura (para leer el PR y comentarlo).
