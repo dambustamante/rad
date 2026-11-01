@@ -12,7 +12,7 @@ Programar una Tarea contra su spec aprobada. Uso: `/desarrollar <TAREA>`. Tambi�
    esos repositorios. El tipo es `fix` para un Error o un Hotfix, `chore` para una Tarea de deuda y `feat` para el resto. Si
    el cambio es de otro tipo, indicarlo con `--tipo` (ADR-EQ-010). Si se detiene, mostrar el motivo y no programar.
 
-2. **Leer** la spec y `trabajo/<CLAVE>/contexto.md`. No releer las reglas: ya están en `.cursor/rules/generado/`.
+2. **Leer** la spec y `trabajo/<CLAVE>/contexto.md`. No releer las reglas: `.cursor/rules/generado/` se carga solo. Un chat por Tarea.
 
 3. **Proponer los pasos**, cada uno ligado a un criterio de aceptación y a su prueba, y pedir confirmación. Volver a
    pedirla en los cambios delicados.
@@ -23,4 +23,4 @@ Programar una Tarea contra su spec aprobada. Uso: `/desarrollar <TAREA>`. Tambi�
 5. **Si algo no calza con la spec:** no cambiar el alcance. Un cambio menor se anota para `desvios` de `/listo`. Un
    cambio de alcance o de diseño se detiene y se propone corregir la spec en un MR.
 
-Al terminar, seguir con `/listo <CLAVE>`.
+Al terminar, sugerir un chat nuevo para `/listo <CLAVE>`.

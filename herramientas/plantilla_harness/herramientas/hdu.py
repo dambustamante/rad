@@ -3,7 +3,6 @@
 Uso:
   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b]  /hdu: refina una historia o toma otra incidencia
   python3 herramientas/hdu.py crear-tareas <HISTORIA> [--confirmar]      /hdu: crea las Tareas propuestas y sus specs
-  python3 herramientas/hdu.py tarea <HISTORIA>             /tarea: specs de las Tareas creadas a mano
   python3 herramientas/hdu.py spec <CLAVE>                               valida las specs antes de su MR
   python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo T] /desarrollar: comprueba la aprobación y crea las ramas
 
@@ -422,7 +421,7 @@ def errores_refinamiento(clave: str) -> list[str]:
     errores = ["propuesta: quedan partes por completar"] if PENDIENTE_SPEC in texto else []
     specs = sorted(a for a in propuesta.parent.glob("*.md") if a.name != propuesta.name)
     if not specs:
-        errores.append("no hay specs: crear las Tareas con /tarea")
+        errores.append("no hay specs: crear las Tareas con hdu.py crear-tareas")
     cubiertos = set()
     for archivo in specs:
         errores += [f"{archivo.stem}: {e}" for e in errores_spec(archivo.stem)]
@@ -520,7 +519,7 @@ def desarrollar(clave: str, tipo_rama: str | None = None, crear_rama: bool = Tru
     relacion = relacionado(incidencia, contexto, repos)
     avisos = avisos_arquitectura()
     archivo = escribir_contexto(incidencia, medicion, repos, ramas, relacion, arquitectura_relacionada(incidencia, relacion), avisos,
-                                str(ruta_spec(clave).relative_to(RAIZ)))
+                                str(ruta_spec(clave).relative_to(RAIZ)), con_historia=False)
     return {"spec": ruta_spec(clave), "tipo": tipo, "ramas": ramas, "contexto": archivo, "avisos": avisos}
 
 
@@ -541,7 +540,7 @@ def avisos_lenguaje(texto: str) -> list[str]:
 
 
 def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: dict[str, str], relacion: dict,
-                      documentos: list[dict], avisos: list[str], spec: str) -> Path:
+                      documentos: list[dict], avisos: list[str], spec: str, con_historia: bool = True) -> Path:
     carpeta = RAIZ / "trabajo" / historia["clave"]
     carpeta.mkdir(parents=True, exist_ok=True)
     lineas = [f"# {historia['clave']}: {historia['titulo']}", "",
@@ -555,10 +554,11 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
     lineas += [*[f"> {a}" for a in avisos], ""] if avisos else []
     if medicion == "sin medir":
         lineas += ["> HU sin medir: al terminar, `/listo` exige revisar la deuda técnica y operativa que deja.", ""]
-    lineas += ["## Criterios de aceptación", ""]
-    lineas += [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or \
-        ["NO DETERMINADO: la historia no tiene una sección de criterios de aceptación reconocible."]
-    lineas += ["", "## Descripción", "", historia["descripcion"].strip() or "(vacía)", ""]
+    if con_historia:  # en /desarrollar, los criterios y el objetivo ya están en la spec
+        lineas += ["## Criterios de aceptación", ""]
+        lineas += [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or \
+            ["NO DETERMINADO: la historia no tiene una sección de criterios de aceptación reconocible."]
+        lineas += ["", "## Descripción", "", historia["descripcion"].strip() or "(vacía)", ""]
     lineas += ["## Arquitectura relacionada", "", "Elegida por palabras en común. Las reglas rápidas de todos los documentos "
                "están en `.cursor/rules/generado/decisiones.mdc`.", ""]
     for documento in documentos:
@@ -659,31 +659,11 @@ def crear_tareas(clave: str, confirmar: bool) -> dict:
     solicitudes = [solicitud_tarea(historia, f["titulo"], config, campos) for f in pendientes]
     if pendientes and not confirmar:
         return {"creadas": [], "pendientes": pendientes, "existentes": existentes, "solicitudes": solicitudes, "specs": []}
+    if not filas:  # todas hechas a mano: la fila de ejemplo de la propuesta ya no aplica
+        propuesta.write_text(re.sub(r"\| <completar: título.*\n", "", propuesta.read_text(encoding="utf-8")), encoding="utf-8")
     creadas = [{"clave": enviar(env, "/rest/api/3/issue", s)["key"], "titulo": f["titulo"]} for f, s in zip(pendientes, solicitudes)]
     return {"creadas": creadas, "pendientes": [], "existentes": existentes, "solicitudes": solicitudes,
             "specs": escribir_specs(historia, [*existentes, *creadas], config, env)}
-
-
-def registrar_manuales(clave: str, crear_rama: bool = True) -> dict:
-    """/tarea: spec de las Tareas creadas a mano que cuelgan de la historia. No escribe en Jira."""
-    config, env = leer_json("config.json"), cargar_env()
-    historia = historia_para_tareas(clave, config, env)
-    medicion = evaluar_medicion(historia["medicion"], config["jira"]["medicion_aceptada"])
-    if medicion == "rechazada":
-        raise ErrorHdu("La Medición HU no es una de las aceptadas: completar la historia antes de desarrollarla.")
-    existentes = tareas_de(clave, env)
-    if not existentes:
-        raise ErrorHdu(f"No hay Tareas colgando de {clave}. Crearlas a mano en Jira, o usar /hdu {clave} para que se propongan.")
-    actualizar_harness()
-    if crear_rama:
-        rama_del_harness(rama_tareas(clave))
-    propuesta = ruta_propuesta(clave)
-    if not propuesta.exists():
-        propuesta.parent.mkdir(parents=True, exist_ok=True)
-        texto = texto_propuesta(historia, medicion).replace(
-            "<completar: criterios ambiguos o faltantes, como preguntas; si no hay, Ninguna>", "Ninguna")
-        propuesta.write_text(re.sub(r"\| <completar: título.*\n", "", texto), encoding="utf-8")
-    return {"existentes": existentes, "specs": escribir_specs(historia, existentes, config, env)}
 
 
 def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict:
@@ -722,7 +702,7 @@ def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict
     avisos = avisos_arquitectura()
     archivo = escribir_contexto(incidencia, medicion, repos, {}, relacion, arquitectura_relacionada(incidencia, relacion), avisos, spec)
     return {"historia": incidencia, "medicion": medicion, "tomada": True, "repos": repos, "contexto": archivo, "avisos": avisos,
-            "spec": spec, "es_historia": es_historia}
+            "spec": spec, "es_historia": es_historia, "existentes": tareas_de(clave, env) if es_historia else []}
 
 
 def main(argumentos: list[str] | None = None) -> int:
@@ -734,8 +714,6 @@ def main(argumentos: list[str] | None = None) -> int:
     p = sub.add_parser("crear-tareas")
     p.add_argument("clave")
     p.add_argument("--confirmar", action="store_true", help="crea las Tareas en Jira; sin esto solo muestra la vista previa")
-    p = sub.add_parser("tarea")
-    p.add_argument("clave")
     p = sub.add_parser("spec")
     p.add_argument("clave")
     p = sub.add_parser("desarrollar")
@@ -748,13 +726,6 @@ def main(argumentos: list[str] | None = None) -> int:
             errores = errores_refinamiento(clave)
             print("Válido: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
             return 1 if errores else 0
-        if o.accion == "tarea":
-            r = registrar_manuales(clave)
-            print(f"Tareas de {clave}: {', '.join(e['clave'] for e in r['existentes'])}")
-            for archivo in r["specs"]:
-                print(f"Spec: {archivo.relative_to(RAIZ)}")
-            print(f"Siguiente: completar las specs, validar con hdu.py spec {clave} y abrir el MR de las Tareas.")
-            return 0
         if o.accion == "crear-tareas":
             r = crear_tareas(clave, o.confirmar)
             print(f"Ya existen: {', '.join(e['clave'] for e in r['existentes']) or 'ninguna'}")
@@ -800,6 +771,8 @@ def main(argumentos: list[str] | None = None) -> int:
     for aviso in r["avisos"]:
         print(f"Aviso: {aviso}")
     print(f"Reglas: harness versión {version_harness()}. {'Propuesta' if r['es_historia'] else 'Spec'}: {r['spec']}.")
+    if r["existentes"]:
+        print(f"Tareas que ya cuelgan de la historia: {', '.join(e['clave'] + ' · ' + e['titulo'] for e in r['existentes'])}")
     print(f"Criterios de aceptación: {len(h['criterios'])}. Contexto: {r['contexto'].relative_to(RAIZ)}")
     return 0
 

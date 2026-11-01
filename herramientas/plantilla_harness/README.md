@@ -6,18 +6,19 @@ repositorios del producto en `code/` y las reglas que el código debe cumplir. L
 
 **Comandos:** [docs/comandos.md](docs/comandos.md) dice cuál usar en cada caso y qué hace.
 
+Usa un chat nuevo por etapa: gasta menos y la spec ya tiene lo necesario.
+
 Una historia se refina y se divide en **Tareas** de Jira, que cuelgan de ella. Cada Tarea tiene su spec: una página que
 dice qué se construirá, cómo se probará y qué reglas aplican.
 
 | Paso | Dónde | Qué pasa |
 |---|---|---|
-| 1. `/hdu <HISTORIA>` | Harness y Jira | Refina la historia, **propone las Tareas** y, si confirmas, las crea en Jira con una spec por cada una |
-| 2. `/tarea <HISTORIA>` | Harness | Opcional: genera la spec de las Tareas que creaste a mano |
-| 3. MR de las Tareas | Harness | Se revisan y se aprueban todas las specs, antes de programar |
-| 4. `/desarrollar <TAREA>` | `code/<repo>/` | Crea la rama de código y programa contra la spec aprobada |
-| 5. `/listo <TAREA>` | Harness | Verifica que el código cumple la spec |
-| 6. MR del código | Repositorio del producto | Se revisa y se aprueba como siempre |
-| 7. `/revisar mr` | radiografia | Contrasta el MR con la spec y las reglas |
+| 1. `/hdu <HISTORIA>` | Harness y Jira | Refina la historia, **propone las Tareas** y, si confirmas, las crea en Jira con una spec por cada una. Las Tareas hechas a mano también se reconocen |
+| 2. MR de las Tareas | Harness | Se revisan y se aprueban todas las specs, antes de programar |
+| 3. `/desarrollar <TAREA>` | `code/<repo>/` | Crea la rama de código y programa contra la spec aprobada |
+| 4. `/listo <TAREA>` | Harness | Verifica que el código cumple la spec |
+| 5. MR del código | Repositorio del producto | Se revisa y se aprueba como siempre |
+| 6. `/revisar mr` | radiografia | Contrasta el MR con la spec y las reglas |
 
 `/hdu` solo toma una historia si su **Medición HU** es Óptima, Completa o Adecuada, o está vacía. Un Error, un Hotfix, un
 Spike o una Tarea sin historia tienen [otro recorrido](docs/comandos.md#casos-distintos).

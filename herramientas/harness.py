@@ -44,6 +44,7 @@ GENERADOS = ("repos.json", "config.json", "contexto.json", "lenguaje.json", "GEN
              ".cursor/rules/generado/", ".cursor/arquitectura/")
 MAXIMO_HALLAZGOS = 15
 LARGO_RESUMEN = 700
+LIMITE_REGLAS_SIEMPRE = 1500  # palabras: decisiones.mdc se paga en cada mensaje
 MAXIMO_EXTRACTO = 1500
 ORDEN_SEVERIDAD = {"bloqueante": 0, "alta": 1, "media": 2, "baja": 3}
 PREFIJO_ID = re.compile(r"^[A-Z]+-[0-9]+:\s*")
@@ -68,42 +69,52 @@ def con_harness(raiz: Path, producto: str | None) -> list[str]:
 
 # --- Contenido generado ------------------------------------------------------------------------
 
+def decisiones_del_producto(raiz: Path, producto: str) -> tuple[list[tuple[str, dict[str, dict]]], list[dict]]:
+    todas = leer_decisiones_producto(raiz, producto)
+    grupos = [("Equipo", decisiones_con_criterios(raiz)),
+              ("Producto", {k: v for k, v in todas.items() if v["tipo"] == "decision" and v["evaluado"]})]
+    excepciones = [d for d in todas.values() if d["tipo"] == "excepcion" and normalizar(d["estado"]) == "aprobado"]
+    return grupos, excepciones
+
+
 def texto_decisiones(raiz: Path, producto: str) -> str:
-    """Regla que se aplica siempre: lo que el código del producto debe cumplir, en forma compacta."""
-    suspendidos = criterios_suspendidos(raiz, producto)
-    lineas = ["---", f"description: Decisiones que el código de {producto} debe cumplir (generado por radiografia; no se edita)",
-              "alwaysApply: true", "---", "", f"# Decisiones que aplican a {producto}", "",
+    """Regla que se aplica siempre: la regla rápida de cada documento y decisión, sin sus criterios."""
+    lineas = ["---", f"description: Reglas rápidas que {producto} debe cumplir (generado por radiografia; no se edita)",
+              "alwaysApply: true", "---", "", f"# Reglas de {producto}", "",
               "Generado por radiografia: no se edita. Las decisiones en `propuesta` todavía se están calibrando: "
-              "conviene cumplirlas, pero no bloquean el MR.", "", "## Arquitectura (obligatorio)", "",
+              "conviene cumplirlas, pero no bloquean el MR. Los criterios de cada una se cargan al trabajar en `code/` "
+              "(`.cursor/rules/generado/criterios.mdc`).", "", "## Arquitectura (obligatorio)", "",
               "/hdu trae los extractos relacionados con la historia. Si una regla toca el cambio y no está en el contexto, "
               "leer `.cursor/arquitectura/<clave>.md` (los `:` de la clave se escriben `--`).", ""]
     lineas += [f"- `{clave}` {PREFIJO_ID.sub('', d['titulo'])}: {d['regla_rapida'] or 'ver el documento'}"
                for clave, d in sorted(leer_arquitectura_vigente(raiz).items())] or ["Sin documentos de arquitectura vigentes."]
-    for titulo, decisiones in (("Equipo", decisiones_con_criterios(raiz)),
-                               ("Producto", {k: v for k, v in leer_decisiones_producto(raiz, producto).items()
-                                             if v["tipo"] == "decision" and v["evaluado"]})):
+    grupos, excepciones = decisiones_del_producto(raiz, producto)
+    for titulo, decisiones in grupos:
         lineas += ["", f"## {titulo}", ""]
-        if not decisiones:
-            lineas.append("Sin decisiones vigentes.")
-        for id_decision, d in decisiones.items():
-            modo = " (propuesta)" if normalizar(d["estado"]) == "propuesto" else ""
-            lineas += [f"### {id_decision} {d['titulo']}{modo}", "", f"Regla: {d['regla_rapida'] or '—'}", ""]
-            tabla = d.get("tabla") or {}
-            if not tabla:
-                from verificaciones import leer_criterios
-                tabla = leer_criterios(d["texto"])
-            if any(termino in criterio["como"].lower() for criterio in tabla.values() for termino in FORMA_DE_TRABAJAR):
-                continue  # decisiones sobre la forma de trabajar (historias, MR): basta la regla rápida
-            for id_criterio, criterio in tabla.items():
-                if id_criterio not in suspendidos.get(id_decision, []) and criterio["como"] in COMO_CODIGO:
-                    lineas.append(f"- `{id_criterio}` ({criterio['severidad']}): {criterio['texto']}")
-            lineas.append("")
-    excepciones = [d for d in leer_decisiones_producto(raiz, producto).values()
-                   if d["tipo"] == "excepcion" and normalizar(d["estado"]) == "aprobado"]
+        lineas += [f"- `{i}` {d['titulo']}" + (" (propuesta)" if normalizar(d["estado"]) == "propuesto" else "") + f": {d['regla_rapida'] or '—'}"
+                   for i, d in decisiones.items()] or ["Sin decisiones vigentes."]
     if excepciones:
-        lineas += ["## Excepciones aprobadas", ""]
+        lineas += ["", "## Excepciones aprobadas", ""]
         lineas += [f"- {d['id']}: {d['titulo']} (exceptúa {d['campos'].get('criterios exceptuados', '—')}; "
                    f"repositorios {d['campos'].get('repositorios', 'todos')}; vence {d['campos'].get('vence', '—')})" for d in excepciones]
+    return "\n".join(lineas).rstrip() + "\n"
+
+
+def texto_criterios(raiz: Path, producto: str) -> str:
+    """Regla que se aplica al trabajar en code/: los criterios que el código debe cumplir."""
+    from verificaciones import leer_criterios
+    suspendidos = criterios_suspendidos(raiz, producto)
+    lineas = ["---", f"description: Criterios que el código de {producto} debe cumplir (generado por radiografia; no se edita)",
+              'globs: code/**', "alwaysApply: false", "---", "", "# Criterios que el código debe cumplir"]
+    for titulo, decisiones in decisiones_del_producto(raiz, producto)[0]:
+        lineas += ["", f"## {titulo}"]
+        for id_decision, d in decisiones.items():
+            tabla = d.get("tabla") or leer_criterios(d["texto"])
+            if any(termino in criterio["como"].lower() for criterio in tabla.values() for termino in FORMA_DE_TRABAJAR):
+                continue  # decisiones sobre la forma de trabajar (historias, MR): basta la regla rápida
+            criterios = [f"- `{i}` ({c['severidad']}): {c['texto']}" for i, c in tabla.items()
+                         if i not in suspendidos.get(id_decision, []) and c["como"] in COMO_CODIGO]
+            lineas += ["", f"### {id_decision} {d['titulo']}", *criterios] if criterios else []
     return "\n".join(lineas).rstrip() + "\n"
 
 
@@ -191,6 +202,7 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
             {"id": str(r["id"]), "url": str(r["url"]), "rama": str(r["rama"]), "tipo": str(r["tipo"])} for r in activos]},
             indent=2, ensure_ascii=False) + "\n",
         ".cursor/rules/generado/decisiones.mdc": texto_decisiones(raiz, producto),
+        ".cursor/rules/generado/criterios.mdc": texto_criterios(raiz, producto),
     }
     vigentes = leer_arquitectura_vigente(raiz)
     archivos["arquitectura.json"] = indice_arquitectura(raiz, vigentes)
@@ -491,6 +503,10 @@ def main(argumentos: list[str] | None = None) -> int:
                     print(f"    La plantilla cambió {aviso}: revisar si el cambio se lleva al harness (por MR).")
             if not hubo_cambios:
                 print("Harness: sin cambios generados.")
+            for nombre in con_harness(raiz, o.producto):
+                palabras = len(texto_decisiones(raiz, nombre).split())
+                if palabras > LIMITE_REGLAS_SIEMPRE:
+                    print(f"  harness-{nombre}: decisiones.mdc tiene {palabras} palabras y se carga en cada mensaje: acortar las reglas rápidas.")
             faltantes = sin_regla_rapida(raiz)
             if faltantes:
                 print(f"  Documentos de arquitectura vigentes sin regla rápida: {', '.join(faltantes)}")

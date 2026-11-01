@@ -1,7 +1,7 @@
 # 10. Comandos de radiografia
 
 Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan el producto `motor-fraudes`.
-Los comandos del harness (`/hdu`, `/tarea`, `/desarrollar` y `/listo`) están en
+Los comandos del harness (`/hdu`, `/desarrollar` y `/listo`) están en
 [su propia guía](../herramientas/plantilla_harness/docs/comandos.md). Para preparar el entorno, ver
 [Instalación](01-instalacion.md).
 

@@ -18,9 +18,11 @@ harness-motor-fraudes/
 ├── .cursor/
 │   ├── arquitectura/<clave>.md           texto completo de los documentos vigentes (generado; se abre solo si hace falta)
 │   ├── rules/00-general.mdc              remite a AGENTS.md
-│   ├── rules/generado/decisiones.mdc     lo que el código debe cumplir (generado; se aplica siempre)
+│   ├── partes/                           partes de /hdu, que se leen solo si hacen falta
+│   ├── rules/generado/decisiones.mdc     reglas rápidas (generado; se aplica siempre)
+│   ├── rules/generado/criterios.mdc      criterios del código (generado; se aplica al trabajar en code/)
 │   ├── rules/generado/repo-<id>.mdc      contexto de cada repositorio (generado; se aplica al trabajar en code/<id>/)
-│   ├── commands/                         /hdu, /tarea, /desarrollar y /listo
+│   ├── commands/                         /hdu, /desarrollar y /listo
 │   └── hooks.json                        guardia de comandos
 ├── docs/comandos.md                      guía de comandos, de principio a fin
 ├── documentos/                           documentación del producto, en markdown
@@ -33,10 +35,10 @@ harness-motor-fraudes/
 
 **Lo generado** lo escribe radiografia y no se edita a mano:
 
-- `decisiones.mdc`: documentos de arquitectura vigentes con su regla rápida, y las decisiones del
-  equipo y del producto con los criterios que se aplican al código. Las decisiones sobre la forma de
-  trabajar (definición de terminado, estructura de las historias) van solo con su regla rápida. Los
-  criterios suspendidos por un choque no aparecen.
+- `decisiones.mdc`: la regla rápida de los documentos de arquitectura vigentes y de las decisiones del equipo y del producto. Se
+  carga en cada mensaje: `harness-generar` avisa si supera las 1.500 palabras.
+- `criterios.mdc`: los criterios que se aplican al código, sin los suspendidos por un choque. Se carga solo al trabajar en
+  `code/`. Las decisiones sobre la forma de trabajar no entran.
 - `repo-<id>.mdc`: propósito y arquitectura real (del AS IS), componentes, terceros y hasta 15
   hallazgos abiertos, ordenados por severidad, para corregirlos si se toca ese código.
 

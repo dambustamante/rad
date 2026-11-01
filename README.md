@@ -93,7 +93,7 @@ Esta semana se recibe el producto `motor-fraudes`.
 | **Para qué sirve** | Mostrar el estado real, publicar las reglas y revisar MR | Desarrollar las historias de Jira |
 | **Cuántos hay** | Uno | Uno por producto |
 | **Código de los productos** | Copias de solo lectura | Se modifica en `code/` |
-| **Comandos** | `/estado` `/actualizar` `/producto` `/revisar` `/triar` `/crear` | `/hdu` `/tarea` `/desarrollar` `/listo` |
+| **Comandos** | `/estado` `/actualizar` `/producto` `/revisar` `/triar` `/crear` | `/hdu` `/desarrollar` `/listo` |
 
 Este documento explica radiografia. El harness tiene [su propio README](herramientas/plantilla_harness/README.md).
 

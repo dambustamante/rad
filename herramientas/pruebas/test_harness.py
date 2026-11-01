@@ -90,8 +90,7 @@ class PruebaHarness(unittest.TestCase):
         decisiones = (self.destino / ".cursor/rules/generado/decisiones.mdc").read_text(encoding="utf-8")
         self.assertIn("alwaysApply: true", decisiones)
         self.assertIn("- `decisiones:ADR-010` Timeouts obligatorios: Ninguna llamada externa sin timeout explícito.", decisiones)
-        self.assertIn("### ADR-EQ-002 Integraciones resilientes con política de degradación explícita (propuesta)", decisiones)
-        self.assertIn("- `EQ-002.1` (alta):", decisiones)
+        self.assertIn("- `ADR-EQ-002` Integraciones resilientes con política de degradación explícita (propuesta):", decisiones)
         self.assertNotIn("EQ-009.2", decisiones, "los criterios de revisión de la historia no son para el código")
         repo = (self.destino / ".cursor/rules/generado/repo-fraude-core.mdc").read_text(encoding="utf-8")
         self.assertIn("globs: code/fraude-core/**", repo)
@@ -336,24 +335,43 @@ class PruebaHarness(unittest.TestCase):
         with self.assertRaises(modulo.ErrorHdu):
             modulo.desarrollar("FRAUD-100")  # una historia no se programa
 
-    def test_tarea_genera_la_spec_de_las_hechas_a_mano(self) -> None:
+    def test_hdu_reconoce_las_tareas_hechas_a_mano(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         modulo = self.hdu("Completa")
-        modulo.enviar = mock.Mock(side_effect=AssertionError("/tarea no escribe en Jira"))
-        with self.assertRaises(modulo.ErrorHdu):
-            modulo.registrar_manuales("FRAUD-100", False)  # sin Tareas colgando
+        modulo.enviar = mock.Mock(side_effect=AssertionError("sin Tareas propuestas no escribe en Jira"))
         self.hijas = [{"key": "FRAUD-150", "fields": {"summary": "Dejar en revisión"}}]
-        r = modulo.registrar_manuales("FRAUD-100", True)
-        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "docs/FRAUD-100-tareas")
-        self.assertEqual([a.name for a in r["specs"]], ["FRAUD-150.md"], "sin /hdu previo también funciona")
-        archivo = r["specs"][0]
-        self.assertIn("1. La consulta responde en menos de 800 ms.", archivo.read_text(encoding="utf-8"))
-        self.assertEqual(modulo.registrar_manuales("FRAUD-100", True)["specs"], [], "no pisa una spec que ya existe")
-        archivo.write_text(re.sub(r"<completar[^>]*>", "fraude-core", archivo.read_text(encoding="utf-8")), encoding="utf-8")
+        self.assertEqual(modulo.tomar("FRAUD-100", None, False)["existentes"][0]["clave"], "FRAUD-150")
+        r = modulo.crear_tareas("FRAUD-100", False)
+        self.assertEqual([a.name for a in r["specs"]], ["FRAUD-150.md"])
+        self.assertNotIn("título en infinitivo", modulo.ruta_propuesta("FRAUD-100").read_text(encoding="utf-8"))
+        self.assertEqual(modulo.crear_tareas("FRAUD-100", False)["specs"], [], "no pisa una spec que ya existe")
+        for archivo in (modulo.ruta_propuesta("FRAUD-100"), r["specs"][0]):
+            archivo.write_text(re.sub(r"<completar[^>]*>", "fraude-core", archivo.read_text(encoding="utf-8")), encoding="utf-8")
         self.assertEqual(modulo.errores_refinamiento("FRAUD-100"), [])
-        rechazada = self.hdu("Incompleta")
-        with self.assertRaises(rechazada.ErrorHdu):
-            rechazada.registrar_manuales("FRAUD-100", False)
+
+    def test_reglas_siempre_y_criterios_al_tocar_el_codigo(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        generado = self.destino / ".cursor" / "rules" / "generado"
+        siempre, criterios = (generado / "decisiones.mdc").read_text(encoding="utf-8"), (generado / "criterios.mdc").read_text(encoding="utf-8")
+        self.assertIn("alwaysApply: true", siempre)
+        self.assertNotIn("EQ-002.1", siempre, "los criterios no se pagan en cada mensaje")
+        self.assertIn("ADR-EQ-002", siempre)
+        self.assertIn('globs: code/**', criterios)
+        self.assertIn("EQ-002.1", criterios)
+        self.assertNotIn("EQ-009.2", criterios, "las decisiones sobre la forma de trabajar no entran")
+        self.assertLess(len(siempre.split()), harness.LIMITE_REGLAS_SIEMPRE)
+
+    def test_el_contexto_de_desarrollar_no_repite_la_spec(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
+        modulo = self.hdu("Completa")
+        self.especificar(modulo)
+        self.assertIn("## Criterios de aceptación", (self.destino / "trabajo" / "FRAUD-100" / "contexto.md").read_text(encoding="utf-8"))
+        self.integrar_tareas()
+        contexto = modulo.desarrollar("FRAUD-200")["contexto"].read_text(encoding="utf-8")
+        self.assertNotIn("## Criterios de aceptación", contexto)
+        self.assertNotIn("## Descripción", contexto)
+        self.assertIn("Spec: specs/FRAUD-100/FRAUD-200.md", contexto)
 
     def test_todo_producto_nace_con_su_harness(self) -> None:
         import productos

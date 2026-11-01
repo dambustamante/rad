@@ -1,6 +1,6 @@
 # Comandos de harness-{{producto}}
 
-Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan la historia `FRAUD-123` y su Tarea
+Los comandos que empiezan con `/` se escriben en el chat de Cursor. Conviene un chat nuevo por etapa. Los ejemplos usan la historia `FRAUD-123` y su Tarea
 `FRAUD-200`. Para preparar el entorno, ver el [README](../README.md).
 
 ## Qué comando usar
@@ -8,7 +8,7 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 | Qué se necesita | Comando |
 |---|---|
 | Refinar una historia, y que te proponga y cree sus Tareas | [`/hdu <HISTORIA>`](#hdu) |
-| Generar la spec de Tareas creadas a mano | [`/tarea <HISTORIA>`](#tarea) |
+| Generar la spec de Tareas creadas a mano | [`/hdu <HISTORIA>`](#hdu) |
 | Validar las specs antes de su MR | [`python3 herramientas/hdu.py spec <HISTORIA>`](#hdu) |
 | Aprobar las specs | [MR de las Tareas](#mr-de-las-tareas) |
 | Programar con la spec aprobada | [`/desarrollar <TAREA>`](#desarrollar) |
@@ -35,6 +35,9 @@ propone y escribe. Tú confirmas antes de lo importante.
 
 **Qué te pide:** revisar la propuesta y confirmar la creación de las Tareas. Después, revisar cada spec.
 
+**Tareas hechas a mano:** si ya creaste Tareas en Jira, colgando de la historia, `/hdu` las muestra. Puedes usar esas en lugar de
+las propuestas, y solo les genera la spec.
+
 **Cómo lo hace:**
 
 1. **Scripts:** traen la última versión de las reglas y leen la historia en Jira. Revisan la Medición HU.
@@ -54,20 +57,6 @@ propone y escribe. Tú confirmas antes de lo importante.
 
 **Se detiene si:** no puede actualizar las reglas, este repositorio no está en `main`, o la Medición HU no es Óptima,
 Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda.
-
-### /tarea
-
-| Comando | Qué hace |
-|---|---|
-| `/tarea <HISTORIA>` | Crea la rama y la spec de las Tareas hechas a mano |
-
-**Cuándo:** solo si creaste Tareas a mano en Jira, colgando de la historia, en lugar de usar las que propone `/hdu`, o si
-agregaste una después.
-
-**Cómo lo hace:** los scripts leen las Tareas que cuelgan de la historia y escriben la spec de las que no la tienen. No escriben en
-Jira. Cursor ayuda a completar cada spec y a dejar solo los criterios que cubre y sus repositorios. Se valida igual que en `/hdu`.
-
-**Se detiene si:** la incidencia no es una historia, su Medición HU no es aceptada o no hay Tareas colgando de ella.
 
 ### MR de las Tareas
 
@@ -98,7 +87,7 @@ El MR se abre en GitLab y revisa de una vez la división del trabajo. Las specs 
 1. **Scripts:** vuelven a `main`, traen las reglas y comprueban que la spec esté aprobada y sea válida.
 2. **Scripts:** crean `feat/FRAUD-200-...` en cada repositorio de la spec, dejan visibles en Cursor solo esos repositorios y
    escriben el contexto de la Tarea. No cambian de rama un repositorio con cambios sin commit.
-3. **Cursor:** lee la spec, propone los pasos por criterio, programa en `code/<repo>/` y ejecuta las pruebas.
+3. **Cursor:** lee la spec y el contexto, propone los pasos por criterio, programa en `code/<repo>/` y ejecuta las pruebas.
 
 La conversación sigue siendo normal: "implementemos el criterio 2" o "revisa por qué falla esta prueba". Los commits
 siguen Conventional Commits, por ejemplo `feat(buro): consulta el puntaje`.
@@ -150,7 +139,7 @@ registro del final no se edita: lo usa la revisión. El MR se aprueba en GitLab,
 
 ## Casos distintos
 
-Sin historia no hay propuesta ni `/tarea`: `/hdu <CLAVE>` crea una sola spec, `specs/<CLAVE>/<CLAVE>.md`, en la rama
+Sin historia no hay propuesta: `/hdu <CLAVE>` crea una sola spec, `specs/<CLAVE>/<CLAVE>.md`, en la rama
 `docs/<CLAVE>-spec`. La validación es `hdu.py spec <CLAVE>`.
 
 | Caso | Recorrido |
