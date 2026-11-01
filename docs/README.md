@@ -20,9 +20,9 @@ Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver
 
 ```
 /actualizar ─► /producto ─► /revisar (un chat por repo) ─► /triar ─► /crear
-     ▲                                                                       │
-     └───────────────── /estado indica qué sigue ◄──────────────────────────────┘
 ```
+
+`/estado` indica en cada momento qué sigue.
 
 Cada comando ejecuta primero su parte determinista (scripts de `herramientas/`, sin IA) y después
 la parte que requiere criterio, que hace Cursor. Así se gasta IA solo donde aporta.
