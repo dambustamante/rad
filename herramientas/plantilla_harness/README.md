@@ -4,6 +4,8 @@ Repositorio de trabajo para desarrollar **{{producto}}** con [Cursor](https://cu
 repositorios del producto en `code/` y las reglas que el código debe cumplir. Lo genera y lo revisa
 **radiografia**.
 
+**Comandos:** [docs/comandos.md](docs/comandos.md) dice cuál usar en cada caso y qué hace.
+
 Una historia se desarrolla en una **Tarea** de Jira, que lleva la spec, el código y las pruebas. Las Tareas cuelgan de
 la historia, que puede tener varias, y se crean con `/tarea <HISTORIA>` o a mano. `<CLAVE>` es la clave de la Tarea.
 
@@ -33,10 +35,6 @@ make actualizar               # clona los repositorios en code/; ENLAZAR=~/repos
 ```
 
 Abrir **esta carpeta** en Cursor, no la de un repositorio.
-
-## Comandos
-
-Cada comando, de principio a fin: [docs/comandos.md](docs/comandos.md).
 
 ## Qué no se edita a mano
 

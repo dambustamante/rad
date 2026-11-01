@@ -1,11 +1,27 @@
 # Comandos de harness-{{producto}}
 
-Guía de principio a fin para desarrollar en este repositorio. Los ejemplos usan la historia `FRAUD-123` y la Tarea
-`FRAUD-200`. Los comandos que empiezan con `/` se escriben en el chat de Cursor.
+Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan la historia `FRAUD-123` y la
+Tarea `FRAUD-200`. Para preparar el entorno, ver el [README](../README.md).
 
-Para preparar el entorno y ver el recorrido completo, ver el [README](../README.md).
+## Qué comando usar
 
-## `/tarea <HISTORIA>`: crear una Tarea en Jira
+| Qué se necesita | Comando |
+|---|---|
+| Crear la Tarea de una historia en Jira | [`/tarea <HISTORIA>`](#tarea) |
+| Empezar una Tarea, un Error, un Hotfix o un Spike | [`/hdu <CLAVE>`](#hdu) |
+| Validar la spec antes de su MR | [`python3 herramientas/hdu.py spec <CLAVE>`](#hdu) |
+| Aprobar la spec | [MR de la spec](#mr-de-la-spec) |
+| Programar con la spec aprobada | [`/desarrollar <CLAVE>`](#desarrollar) |
+| Cerrar antes del MR del código | [`/listo <CLAVE>`](#listo) |
+| Entregar el código | [MR del código](#mr-del-código) |
+| Traer la última versión de todo | [`make actualizar`](#comandos-de-apoyo) |
+| Cambiar los repositorios visibles en Cursor | [`make foco`](#comandos-de-apoyo) |
+| Proponer un ADR del producto | [`harness.py adr`](#comandos-de-apoyo) |
+| Saber qué cambia en un Hotfix, un Error o un Spike | [Casos distintos](#casos-distintos) |
+
+## Detalle de cada comando
+
+### /tarea
 
 **Cuándo:** cuando la Tarea todavía no existe. Es opcional, porque también se puede crear a mano. Una historia puede
 tener varias Tareas.
@@ -22,7 +38,7 @@ tener varias Tareas.
 
 **Después:** `/hdu` con la clave de la Tarea creada.
 
-## `/hdu <CLAVE>`: tomar el trabajo
+### /hdu
 
 **Cuándo:** al empezar una Tarea, un Error, un Hotfix o un Spike.
 
@@ -57,7 +73,7 @@ python3 herramientas/hdu.py spec FRAUD-200
 - la clave es de una historia (salida 4): primero hay que crear su Tarea;
 - no sabe qué repositorios toca (salida 3): repetir con `--repos`.
 
-## MR de la spec
+### MR de la spec
 
 **Cuándo:** con la spec válida. Todavía no se programa.
 
@@ -69,7 +85,7 @@ git push -u origin docs/FRAUD-200-spec
 
 El MR se abre en GitLab. La spec queda **aprobada** cuando ese MR se integra en `main`.
 
-## `/desarrollar <CLAVE>`: programar
+### /desarrollar
 
 **Cuándo:** con la spec aprobada.
 
@@ -89,7 +105,7 @@ detiene y se corrige la spec en un MR.
 
 **Se detiene si:** la spec no está aprobada o no es válida.
 
-## `/listo <CLAVE>`: cerrar antes del MR
+### /listo
 
 **Cuándo:** con el código terminado y todo en commits.
 
@@ -108,7 +124,7 @@ detiene y se corrige la spec en un MR.
 **No cierra si:** la spec no está aprobada, un criterio no tiene prueba, una prueba está deshabilitada o una evidencia no
 existe.
 
-## MR del código
+### MR del código
 
 ```sh
 git -C code/<repo> push -u origin feat/FRAUD-200-...

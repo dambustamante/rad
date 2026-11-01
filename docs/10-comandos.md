@@ -1,29 +1,51 @@
 # 10. Comandos de radiografia
 
-Guía de principio a fin. Los ejemplos usan el producto `motor-fraudes`. Los comandos que empiezan con `/` se escriben
-en el chat de Cursor. Los comandos del harness (`/tarea`, `/hdu`, `/desarrollar` y `/listo`) están en
+Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan el producto `motor-fraudes`.
+Los comandos del harness (`/tarea`, `/hdu`, `/desarrollar` y `/listo`) están en
 [su propia guía](../herramientas/plantilla_harness/docs/comandos.md). Para preparar el entorno, ver
 [Instalación](01-instalacion.md).
 
-## Recorrido
+## Qué comando usar
+
+| Qué se necesita | Comando |
+|---|---|
+| Saber qué sigue | [`/estado`](#estado) |
+| Ver qué cambió en la semana | [`/estado semanal`](#estado-semanal) |
+| Traer y publicar las reglas nuevas | [`/actualizar`](#actualizar) |
+| Agregar o retirar un repositorio de arquitectura | [`/actualizar fuentes`](#actualizar) |
+| Registrar un producto y crear su harness | [`/producto <nombre>`](#producto) |
+| Agregar o retirar repositorios, o registrar terceros | [`/producto <nombre>`](#producto) |
+| Conocer el estado real de un repositorio | [`/revisar <producto> [repo]`](#revisar) |
+| Revisar los MR abiertos | [`/revisar mr`](#revisar-mr) |
+| Decidir qué hacer con los hallazgos | [`/triar <producto> [repo]`](#triar) |
+| Crear un ADR del producto, en su harness | [`/crear <producto> adr`](#crear) |
+| Proponer ADR a partir de historias | [`/crear <producto> adr --desde-historias`](#crear) |
+| Crear una excepción a una regla, con vencimiento | [`/crear <producto> excepcion`](#crear) |
+| Crear un ADR del equipo | [`/crear equipo adr`](#crear) |
+| Crear una Tarea de Deuda Técnica desde hallazgos | [`/crear <producto> tarea --desde H-0041,H-0052`](#crear) |
+| Crear una Tarea desde la deuda declarada en `/listo` | [`/crear <producto> tarea --deuda FRAUD-200`](#crear) |
+| Crear un Spike, un Error o un Hotfix | [`/crear <producto> spike`, `error` o `hotfix`](#crear) |
+| Crear el Error de seguimiento de un Hotfix | [`/crear <producto> error --hotfix FRAUD-300`](#crear) |
+
+## Orden de uso
 
 ```text
-make venv y make doctor                 Una sola vez
-        ↓
-/actualizar                             Trae y publica las reglas
-        ↓
-/producto motor-fraudes                 Registra el producto y crea su harness
-        ↓
-/revisar motor-fraudes                  Deja el estado y los hallazgos, un chat por repositorio
-        ↓
-/triar motor-fraudes                    Decide qué hacer con cada hallazgo
-        ↓
-/crear motor-fraudes <tipo>             Crea un ADR o una incidencia de Jira
-        ↓
-Cada día: /estado y /revisar mr         Cada semana: /estado semanal y /actualizar
+/actualizar                     Trae y publica las reglas
+     ↓
+/producto motor-fraudes         Registra el producto y crea su harness
+     ↓
+/revisar motor-fraudes          Deja el estado y los hallazgos, un chat por repositorio
+     ↓
+/triar motor-fraudes            Decide qué hacer con cada hallazgo
+     ↓
+/crear motor-fraudes <tipo>     Crea un ADR o una incidencia de Jira
 ```
 
-## `/estado`: saber qué sigue
+Después: `/estado` y `/revisar mr` cada día; `/estado semanal` y `/actualizar` cada semana.
+
+## Detalle de cada comando
+
+### /estado
 
 **Cuándo:** al empezar, o si no se sabe qué comando usar.
 
@@ -33,7 +55,7 @@ Cada día: /estado y /revisar mr         Cada semana: /estado semanal y /actuali
 
 Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos locales: no usa la red ni gasta análisis.
 
-## `/estado semanal`: ver qué cambió
+### /estado semanal
 
 **Cuándo:** cada semana.
 
@@ -44,7 +66,7 @@ Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos loc
 Actualiza las copias de los repositorios y escribe `productos/<producto>/semanal/<AAAA-Wnn>.md` con commits, ramas
 activas y hallazgos nuevos, corregidos y reaparecidos. No publica nada.
 
-## `/actualizar`: traer y publicar las reglas
+### /actualizar
 
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
 
@@ -63,7 +85,7 @@ uno después, se usa `/actualizar fuentes`.
 
 Un harness con coherencia por evaluar queda retenido y no se sube.
 
-## `/producto <nombre>`: registrar un producto
+### /producto
 
 **Cuándo:** al recibir o iniciar un producto, y para agregar o retirar repositorios.
 
@@ -79,7 +101,7 @@ Un harness con coherencia por evaluar queda retenido y no se sube.
 **Paso manual:** crear el repositorio `harness-motor-fraudes` en GitLab y hacer el primer push, con los comandos que
 muestra el script.
 
-## `/revisar <producto> [repo]`: conocer el estado real
+### /revisar
 
 **Cuándo:** al recibir un producto y cuando cambia la rama principal de un repositorio. Se usa un chat por repositorio.
 
@@ -91,7 +113,7 @@ Ejecuta las verificaciones automáticas y Sonar, y Cursor revisa el código. Dej
 (`as-is/<repo>.md`), sus hallazgos y su veredicto. Cuando todos están revisados, consolida el producto en
 `as-is/PRODUCTO.md`.
 
-## `/revisar mr`: revisar los cambios del día
+### /revisar mr
 
 **Cuándo:** una o dos veces al día.
 
@@ -113,7 +135,7 @@ Ejecuta las verificaciones automáticas y Sonar, y Cursor revisa el código. Dej
 
 radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
-## `/triar <producto> [repo]`: decidir sobre los hallazgos
+### /triar
 
 **Cuándo:** después de revisar.
 
@@ -128,20 +150,10 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 | Deuda | Se acepta con un motivo. Sin fecha, vence a los 90 días |
 | Falso positivo | La herramienta o la revisión se equivocó. Exige un motivo |
 
-## `/crear <producto>`: crear ADR e incidencias
+### /crear
 
-**Cuándo:** cuando hace falta. Sin indicar el tipo, `/crear motor-fraudes` pregunta qué crear y no crea nada todavía.
-
-| Comando | Qué crea |
-|---|---|
-| `/crear motor-fraudes adr` | ADR del producto, en su harness |
-| `/crear motor-fraudes excepcion` | Excepción a una regla, con vencimiento |
-| `/crear equipo adr` | ADR del equipo |
-| `/crear motor-fraudes adr --desde-historias` | ADR propuestos a partir de historias |
-| `/crear motor-fraudes tarea --desde H-0041,H-0052` | Tarea de Deuda Técnica desde hallazgos |
-| `/crear motor-fraudes tarea --deuda FRAUD-200` | Tarea desde la deuda que declaró `/listo` |
-| `/crear motor-fraudes spike`, `error` o `hotfix` | Spike, Error o Hotfix |
-| `/crear motor-fraudes error --hotfix FRAUD-300` | Error de seguimiento de un Hotfix |
+**Cuándo:** cuando hace falta. Los comandos están en [Qué comando usar](#qué-comando-usar). Sin indicar el tipo,
+`/crear motor-fraudes` pregunta qué crear y no crea nada todavía.
 
 Todo lo que va a Jira muestra una vista previa y se crea solo con confirmación. Las Tareas de desarrollo no se crean
 aquí, sino en el harness o a mano.
