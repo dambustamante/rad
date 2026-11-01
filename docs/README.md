@@ -14,6 +14,7 @@ Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver
 | 7 | [Crear ADR, Tareas, Spikes, Errores y Hotfix](07-crear.md) | `/crear` | decisiones del producto, excepciones, historias de usuario y Jira |
 | 8 | [Mantenimiento](08-mantenimiento.md) | `/estado`, `make` | el reporte semanal, el ciclo de uso habitual, los objetivos de `make` y las pruebas |
 | 9 | [Harness del producto](09-harness.md) | `/producto` | el repositorio de trabajo de cada producto: estructura, lo generado, cómo se crea y se mantiene |
+| 10 | [Comandos](10-comandos.md) | todos | cada comando de principio a fin: cuándo se usa, qué hace y qué se obtiene |
 
 ## El ciclo completo
 

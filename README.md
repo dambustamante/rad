@@ -125,6 +125,7 @@ Antes de la primera semana, se ejecuta una vez `/actualizar fuentes`.
 
 ## Más información
 
+- [Comandos de principio a fin](docs/10-comandos.md)
 - [Guía paso a paso](docs/README.md)
 - [Cómo se gobierna cada harness](docs/09-harness.md)
 - [Decisiones del equipo](equipo/README.md)

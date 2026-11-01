@@ -45,6 +45,8 @@ Abrir **esta carpeta** en Cursor, no la de un repositorio.
 | `make actualizar` | al empezar el día | trae la última versión del harness y de los repositorios |
 | `make foco [REPOS=a,b]` | si hace falta | repositorios visibles en Cursor; sin `REPOS`, todos |
 
+Guía de principio a fin: [docs/comandos.md](docs/comandos.md).
+
 ## Qué no se edita a mano
 
 `.cursor/rules/generado/`, `.cursor/arquitectura/`, los `.json` de la raíz y los índices de `decisiones/` los genera radiografia
