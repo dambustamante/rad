@@ -512,7 +512,7 @@ def desarrollar(clave: str, tipo_rama: str | None = None, crear_rama: bool = Tru
     deuda = normalizar(incidencia["tipo"] or "").startswith("deuda")
     tipo_cambio = tipo_rama or ("chore" if deuda else TIPO_RAMA.get(tipo, "feat"))
     nombre_rama = f"{tipo_cambio}/{clave}-{slug(incidencia['titulo'])}"
-    ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama (--sin-rama)")
+    ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama")
              for r in repos_config if r["id"] in repos}
     foco(repos, ids)
     medicion = evaluar_medicion(incidencia["medicion"], config["jira"]["medicion_aceptada"])
