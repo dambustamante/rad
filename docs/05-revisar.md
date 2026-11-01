@@ -49,6 +49,7 @@ repositorio completo:
 - mapa del repositorio, manifiestos y puntos de entrada;
 - señales en el código con `archivo:línea`: clientes de sistemas externos, acceso a datos, resiliencia, manejo de excepciones sospechoso y logs con posibles datos sensibles;
 - terceros del repositorio, con su p95, límites y política ante falla;
+- documentos del producto, para contrastarlos con el código: lo que el código contradice es un hallazgo de `documentacion`;
 - hallazgos automáticos y de Sonar ya registrados (no se repiten);
 - **qué evaluar**: cada documento de arquitectura vigente con su regla rápida, y los criterios de
   `revisión de código` agrupados por decisión, con su severidad;

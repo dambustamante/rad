@@ -1,6 +1,7 @@
 # /producto
 
-Crea un producto con su harness o administra sus repositorios: agregar repositorios nuevos o retirar uno.
+Crea un producto con su harness y reúne lo que `/revisar` va a revisar: repositorios git, páginas de Confluence y
+documentación en cualquier formato. También administra un producto existente.
 Uso: `/producto <nombre>` (por ejemplo `/producto motor-fraudes`).
 
 La parte determinista la hace `herramientas/productos.py`. Nunca editar `producto.yaml` a mano en
@@ -29,8 +30,10 @@ este comando: siempre mediante el script.
 
      El script crea también el harness: seguir `.cursor/partes/producto-harness.md` para subirlo. Un producto
      nuevo puede quedar sin repositorios hasta que tenga código. La sigla queda fija al crearlo.
-   - Producto **heredado**: seguir con los repositorios y, al terminar, sugerir la toma de control con
-     `/revisar <producto>` (un repositorio por chat).
+   - Después de crearlo, pedir **de una vez** los tres insumos. Lo que el usuario todavía no tenga se puede agregar después:
+     1. **Repositorios git**, uno por línea (pasos 2 a 7).
+     2. **Páginas o espacios de Confluence** (paso 8).
+     3. **Documentación en otros formatos:** PDF, Word, PowerPoint, Excel, texto, dibujos y conversaciones (paso 8).
 
 2. **Para agregar**, pedir los repositorios, uno por línea. Se aceptan URL SSH o HTTPS de GitLab
    o GitHub y rutas de carpetas locales con un repositorio git.
@@ -83,21 +86,18 @@ este comando: siempre mediante el script.
    .venv/bin/python herramientas/productos.py sincronizar --producto <producto>
    ```
 
-8. **Actualizar el harness:** `.venv/bin/python herramientas/harness.py generar <producto>`, para que reciba
+8. **Cargar los documentos:** leer y seguir `.cursor/partes/producto-documentos.md`.
+
+9. **Actualizar el harness:** `.venv/bin/python herramientas/harness.py generar <producto>`, para que reciba
    los repositorios nuevos o retirados.
 
-9. **Cerrar** con la tabla final del producto y el resultado de la descarga, y sugerir
-   `/revisar <producto>` para obtener la línea base AS IS de los repositorios nuevos.
+10. **Cerrar** con la tabla final de repositorios, los documentos cargados y lo que quedó por completar, y sugerir
+    `/revisar <producto>` (un repositorio por chat), que revisa el código contra las reglas y contra estos documentos.
 
 ## Terceros
 
 Para registrar o completar el producto comprado y las integraciones, leer y seguir
 `.cursor/partes/producto-terceros.md`.
-
-## Documentos del producto
-
-Para cargar Confluence, PDF, conversaciones, dibujos y otros documentos, leer y seguir
-`.cursor/partes/producto-documentos.md`.
 
 ## Reglas
 

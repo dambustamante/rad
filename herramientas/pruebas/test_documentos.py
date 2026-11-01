@@ -120,6 +120,19 @@ class PruebaDocumentos(unittest.TestCase):
             documentos.importar(self.raiz, "motor-fraudes", origen)
         self.assertFalse((self.carpeta / "claves.md").exists())
 
+    def test_el_paquete_de_revision_lista_los_documentos(self) -> None:
+        import revision
+        origen = self.raiz / "flujo.txt"
+        origen.write_text("Se consulta el buró.\n", encoding="utf-8")
+        documentos.importar(self.raiz, "motor-fraudes", origen)
+        imagen = self.raiz / "diagrama.png"
+        imagen.write_bytes(b"x")
+        documentos.importar(self.raiz, "motor-fraudes", imagen)
+        paquete = revision.generar_paquete(self.raiz, "motor-fraudes", "fraude-core").read_text(encoding="utf-8")
+        self.assertIn("## Documentos del producto", paquete)
+        self.assertIn("- `flujo.md` · txt", paquete)
+        self.assertIn("- `diagrama.md` · dibujo · por completar: no usar como evidencia", paquete)
+
     def test_cli(self) -> None:
         origen = self.raiz / "nota.md"
         origen.write_text("Texto\n", encoding="utf-8")

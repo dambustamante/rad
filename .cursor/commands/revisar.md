@@ -22,7 +22,8 @@ regenerar solo el paquete con `revision.py paquete <producto> <repo>`.
 
 ## 2. Leer
 
-Leer el paquete completo antes de abrir archivos. Después, el código de `productos/<producto>/repos/<repo>/`
+Leer el paquete completo antes de abrir archivos. Si trae **Documentos del producto**, abrir los relacionados y
+contrastarlos con el código: lo que el código contradice es un hallazgo de categoría `documentacion`. Después, el código de `productos/<producto>/repos/<repo>/`
 empezando por los manifiestos, los puntos de entrada y los archivos señalados. Contar los archivos
 leídos. No modificar nada en esa carpeta ni copiar valores de secretos. Si el paquete es incremental,
 revisar solo lo que el cambio afecta: lo demás se hereda.

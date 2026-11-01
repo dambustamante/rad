@@ -66,12 +66,12 @@ Un harness con coherencia por evaluar queda retenido y no se sube.
 
 | Comando | Qué hace |
 |---|---|
-| `/producto <nombre>` | Si el producto no existe, lo crea con su harness. Si existe, permite administrar sus repositorios y terceros |
+| `/producto <nombre>` | Si el producto no existe, lo crea con su harness y pide sus repositorios, sus páginas de Confluence y su documentación. Si existe, permite administrarlos |
 
 **Cuándo:** al recibir o iniciar un producto, y para agregar o retirar repositorios.
 
 - **Producto nuevo:** pide descripción, origen (`heredado` o `nuevo`) y sigla, y crea el producto **con su harness**.
-  La sigla queda fija.
+  La sigla queda fija. Después pide de una vez los repositorios git, las páginas de Confluence y los demás documentos.
 - **Producto existente:** permite agregar o retirar repositorios, registrar terceros, cargar documentos y configurar
   historias.
 - **Documentos:** Confluence, PDF, Word, PowerPoint, Excel, HTML, texto, conversaciones y dibujos quedan en markdown en
@@ -92,7 +92,9 @@ muestra el script.
 
 **Cuándo:** `/revisar <producto>` al recibir un producto y cuando cambia la rama principal de un repositorio, con un chat por repositorio. `/revisar mr` una o dos veces al día.
 
-**Revisión de un repositorio:** Ejecuta las verificaciones automáticas y Sonar, y Cursor revisa el código. Deja el estado del repositorio
+**Revisión de un repositorio:** trae las páginas de Confluence que cambiaron, ejecuta las verificaciones automáticas y
+Sonar, y Cursor revisa el código contra las reglas y contra los documentos del producto. Lo que un documento afirma y el
+código contradice queda como hallazgo de `documentacion`. Deja el estado del repositorio
 (`as-is/<repo>.md`), sus hallazgos y su veredicto. Cuando todos están revisados, consolida el producto en
 `as-is/PRODUCTO.md`.
 

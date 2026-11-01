@@ -60,6 +60,7 @@ actualizar: doctor sync-arquitectura harness-traer coherencia repos terceros his
 
 revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1] [COMPLETA=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)
+	-@$(PYTHON) herramientas/documentos.py sincronizar $(P)
 	@$(PYTHON) herramientas/revisar.py $(P) $(if $(R),--repo $(R)) $(if $(SIN_SONAR),--sin-sonar) $(if $(COMPLETA),--completa)
 
 semanal: repos ## Reporte semanal de cada producto (actualiza antes las copias de los repositorios)

@@ -45,6 +45,7 @@ from coherencia import (cita_existe, leer_arquitectura_vigente, leer_decisiones_
 from comun import RAIZ, ErrorRadiografia, git, normalizar
 from revisar import MARCA_REVISION, decisiones_con_criterios, leer_json, reemplazar_bloque, veredicto
 
+MAXIMO_DOCUMENTOS = 40
 MARCA_COMPARACION = ("<!-- comparacion:inicio -->", "<!-- comparacion:fin -->")
 MARCA_PRODUCTO_AUTOMATICO = ("<!-- producto-automatico:inicio -->", "<!-- producto-automatico:fin -->")
 MARCA_PRODUCTO_NARRATIVA = ("<!-- producto-narrativa:inicio -->", "<!-- producto-narrativa:fin -->")
@@ -299,12 +300,19 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
         lineas.append("")
 
-    documentos_producto = list((raiz / "productos" / producto / "harness" / "documentos").glob("*.md"))
-    if documentos_producto:
+    import documentos as documentos_producto
+    disponibles = documentos_producto.listar(raiz, producto) if (raiz / "productos" / producto / "harness" / "documentos").exists() else []
+    if disponibles:
         lineas += ["## Documentos del producto", "",
-                   f"Hay {len(documentos_producto)} en `documentos/` de su harness. Buscar con "
-                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"` y citar como `[doc]`. Si contradicen "
-                   "al código, manda el código y la diferencia es un hallazgo.", ""]
+                   "Contrastarlos con este repositorio. Abrir solo los relacionados, por su nombre, o buscar con "
+                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"`. Citarlos como `[doc] documentos/<archivo>`. "
+                   "Manda el código: lo que un documento afirma y el código contradice es un hallazgo de categoría `documentacion`, "
+                   "con evidencia en el código y la cita del documento.", ""]
+        lineas += [f"- `{d['archivo']}` · {d['tipo']}" + (" · por completar: no usar como evidencia" if d["pendiente"] else "")
+                   for d in disponibles[:MAXIMO_DOCUMENTOS]]
+        if len(disponibles) > MAXIMO_DOCUMENTOS:
+            lineas.append(f"- … y {len(disponibles) - MAXIMO_DOCUMENTOS} más: usar la búsqueda.")
+        lineas.append("")
 
     fichas = terceros.para_repo(raiz, producto, repo)
     if fichas:

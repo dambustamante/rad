@@ -2,10 +2,12 @@
 
 Cuando todos los repositorios están al día.
 
-1. Leer las fichas `productos/<producto>/as-is/<repo>.md` (AS IS, componentes y comparación).
+1. Leer las fichas `productos/<producto>/as-is/<repo>.md` (AS IS, componentes y comparación). Ver los documentos con
+   `.venv/bin/python herramientas/documentos.py listar <producto>` y abrir los que describen el producto completo.
 2. Escribir un archivo temporal con dos secciones:
    - `## Visión del producto`: qué hace y cómo se reparten las responsabilidades entre repositorios.
-   - `## Conclusiones`: brechas principales y recomendaciones, con referencias a los hallazgos.
+   - `## Conclusiones`: brechas principales y recomendaciones, con referencias a los hallazgos. Incluir lo que los
+     documentos describen y no se encontró en ningún repositorio, como `[doc]`.
 
    El C4 del producto y la tabla de componentes los genera el script: no escribirlos.
 3. Ejecutar:
