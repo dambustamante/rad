@@ -42,15 +42,6 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 - No publica nada ni crea incidencias: lo que surja se hace con `/revisar mr`, `/triar` y `/crear`.
 - Nada se ejecuta solo: el reporte se pide. `/estado` recuerda pedirlo cuando pasan más de 7 días.
 
-## Ciclo semanal sugerido
-
-1. `/estado semanal` para ver qué cambió.
-2. `/actualizar` para trabajar con la última versión de arquitectura y de los repositorios.
-3. `/revisar mr` para los MR abiertos (una o dos veces al día), y
-   `/revisar <producto>` (un chat por repositorio) para la rama principal de los que cambiaron.
-4. `/triar <producto>` con los hallazgos nuevos.
-5. `/crear <producto> tarea --desde …` para la deuda que se lleva a Jira.
-
 ## Objetivos de `make`
 
 `make help` los lista en dos grupos.
@@ -74,6 +65,7 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make historias` | sincroniza las historias de usuario configuradas |
 | `make harness-traer` | trae la última versión de cada harness de producto |
 | `make harness-generar` | regenera lo generado en cada harness y hace commit local si cambió |
+| `make harness-al-dia` | reglas de arquitectura y de equipo al día en cada harness, sin subirlas |
 | `make indices` | regenera los `INDICE.md` |
 
 ## Configuración (`harness.yaml`)
@@ -88,16 +80,9 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 `harness.yaml` se modifica solo mediante los scripts, que validan los datos y conservan los
 comentarios.
 
-## Reglas que siempre se cumplen
+## Guardia de comandos
 
-- Los repositorios de los productos (`productos/*/repos/`) y `arquitectura/` son de solo lectura.
-  Nunca commit, push, merge, MR ni PR en ellos.
-- Nada se escribe en Jira, Sonar o la plataforma git sin vista previa y confirmación explícita. En la
-  plataforma git solo se escribe el comentario de la revisión de una rama.
-- Nada se ejecuta solo: sin tareas programadas ni procesos en segundo plano.
-- Los tokens viven solo en `.env`; ningún archivo, reporte ni mensaje muestra su valor.
-
-Las dos primeras reglas también las aplica Cursor antes de ejecutar cada comando de terminal, con el
+Las reglas no negociables están en [AGENTS.md](../AGENTS.md). Cursor aplica las dos primeras antes de ejecutar cada comando de terminal, con el
 hook de `.cursor/hooks.json` (`herramientas/guardia.py`):
 
 | Comando | Qué pasa |
@@ -109,7 +94,6 @@ hook de `.cursor/hooks.json` (`herramientas/guardia.py`):
 
 Los comandos de lectura (`git log`, `git diff`, consultas a Sonar) y los de `make` funcionan normalmente.
 
-El contrato completo está en [AGENTS.md](../AGENTS.md).
 
 ## Pruebas
 

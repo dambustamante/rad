@@ -3,34 +3,7 @@
 Guía de principio a fin para desarrollar en este repositorio. Los ejemplos usan la historia `FRAUD-123` y la Tarea
 `FRAUD-200`. Los comandos que empiezan con `/` se escriben en el chat de Cursor.
 
-## Recorrido
-
-```text
-make doctor y make code          Una sola vez
-        ↓
-/tarea FRAUD-123                 Opcional: crea la Tarea en Jira
-        ↓
-/hdu FRAUD-200                   Crea las ramas y el borrador de la spec
-        ↓
-MR de la spec                    Se aprueba antes de programar
-        ↓
-/desarrollar FRAUD-200           Programa contra la spec
-        ↓
-/listo FRAUD-200                 Verifica y escribe la descripción del MR
-        ↓
-MR del código                    Se abre en el repositorio del producto
-```
-
-## Preparar el entorno (una sola vez)
-
-```sh
-cp .env.example .env    # completar JIRA_URL, JIRA_EMAIL y JIRA_TOKEN
-make doctor             # verifica git, Python y gitleaks
-make code               # clona los repositorios en code/
-```
-
-`make code ENLAZAR=~/repos` reutiliza clones que ya existen. Después, abrir **esta carpeta** en Cursor, no la de un
-repositorio.
+Para preparar el entorno y ver el recorrido completo, ver el [README](../README.md).
 
 ## `/tarea <HISTORIA>`: crear una Tarea en Jira
 
@@ -67,7 +40,8 @@ tener varias Tareas.
 - Lee la Tarea y su historia: de ahí salen la Medición HU y los criterios de aceptación.
 - Crea la rama `feat/FRAUD-200-...` en cada repositorio que toca y `docs/FRAUD-200-spec` en este repositorio.
 - Deja visibles en Cursor solo esos repositorios.
-- Escribe `trabajo/FRAUD-200/contexto.md` y el borrador `specs/FRAUD-200/spec.md`.
+- Escribe `trabajo/FRAUD-200/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados, y
+  el borrador `specs/FRAUD-200/spec.md`.
 
 Cursor ayuda a completar la spec: objetivo, diseño, una prueba por criterio, reglas que aplican y lo que queda fuera
 de alcance. Si la historia tiene varias Tareas, la spec deja solo los criterios que cubre esta. La validación es:
@@ -128,7 +102,8 @@ detiene y se corrige la spec en un MR.
 2. **Revisa:** Cursor contrasta el diff con la spec y con las reglas. Lo que no cumple se corrige.
 3. **Registra** en `trabajo/FRAUD-200/listo.json` la prueba de cada criterio, la deuda que queda, los desvíos y las
    decisiones que aplican.
-4. **Cierra:** escribe `trabajo/FRAUD-200/mr-<repo>.md` con la descripción del MR.
+4. **Cierra:** escribe `trabajo/FRAUD-200/mr-<repo>.md` con la descripción del MR. La deuda queda en esa descripción, y
+   radiografia la toma de ahí para llevarla a Jira.
 
 **No cierra si:** la spec no está aprobada, un criterio no tiene prueba, una prueba está deshabilitada o una evidencia no
 existe.
@@ -146,7 +121,7 @@ registro del final no se edita: lo usa la revisión. El MR se aprueba en GitLab,
 
 | Comando | Cuándo | Qué hace |
 |---|---|---|
-| `make actualizar` | Al empezar el día | Trae la última versión de este repositorio y de los repositorios de `code/` |
+| `make actualizar` | Al empezar el día | Trae la última versión de este repositorio y clona o actualiza los repositorios de `code/`. `ENLAZAR=~/repos` reutiliza clones que ya existen |
 | `make foco REPOS=a,b` | Si hace falta | Deja visibles en Cursor solo esos repositorios |
 | `make foco` | Si hace falta | Vuelve a dejar visibles todos los repositorios |
 | `python3 herramientas/harness.py adr --titulo "<decisión>" --historia <CLAVE>` | Para proponer un ADR | Crea un ADR del producto en `Propuesto`; se integra por MR |
@@ -160,9 +135,3 @@ registro del final no se edita: lo usa la revisión. El MR se aprueba en GitLab,
 | **Tarea de deuda** | Mismo recorrido, con rama `chore/` o la que indique `--tipo` |
 | **Spike** | No lleva spec ni código: entrega un ADR del producto por MR |
 | **Tarea sin historia** | Usa sus propios criterios y queda sin medir: `/listo` exige revisar la deuda |
-
-## Qué no se puede hacer
-
-La guardia de Cursor bloquea el push a `main`, el `--force`, aprobar o mergear MR desde Cursor y las escrituras HTTP
-directas. Tampoco se editan `.cursor/rules/generado/`, `.cursor/arquitectura/` ni los `.json` de la raíz: los genera
-radiografia.

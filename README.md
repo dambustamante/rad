@@ -88,7 +88,7 @@ Abrir la carpeta en Cursor y escribir `/estado`: indica qué hacer a continuaci�
 | `/revisar <producto>` | Revisar un repositorio del producto y dejar su estado y sus hallazgos |
 | `/revisar mr` | Revisar los MR abiertos |
 | `/triar <producto>` | Decidir qué hacer con cada hallazgo |
-| `/crear <producto>` | Crear un ADR o una incidencia de Jira |
+| `/crear <producto> <tipo>` | Crear un ADR, una excepción, o una Tarea de deuda, un Spike, un Error o un Hotfix en Jira |
 
 ## Una semana de ejemplo
 
@@ -103,7 +103,7 @@ Esta semana se recibe el producto `motor-fraudes`.
 | **Martes** | Registrar el producto y crear su harness | `/producto motor-fraudes` |
 | | Revisar sus repositorios, un chat por cada uno | `/revisar motor-fraudes` |
 | **Miércoles** | Decidir qué hacer con los hallazgos | `/triar motor-fraudes` |
-| | Crear las Tareas en Jira | `/crear motor-fraudes` |
+| | Llevar a Jira los hallazgos que se van a corregir | `/crear motor-fraudes tarea --desde <hallazgos>` |
 
 ## Dónde ver los resultados
 

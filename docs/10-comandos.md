@@ -2,7 +2,8 @@
 
 Guía de principio a fin. Los ejemplos usan el producto `motor-fraudes`. Los comandos que empiezan con `/` se escriben
 en el chat de Cursor. Los comandos del harness (`/tarea`, `/hdu`, `/desarrollar` y `/listo`) están en
-[su propia guía](../herramientas/plantilla_harness/docs/comandos.md).
+[su propia guía](../herramientas/plantilla_harness/docs/comandos.md). Para preparar el entorno, ver
+[Instalación](01-instalacion.md).
 
 ## Recorrido
 
@@ -20,14 +21,6 @@ make venv y make doctor                 Una sola vez
 /crear motor-fraudes                    Lleva a Jira lo que corresponde
         ↓
 Cada día: /estado y /revisar mr         Cada semana: /estado semanal y /actualizar
-```
-
-## Preparar el entorno (una sola vez)
-
-```sh
-cp .env.example .env      # completar Sonar y, si se usan, Jira y la plataforma git
-make venv
-make doctor
 ```
 
 ## `/estado`: saber qué sigue
@@ -137,7 +130,7 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 ## `/crear <producto>`: crear ADR e incidencias
 
-**Cuándo:** cuando hace falta.
+**Cuándo:** cuando hace falta. Sin indicar el tipo, `/crear motor-fraudes` pregunta qué crear y no crea nada todavía.
 
 | Comando | Qué crea |
 |---|---|
@@ -153,14 +146,4 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 Todo lo que va a Jira muestra una vista previa y se crea solo con confirmación. Las Tareas de desarrollo no se crean
 aquí, sino en el harness o a mano.
 
-## Comandos de apoyo
-
-| Comando | Qué hace |
-|---|---|
-| `make estado` | Parte automática de `/estado` |
-| `make actualizar` | Parte automática de `/actualizar` |
-| `make harness-al-dia` | Reglas al día en cada harness, sin subirlas |
-| `make revisar P=<producto> [R=<repo>]` | Parte automática de `/revisar` |
-| `make semanal` | Reporte semanal de cada producto |
-| `make test` | Pruebas de las herramientas |
-| `make help` | Lista todos los objetivos |
+Los objetivos de `make` están en [Mantenimiento](08-mantenimiento.md#objetivos-de-make).

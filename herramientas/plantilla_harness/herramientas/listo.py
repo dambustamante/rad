@@ -91,7 +91,7 @@ def secretos(destino: Path, base: str) -> int | None:
 def verificar(repo: dict) -> dict:
     destino = RAIZ / "code" / repo["id"]
     if not (destino / ".git").exists():
-        raise ErrorListo(f"No existe code/{repo['id']}: ejecutar make code.")
+        raise ErrorListo(f"No existe code/{repo['id']}: ejecutar make actualizar.")
     if git("status", "--porcelain", cwd=destino):
         raise ErrorListo(f"code/{repo['id']} tiene cambios sin commit: hacer commit antes de /listo.")
     base = git("merge-base", f"origin/{repo['rama']}", "HEAD", cwd=destino)

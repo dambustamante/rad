@@ -1,7 +1,7 @@
 # Guía de radiografia
 
-Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver el
-[README principal](../README.md).
+Explicación paso a paso de cómo funciona cada etapa. Para empezar, ver el [README principal](../README.md). Para
+consultar un comando, ver [Comandos](10-comandos.md).
 
 | # | Guía | Comando | Qué se aprende |
 |---|---|---|---|
@@ -15,14 +15,6 @@ Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver
 | 8 | [Mantenimiento](08-mantenimiento.md) | `/estado`, `make` | el reporte semanal, el ciclo de uso habitual, los objetivos de `make` y las pruebas |
 | 9 | [Harness del producto](09-harness.md) | `/producto` | el repositorio de trabajo de cada producto: estructura, lo generado, cómo se crea y se mantiene |
 | 10 | [Comandos](10-comandos.md) | todos | cada comando de principio a fin: cuándo se usa, qué hace y qué se obtiene |
-
-## El ciclo completo
-
-```
-/actualizar ─► /producto ─► /revisar (un chat por repo) ─► /triar ─► /crear
-```
-
-`/estado` indica en cada momento qué sigue.
 
 Cada comando ejecuta primero su parte determinista (scripts de `herramientas/`, sin IA) y después
 la parte que requiere criterio, que hace Cursor. Así se gasta IA solo donde aporta.

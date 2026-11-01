@@ -307,7 +307,7 @@ def foco(visibles: list[str] | None, todos: list[str]) -> None:
 def preparar_rama(repo: dict, nombre: str) -> str:
     destino = RAIZ / "code" / repo["id"]
     if not (destino / ".git").exists():
-        return "sin copia en code/ (ejecutar make code)"
+        return "sin copia en code/ (ejecutar make actualizar)"
     _, cambios = git("status", "--porcelain", cwd=destino)
     if cambios:
         return "tiene cambios sin commit: no se cambió de rama"

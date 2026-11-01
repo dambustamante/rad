@@ -3,12 +3,6 @@
 Cada producto tiene, además de radiografia, su **harness**: el repositorio donde se desarrolla. Reúne los repositorios del producto en `code/`, las decisiones que el código debe
 cumplir y los ADR del producto.
 
-| | radiografia | harness-<producto> |
-|---|---|---|
-| Qué hace | AS IS, decisiones del equipo, coherencia, triaje, revisión de MR, reporte semanal | desarrollo del día a día |
-| Repositorios del producto | solo lectura (`productos/<p>/repos/`) | se desarrollan en `code/` |
-| ADR del producto | los crea y verifica su coherencia | viven aquí, en `decisiones/`; nacen en Propuesto por MR |
-
 ## Estructura
 
 ```
@@ -85,119 +79,8 @@ harness y se guarda con `harness.py guardar motor-fraudes --mensaje "…"`.
 
 ## Uso diario
 
-```sh
-git clone <url>/harness-motor-fraudes && cd harness-motor-fraudes
-cp .env.example .env    # JIRA_URL, JIRA_EMAIL y JIRA_TOKEN personales, con lectura del proyecto
-make doctor             # git, Python 3.11, gitleaks y que code/ quede fuera de git
-make code               # clona los repositorios en code/; ENLAZAR=~/repos reutiliza clones existentes (enlaces)
-```
-
-Se abre la carpeta del harness en Cursor y se trabaja en `code/<repo>/`, en una rama propia.
-`make actualizar` trae la versión nueva del harness y las novedades de los repositorios, sin cambiar
-la rama de trabajo ni descartar cambios.
-
-**Guardia** (`.cursor/hooks.json`): bloquea el push a `main` o `master`, el push con
-`--force`, aprobar o mergear MR con `glab` o `gh` y las escrituras HTTP directas. El resto del flujo de
-git funciona normalmente.
-
-## Flujo de una historia
-
-Una historia se desarrolla en una o varias **Tareas** de Jira que cuelgan de ella, con el campo Tipo en `Producto`.
-`/tarea <HISTORIA>` crea una, con vista previa y confirmación; es el único comando del harness que escribe en Jira.
-También se puede crear a mano. Cada Tarea tiene su spec, con los criterios de la historia que cubre. Una historia ya no se toma directo con `/hdu`.
-
-| Paso | Dónde | Qué pasa |
-|---|---|---|
-| 1. `/hdu <CLAVE>` | Harness | Crea la rama y el borrador de la spec |
-| 2. MR de la spec | Harness | Se revisa y se aprueba antes de programar |
-| 3. `/desarrollar <CLAVE>` | `code/<repo>/` | Se trabaja contra la spec aprobada |
-| 4. `/listo <CLAVE>` | Harness | Verifica que el código cumple la spec |
-| 5. MR del código | Repositorio del producto | Se revisa y se aprueba como siempre |
-| 6. `/revisar mr` | radiografia | Contrasta el MR con la spec y las reglas |
-
-**Aprobada** significa integrada en `main` del harness. Un Hotfix no espera la aprobación: su spec se completa
-antes de `/listo` y se integra después. Un Spike no lleva spec: entrega un ADR.
-
-## `/hdu <CLAVE>`: tomar una historia
-
-```sh
-python3 herramientas/hdu.py tomar FRAUD-123 [--repos fraude-core] [--sin-rama]
-```
-
-0. **Actualiza el harness** (`git pull --ff-only`). Si no puede, se detiene: no se propone código con reglas
-   viejas. Sin remoto, sigue.
-1. Lee la Tarea de Jira y la historia de la que cuelga: de ahí salen la Medición HU, los criterios y la descripción. Una Tarea
-   sin historia usa los suyos y queda sin medir. Lo hace en solo lectura, con el token personal: título, descripción, tipo, estado,
-   **Medición HU** y criterios de aceptación (la sección "Criterios de aceptación" de la descripción).
-2. Decide con la Medición HU, sin IA:
-
-   | Medición HU | Resultado |
-   |---|---|
-   | Óptima, Completa o Adecuada (`jira.medicion_aceptada` en `harness.yaml` de radiografia) | se toma |
-   | vacía | se toma; `/listo` va a exigir la revisión de la deuda que deja |
-   | cualquier otro valor | no se toma: se indica qué falta completar en la historia |
-
-3. Identifica los repositorios que toca por los componentes, las etiquetas o las menciones de la
-   historia. Si no surgen, Cursor pregunta y repite con `--repos`.
-4. Crea la rama `<tipo>/<CLAVE>-<título>` en cada repositorio (ADR-EQ-010): `fix` para un Error o un Hotfix, `chore`
-   para una Tarea de deuda y `feat` para el resto; `--tipo` lo cambia. La crea desde su rama principal. No cambia de
-   rama un repositorio con cambios sin commit.
-5. **Foco:** escribe `.cursorignore` para que Cursor vea solo esos repositorios, lo que ahorra tokens en
-   búsquedas e índice. `make foco` lo restaura.
-6. Escribe `trabajo/<CLAVE>/contexto.md`: criterios numerados, descripción y, por repositorio, la rama,
-   los terceros, los componentes y los hallazgos abiertos relacionados (siempre los bloqueantes y altos;
-   del resto, los que comparten palabras con la historia).
-7. **Arquitectura:** agrega al contexto hasta 3 extractos (máximo 1.500 caracteres cada uno) de los documentos
-   que comparten más palabras con la historia. Se elige sin IA y se lee una sola vez. La regla rápida de todos
-   los documentos sigue en `decisiones.mdc`; si una toca el cambio, se abre su texto completo.
-8. **Spec:** crea la rama `docs/<CLAVE>-spec` del harness y el borrador `specs/<CLAVE>/spec.md`, de una página como
-   máximo. Cursor lo completa, con **una prueba por criterio de aceptación**, y pide confirmación.
-   `hdu.py spec <CLAVE>` la valida antes de abrir su MR.
-
-## `/desarrollar <CLAVE>`: programar contra la spec
-
-`hdu.py desarrollar <CLAVE>` vuelve a `main`, actualiza el harness y se detiene si la spec no está aprobada. Cursor
-propone los pasos por criterio, pide confirmación en el plan y en los cambios delicados, implementa en
-`code/<repo>/` y ejecuta las pruebas. Un cambio menor se declara como desvío en `/listo`; un cambio de alcance o de
-diseño exige corregir la spec en un MR.
-
-**Spike:** el contexto indica que el entregable es un ADR del producto. Se crea con
-`python3 herramientas/harness.py adr --titulo "<decisión>" --historia FRAUD-126`, que toma el siguiente
-número libre, lo deja en Propuesto con la historia de origen, y se completa y se propone por MR al
-harness.
-
-## `/listo <CLAVE>`: antes del MR
-
-1. **Preparar** (sin IA): `python3 herramientas/listo.py preparar FRAUD-123`. Trae la última versión de las
-   reglas e indica si cambiaron desde `/hdu`; si no puede traerlas, lo deja como `NO DETERMINADO`. Exige todo en commits y, por
-   cada repositorio de la historia, compara la rama con su rama principal:
-
-   | Verificación | Qué busca |
-   |---|---|
-   | Secretos | gitleaks sobre los commits de la rama |
-   | Consola | `System.out`, `console.log`, `print(` fuera de las pruebas |
-   | Pendientes | `TODO`, `FIXME` o `XXX` agregados |
-   | Contrato | la API cambió y `docs/contratos/` no (EQ-004) |
-   | Integraciones | clientes HTTP nuevos: revisar timeout, ficha del tercero y C4 |
-   | Pruebas debilitadas | `@Disabled`, `skip`, `assert true` o pruebas borradas |
-
-   Escribe `trabajo/FRAUD-123/listo-paquete.md` con el diff y los resultados.
-2. **Revisar:** Cursor contrasta el diff con las decisiones de `.cursor/rules/generado/`; lo que no
-   cumple se corrige antes del MR (y se vuelve al paso 1).
-3. **Registrar** `trabajo/FRAUD-123/listo.json`: la prueba de cada criterio de aceptación
-   (`<repo>:<archivo>:<línea>`), la **deuda que deja la historia** (técnica u operativa: la propone el
-   harness y se confirma antes de cerrar), las decisiones que aplican y, si apareció, una decisión propuesta. En una HU sin medir, decidir la deuda es obligatorio (`"sin_deuda": true` si no hay).
-4. **Cerrar:** `python3 herramientas/listo.py cerrar FRAUD-123`. Rechaza un criterio sin prueba, una prueba
-   que no es parte del cambio o está deshabilitada, una evidencia inexistente y los avisos de lenguaje.
-   Escribe `trabajo/FRAUD-123/mr-<repo>.md` con la descripción del MR y restaura el foco.
-
-La descripción del MR trae los criterios con su prueba, la deuda que deja la historia, la definición de
-terminado como lista y, al final, un **registro** (comentario HTML) para la revisión: commit, versión
-del harness, resultados de las verificaciones, criterios y deuda.
-
-**Dónde queda la deuda:** en la descripción del MR, no en un archivo del harness. Así no hace falta un MR al
-harness (con su aprobación) por cada historia. radiografia la toma de ahí al revisar el MR y la lleva a Jira
-con `/crear <producto> tarea --deuda <CLAVE>`.
+Cómo se usa el harness, comando por comando: [guía del harness](../herramientas/plantilla_harness/docs/comandos.md).
+Las diferencias con radiografia están en el [README principal](../README.md).
 
 ## Qué se ve de cada MR en radiografia
 

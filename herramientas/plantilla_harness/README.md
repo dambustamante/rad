@@ -29,23 +29,14 @@ Requisitos: Python 3.11, `git`, `make`, Cursor, `gitleaks` y un token de Jira co
 ```sh
 cp .env.example .env    # JIRA_URL, JIRA_EMAIL y JIRA_TOKEN
 make doctor
-make code               # clona los repositorios en code/; ENLAZAR=~/repos reutiliza clones existentes
+make actualizar               # clona los repositorios en code/; ENLAZAR=~/repos reutiliza clones existentes
 ```
 
 Abrir **esta carpeta** en Cursor, no la de un repositorio.
 
 ## Comandos
 
-| Comando | Cuándo | Qué hace |
-|---|---|---|
-| `/tarea <HISTORIA>` | si la Tarea no existe | crea en Jira una Tarea que cuelga de la historia, con vista previa y confirmación |
-| `/hdu <CLAVE>` | al empezar una Tarea | Medición HU, ramas, foco, contexto y borrador de la spec |
-| `/desarrollar <CLAVE>` | con la spec aprobada | comprueba la aprobación y desarrolla contra la spec |
-| `/listo <CLAVE>` | antes del MR | verificaciones, pruebas por criterio, deuda y descripción del MR |
-| `make actualizar` | al empezar el día | trae la última versión del harness y de los repositorios |
-| `make foco [REPOS=a,b]` | si hace falta | repositorios visibles en Cursor; sin `REPOS`, todos |
-
-Guía de principio a fin: [docs/comandos.md](docs/comandos.md).
+Cada comando, de principio a fin: [docs/comandos.md](docs/comandos.md).
 
 ## Qué no se edita a mano
 
