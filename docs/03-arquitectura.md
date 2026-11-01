@@ -5,7 +5,7 @@ decisiones, repositorios, documentación de terceros, historias de Jira e índic
 ejecutarlo antes de cada sesión de revisión. `/estado` avisa cuando la copia de arquitectura tiene
 más de 7 días.
 
-## Paso 1: registrar las fuentes (`/actualizar fuentes`)
+## Paso 1: registrar las fuentes
 
 Se hace una vez, y de nuevo cuando arquitectura publica un repositorio nuevo.
 

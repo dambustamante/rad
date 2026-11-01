@@ -48,12 +48,10 @@ Después: `/estado` y `/revisar mr` cada día; `/estado semanal` y `/actualizar`
 
 ### /actualizar
 
-| Comando | Qué hace |
-|---|---|
-| `/actualizar` | Trae y publica las reglas, con los pasos de abajo. La primera vez, pide los repositorios de arquitectura |
-| `/actualizar fuentes` | Agrega o retira un repositorio de arquitectura en `harness.yaml` |
-
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
+
+La primera vez, pide los repositorios de arquitectura. Para agregar o retirar uno después, basta pedirlo al ejecutarlo:
+`/actualizar agrega el repositorio <url>`.
 
 1. Descarga arquitectura y actualiza su índice.
 2. Trae los ADR propuestos en cada harness.
@@ -83,8 +81,7 @@ muestra el script.
 
 | Comando | Qué hace |
 |---|---|
-| `/revisar <producto>` | Revisa el primer repositorio pendiente del producto, o consolida el producto si todos están al día |
-| `/revisar <producto> <repo>` | Revisa ese repositorio |
+| `/revisar <producto> [repo]` | Revisa ese repositorio o, sin indicarlo, el primero pendiente. Si todos están al día, consolida el producto |
 | `/revisar mr` | Publica las reglas nuevas y revisa los MR abiertos |
 | `/revisar mr --producto <producto>` | Muestra solo los MR de ese producto |
 | `/revisar mr --mios` | Muestra solo los MR donde eres revisor. Necesita `GITLAB_USUARIO` en `.env` |
@@ -115,8 +112,7 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 | Comando | Qué hace |
 |---|---|
-| `/triar <producto>` | Decide sobre los hallazgos de todo el producto |
-| `/triar <producto> <repo>` | Decide sobre los hallazgos de ese repositorio |
+| `/triar <producto> [repo]` | Decide sobre los hallazgos de ese repositorio o, sin indicarlo, de todo el producto |
 
 **Cuándo:** después de revisar.
 

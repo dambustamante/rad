@@ -100,7 +100,7 @@ def revisar_estado(raiz: Path) -> dict:
 def que_sigue(estado: dict) -> list[str]:
     pasos = []
     if not estado["fuentes"]:
-        pasos.append("Registrar los repositorios de arquitectura: `/actualizar fuentes`.")
+        pasos.append("Registrar los repositorios de arquitectura: `/actualizar`.")
     elif not estado["sincronizada"]:
         pasos.append("Descargar arquitectura por primera vez: `/actualizar`.")
     elif estado["edad_arquitectura"] is not None and estado["edad_arquitectura"] > DIAS_ARQUITECTURA:

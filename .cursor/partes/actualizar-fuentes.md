@@ -1,4 +1,4 @@
-# /actualizar fuentes
+# /actualizar: repositorios de arquitectura
 
 Los repositorios de donde se descargan los ADR, estándares y referencias. Nunca editar
 `harness.yaml` a mano: siempre con `herramientas/fuentes_arquitectura.py`.

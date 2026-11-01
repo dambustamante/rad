@@ -1,11 +1,11 @@
 """Harness: refinar una historia, crear sus Tareas y programar cada una contra su spec aprobada.
 
 Uso:
-  python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]   /hdu: refina una historia o toma otra incidencia
+  python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b]  /hdu: refina una historia o toma otra incidencia
   python3 herramientas/hdu.py crear-tareas <HISTORIA> [--confirmar]      /hdu: crea las Tareas propuestas y sus specs
-  python3 herramientas/hdu.py tarea <HISTORIA> [--sin-rama]              /tarea: specs de las Tareas creadas a mano
+  python3 herramientas/hdu.py tarea <HISTORIA>             /tarea: specs de las Tareas creadas a mano
   python3 herramientas/hdu.py spec <CLAVE>                               valida las specs antes de su MR
-  python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo T] [--sin-rama] /desarrollar: comprueba la aprobación y crea las ramas
+  python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo T] /desarrollar: comprueba la aprobación y crea las ramas
 
 Solo crear-tareas escribe en Jira, con vista previa y confirmación.
 """
@@ -731,19 +731,16 @@ def main(argumentos: list[str] | None = None) -> int:
     p = sub.add_parser("tomar")
     p.add_argument("clave")
     p.add_argument("--repos", default="")
-    p.add_argument("--sin-rama", action="store_true")
     p = sub.add_parser("crear-tareas")
     p.add_argument("clave")
     p.add_argument("--confirmar", action="store_true", help="crea las Tareas en Jira; sin esto solo muestra la vista previa")
     p = sub.add_parser("tarea")
     p.add_argument("clave")
-    p.add_argument("--sin-rama", action="store_true")
     p = sub.add_parser("spec")
     p.add_argument("clave")
     p = sub.add_parser("desarrollar")
     p.add_argument("clave")
     p.add_argument("--tipo", choices=TIPOS_CAMBIO, help="tipo de cambio de la rama (ADR-EQ-010); por defecto, según la incidencia")
-    p.add_argument("--sin-rama", action="store_true")
     o = parser.parse_args(argumentos)
     clave = o.clave.upper()
     try:
@@ -752,7 +749,7 @@ def main(argumentos: list[str] | None = None) -> int:
             print("Válido: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
             return 1 if errores else 0
         if o.accion == "tarea":
-            r = registrar_manuales(clave, not o.sin_rama)
+            r = registrar_manuales(clave)
             print(f"Tareas de {clave}: {', '.join(e['clave'] for e in r['existentes'])}")
             for archivo in r["specs"]:
                 print(f"Spec: {archivo.relative_to(RAIZ)}")
@@ -774,7 +771,7 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"Siguiente: completar las specs, validar con hdu.py spec {clave} y abrir el MR de las Tareas.")
             return 0
         if o.accion == "desarrollar":
-            r = desarrollar(clave, o.tipo, not o.sin_rama)
+            r = desarrollar(clave, o.tipo)
             for aviso in r["avisos"]:
                 print(f"Aviso: {aviso}")
             print(f"Spec: {r['spec'].relative_to(RAIZ)}" + (" (Hotfix: se completa antes de /listo)" if r["tipo"] == "hotfix" else " (aprobada)"))
@@ -782,7 +779,7 @@ def main(argumentos: list[str] | None = None) -> int:
                 print(f"  {repo}: {estado}")
             print(f"Contexto: {r['contexto'].relative_to(RAIZ)}")
             return 0
-        r = tomar(clave, [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama)
+        r = tomar(clave, [x.strip() for x in o.repos.split(",") if x.strip()] or None, True)
     except ErrorHdu as error:
         print(f"ERROR: {error}")
         return 1

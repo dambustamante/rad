@@ -41,7 +41,7 @@ class PruebaEstado(unittest.TestCase):
         salida = io.StringIO()
         with contextlib.redirect_stdout(salida):
             estado.main(["--raiz", str(vacio)])
-        self.assertIn("1. Registrar los repositorios de arquitectura: `/actualizar fuentes`.", salida.getvalue())
+        self.assertIn("1. Registrar los repositorios de arquitectura: `/actualizar`.", salida.getvalue())
 
 
 if __name__ == "__main__":

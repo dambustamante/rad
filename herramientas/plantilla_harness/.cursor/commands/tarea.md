@@ -7,7 +7,7 @@ que se agreguen después.
 1. **Generar:**
 
    ```sh
-   python3 herramientas/hdu.py tarea <HISTORIA> [--sin-rama]
+   python3 herramientas/hdu.py tarea <HISTORIA>
    ```
 
    Lee las Tareas que cuelgan de la historia y escribe `specs/<HISTORIA>/<TAREA>.md` para las que no tienen spec. Se detiene

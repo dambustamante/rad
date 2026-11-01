@@ -6,7 +6,7 @@ un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código
 1. **Tomar:**
 
    ```sh
-   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]
+   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b]
    ```
 
    Actualiza primero el harness. Si no puede, se detiene: mostrar el motivo y no seguir con reglas viejas.

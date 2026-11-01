@@ -72,7 +72,7 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 
 | Sección | Contenido |
 |---|---|
-| `arquitectura.fuentes` | repositorios de arquitectura; se administran con `/actualizar fuentes` |
+| `arquitectura.fuentes` | repositorios de arquitectura; se administran con `/actualizar` |
 | `arquitectura.estados` | cómo se interpreta la sección Estado de los documentos |
 | `calibracion` | `minimo_triados` y `maximo_falsos_positivos` |
 | `jira` | valores para crear Tareas, Spikes, Errores y Hotfix (Equipos, nombres de campos y tipos de incidencia), el campo Medición HU con los valores con los que el harness toma una historia, y para las Tareas de desarrollo su tipo de incidencia (`tipos_incidencia.tarea_desarrollo`) y su campo Tipo (`tipo_tarea_desarrollo`, `Producto` por defecto) |

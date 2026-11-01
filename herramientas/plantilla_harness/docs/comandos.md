@@ -25,10 +25,8 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 
 | Comando | Qué hace |
 |---|---|
-| `/hdu <HISTORIA>` | Refina la historia, propone sus Tareas y, si confirmas, las crea |
-| `/hdu <CLAVE>` | Toma un Error, un Hotfix, un Spike o una Tarea sin historia. Ver [Casos distintos](#casos-distintos) |
+| `/hdu <CLAVE>` | Con una historia: la refina, propone sus Tareas y, si confirmas, las crea. Con otra incidencia: ver [Casos distintos](#casos-distintos) |
 | `/hdu <CLAVE> --repos a,b` | Indica los repositorios, si no se pueden deducir de Jira |
-| `/hdu <CLAVE> --sin-rama` | No crea la rama en este repositorio |
 
 **Cuándo:** al empezar una historia. Ejemplo: `/hdu FRAUD-123`.
 
@@ -58,7 +56,6 @@ Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda
 | Comando | Qué hace |
 |---|---|
 | `/tarea <HISTORIA>` | Crea la rama y la spec de las Tareas hechas a mano |
-| `/tarea <HISTORIA> --sin-rama` | Hace lo mismo, sin crear la rama |
 
 **Cuándo:** solo si creaste Tareas a mano en Jira, colgando de la historia, en lugar de usar las que propone `/hdu`, o si
 agregaste una después. No escribe en Jira.
@@ -87,7 +84,6 @@ El MR se abre en GitLab y revisa de una vez la división del trabajo. Las specs 
 |---|---|
 | `/desarrollar <CLAVE>` | Comprueba la aprobación, crea las ramas y programa contra la spec |
 | `/desarrollar <CLAVE> --tipo refactor` | Cambia el tipo de la rama: `feat`, `fix`, `docs`, `chore`, `test` o `refactor` |
-| `/desarrollar <CLAVE> --sin-rama` | Hace lo mismo, sin crear ramas |
 
 **Cuándo:** con la spec aprobada, por cada Tarea.
 
@@ -136,8 +132,7 @@ registro del final no se edita: lo usa la revisión. El MR se aprueba en GitLab,
 | Comando | Cuándo | Qué hace |
 |---|---|---|
 | `make actualizar` | Al empezar el día | Trae la última versión de este repositorio y clona o actualiza los repositorios de `code/`. `ENLAZAR=~/repos` reutiliza clones que ya existen |
-| `make foco REPOS=a,b` | Si hace falta | Deja visibles en Cursor solo esos repositorios |
-| `make foco` | Si hace falta | Vuelve a dejar visibles todos los repositorios |
+| `make foco [REPOS=a,b]` | Si hace falta | Deja visibles en Cursor solo esos repositorios o, sin indicarlos, todos |
 | `python3 herramientas/harness.py adr --titulo "<decisión>" --historia <CLAVE>` | Para proponer un ADR | Crea un ADR del producto en `Propuesto`; se integra por MR |
 
 ## Casos distintos

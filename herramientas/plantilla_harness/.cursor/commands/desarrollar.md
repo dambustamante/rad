@@ -5,7 +5,7 @@ Programar una Tarea contra su spec aprobada. Uso: `/desarrollar <TAREA>`. Tambi�
 1. **Preparar** (sin IA):
 
    ```sh
-   python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo feat|fix|docs|chore|test|refactor] [--sin-rama]
+   python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo feat|fix|docs|chore|test|refactor]
    ```
 
    Comprueba la aprobación, crea la rama `<tipo>/<CLAVE>-…` en cada repositorio de la spec y deja visibles en Cursor solo

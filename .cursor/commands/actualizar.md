@@ -3,8 +3,8 @@
 Deja `radiografia` al día: herramientas, documentos de arquitectura, su índice y la coherencia
 de las decisiones del equipo (ADR-EQ) con arquitectura.
 
-Uso: `/actualizar`. Con `fuentes` (agregar o retirar repositorios de arquitectura), o si `harness.yaml`
-no tiene fuentes, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
+Uso: `/actualizar`. Si `harness.yaml` no tiene fuentes, o si se pide agregar o retirar un repositorio de
+arquitectura, leer y seguir primero `.cursor/partes/actualizar-fuentes.md`.
 
 ## Pasos
 

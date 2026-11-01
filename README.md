@@ -54,7 +54,7 @@ Detalle y todas las opciones: [docs/10-comandos.md](docs/10-comandos.md).
 |---|---|
 | `/estado` | Ver qué está pendiente y qué sigue |
 | `/estado semanal` | Ver qué cambió en la semana |
-| `/actualizar` | Traer las reglas nuevas de arquitectura y publicarlas en los harness. La primera vez, pide los repositorios de arquitectura; después, se cambian con `/actualizar fuentes` |
+| `/actualizar` | Traer las reglas nuevas de arquitectura y publicarlas en los harness. La primera vez, pide los repositorios de arquitectura |
 | `/producto <nombre>` | Registrar un producto y crear su harness |
 | `/revisar <producto>` | Revisar un repositorio del producto y dejar su estado y sus hallazgos |
 | `/revisar mr` | Revisar los MR abiertos |
