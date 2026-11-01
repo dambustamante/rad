@@ -89,73 +89,6 @@ referencia de aprobación).
 
 Un ADR Aprobado no se edita: se crea uno nuevo que lo reemplaza y el anterior pasa a Reemplazado.
 
-## ADR a partir de historias de usuario
-
-```
-/crear motor-fraudes adr --desde-historias
-```
-
-Requiere la fuente de historias configurada (ver [Productos y terceros](04-productos.md)). La
-mayoría de las historias no implica una decisión de arquitectura: se usan para **proponer**
-decisiones a partir de requisitos no funcionales, restricciones y Spikes.
-
-1. **Sincronizar** (solo lectura):
-
-   ```sh
-   .venv/bin/python herramientas/jira.py sincronizar motor-fraudes
-   ```
-
-   Guarda cada historia con su descripción y criterios de aceptación. En `historias/INDICE.md`
-   registra las nuevas, las modificadas (con el antes y el después) y las retiradas.
-
-2. **Candidatas** (sin IA):
-
-   ```sh
-   .venv/bin/python herramientas/jira.py candidatas motor-fraudes
-   ```
-
-   Incluye siempre los Spikes y la Deuda Técnica; las demás, solo si tienen señales de tiempos,
-   disponibilidad, retención, seguridad o resiliencia.
-
-3. **Clasificar en un lote**, `historias/clasificacion-lote.yaml`:
-
-   ```yaml
-   historias:
-     - clave: FRAUD-123
-       clasificacion: candidata
-       tema: Latencia de evaluación
-       cita: La evaluación responde en menos de 150 ms
-       explicacion: Requisito de latencia verificable en el código.
-     - clave: FRAUD-140
-       clasificacion: choque
-       documento: decision-records:ADR-010
-       cita: Los reintentos se hacen en cada servicio
-       cita_documento: Los reintentos se configuran solo en el API Gateway
-       explicacion: La historia pide algo que arquitectura prohíbe; conversar antes de implementar.
-     - clave: FRAUD-151
-       clasificacion: sin_impacto
-   ```
-
-   ```sh
-   .venv/bin/python herramientas/jira.py clasificar motor-fraudes
-   ```
-
-   Las citas se validan contra la historia y el documento. Una historia ya analizada no se vuelve a
-   pedir mientras no cambie.
-
-4. **Proponer:** `jira.py propuestas motor-fraudes` agrupa las candidatas por tema. Se crea un ADR
-   por cada tema que el usuario elija:
-
-   ```sh
-   .venv/bin/python herramientas/adr.py nuevo motor-fraudes --tipo decision --titulo "Latencia de evaluación" --historias FRAUD-123,FRAUD-130
-   ```
-
-   Los choques no generan ADR: se informan como temas para conversar.
-
-5. **Seguimiento:** si una historia de origen cambia o se retira, el ADR aparece en `listar` con
-   "revisar: …". Si sigue vigente, se confirma con `jira.py confirmar motor-fraudes --adr ADR-MF-001`;
-   si no, se ajusta (si está Propuesto) o se reemplaza (si está Aprobado).
-
 ## Tareas, Spikes, Errores y Hotfix
 
 Siguen ADR-EQ-009 (estructura) y ADR-EQ-008 (definición de terminado).
@@ -208,7 +141,7 @@ Opciones: `--categoria "Deuda Operativa"`, `--repos <repo1,repo2>`, `--desde <ha
 - `<NNN>-<título>.md`: el borrador, con la plantilla de su tipo ya cargada;
 - `<NNN>-<título>-contexto.md`: lo que Cursor necesita para redactarlo: hallazgos de origen y
   relacionados, AS IS de los repositorios, decisiones que pueden aplicar, terceros, documentación
-  encontrada, historias parecidas de Jira y Sonar.
+  encontrada y Sonar.
 
 Si una historia de Jira ya cubre lo mismo, Cursor avisa antes de seguir.
 

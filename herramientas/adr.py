@@ -197,26 +197,10 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str
     texto = texto.replace("- **Tipo:** decision", f"- **Tipo:** {tipo}", 1)
 
     if historias:
-        import jira as modulo_historias
-        guardadas, analisis = modulo_historias.historias_de(raiz, producto), modulo_historias.analisis_de(raiz, producto)
-        inexistentes = [c for c in historias if c not in guardadas]
-        if inexistentes:
-            raise ErrorRadiografia(f"Historias que no existen (ejecutar jira.py sincronizar): {', '.join(inexistentes)}.")
-        filas = ["| Historia | Tipo | Título | Requisito citado |", "|---|---|---|---|"]
-        for clave in historias:
-            h = guardadas[clave]
-            enlace = f"[{clave}]({h['url']})" if h.get("url") else clave
-            cita = (analisis.get(clave) or {}).get("cita") or (h.get("criterios") or "NO DETERMINADO").split("\n")[0]
-            filas.append(f"| {enlace} | {h.get('tipo') or '—'} | {h['titulo'].replace('|', '/')} | {str(cita).replace('|', '/')} |")
-        texto = texto.replace("- **Restricciones:** <técnicas, regulatorias u operativas>",
-                              "- **Restricciones:** <técnicas, regulatorias u operativas>\n- **Historias que la originan:**\n\n"
-                              + "\n".join(filas) + "\n", 1)
         texto = texto.replace("- **Historias de origen:** —", f"- **Historias de origen:** {', '.join(historias)}", 1)
 
     archivo = carpeta / f"{id_adr}-{slug(titulo)}.md"
     archivo.write_text(texto, encoding="utf-8")
-    if historias:
-        modulo_historias.vincular(raiz, producto, id_adr, historias)
     return archivo
 
 
@@ -225,13 +209,9 @@ def nuevo(raiz: Path, producto: str, tipo: str, titulo: str, historias: list[str
 def listar(raiz: Path, producto: str) -> list[dict]:
     if producto not in productos.leer_productos(raiz):
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
-    import jira as modulo_historias
-    avisos = modulo_historias.atencion(raiz, producto)
     filas = []
     for adr in leer_decisiones_producto(raiz, producto).values():
         efecto = estado_excepcion(adr) if adr["tipo"] == "excepcion" else ("se evalúa" if adr["tipo"] == "decision" and adr["evaluado"] else "—")
-        if adr["id"] in avisos:
-            efecto = f"{efecto} · revisar: {'; '.join(avisos[adr['id']])}"
         filas.append({"id": adr["id"], "titulo": adr["titulo"], "tipo": adr["tipo"], "estado": adr["estado"],
                       "vence": valor(adr["campos"], "vence"), "efecto": efecto, "archivo": Path(adr["archivo"]).name})
     carpeta = carpeta_decisiones_producto(raiz, producto)

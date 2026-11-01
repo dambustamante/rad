@@ -66,17 +66,10 @@ def revisar_estado(raiz: Path) -> dict:
         ultima_revision = max((r["codigo"]["fecha"] for r in al_dia), default=None)
         consolidar = bool(repos) and len(al_dia) == len(repos) and (
             not producto_md.exists() or (ultima_revision and date.fromtimestamp(producto_md.stat().st_mtime).isoformat() < ultima_revision))
-        try:
-            fuente_historias = jira.leer_config(raiz, nombre)["fuente"]
-        except ErrorRadiografia:
-            fuente_historias = "ninguna"
         estado_productos.append({
             "borradores": [b["archivo"] for b in jira.listar(raiz, nombre) if b["estado"] != "creada"],
             "terminado": jira.terminado(raiz, nombre),
             "terceros_incompletos": [f["id"] for f in fichas_terceros if f["errores"] or f["pendientes"]],
-            "historias_fuente": fuente_historias,
-            "historias_pendientes": len(jira.candidatas(raiz, nombre)),
-            "historias_atencion": sorted(jira.atencion(raiz, nombre)),
             "nombre": nombre,
             "repos": len(repos),
             "sin_automatica": [r["repo"] for r in repos if r["situacion"] == "falta la parte automática"],
@@ -149,12 +142,6 @@ def que_sigue(estado: dict) -> list[str]:
         if p["terceros_incompletos"]:
             pasos.append(f"{p['nombre']}: fichas de terceros por completar ({', '.join(p['terceros_incompletos'])}): "
                          f"`/producto {p['nombre']}` → terceros.")
-        if p["historias_atencion"]:
-            pasos.append(f"{p['nombre']}: ADR con historias de origen modificadas o retiradas ({', '.join(p['historias_atencion'])}): "
-                         f"`/crear {p['nombre']} adr`.")
-        if p["historias_pendientes"]:
-            pasos.append(f"{p['nombre']}: {p['historias_pendientes']} historia(s) candidata(s) a ADR por analizar: "
-                         f"`/crear {p['nombre']} adr --desde-historias`.")
         if p["repos"] and (p["dias_semanal"] is None or p["dias_semanal"] > DIAS_SEMANAL):
             cuando = "sin reporte semanal" if p["dias_semanal"] is None else f"último reporte semanal hace {p['dias_semanal']} días"
             pasos.append(f"{p['nombre']}: {cuando}: `/estado semanal`.")

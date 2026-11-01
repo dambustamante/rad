@@ -72,7 +72,7 @@ ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No public
 **Cómo lo hace:**
 
 1. **Scripts (`make actualizar`):** descargan los ADR y estándares de arquitectura, traen los ADR propuestos en cada harness,
-   buscan pares nuevos de decisión y documento, actualizan repositorios, terceros, historias y páginas de Confluence, y
+   buscan pares nuevos de decisión y documento, actualizan repositorios y páginas de Confluence, y
    regeneran las reglas de cada harness.
 2. **Cursor:** evalúa los pares nuevos, si los hay. Primero filtra por tema, con la regla rápida, y lee más solo si tratan lo
    mismo. Cada par queda como `sin_relacion`, `compatible`, `duplica` o `choca`, con citas textuales. Lo que choca queda
@@ -96,7 +96,7 @@ ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No public
 
 - **Producto nuevo:** descripción, origen (`heredado` o `nuevo`) y sigla, que queda fija.
 - **De una vez, lo que tengas:** repositorios git, páginas o espacios de Confluence, y documentos en otros formatos.
-- **Producto existente:** qué hacer: agregar o retirar repositorios, cargar documentos, registrar terceros o configurar historias.
+- **Producto existente:** qué hacer: agregar o retirar repositorios, cargar documentos, registrar terceros o indicar su proyecto de Jira.
 
 **Cómo lo hace:**
 
@@ -198,7 +198,6 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 |---|---|
 | `/crear <producto>` | Pregunta qué crear. No crea nada todavía |
 | `/crear <producto> adr` | ADR del producto, en su harness |
-| `/crear <producto> adr --desde-historias` | ADR propuestos a partir de historias |
 | `/crear <producto> excepcion` | Excepción a una regla, con vencimiento |
 | `/crear equipo adr` | ADR del equipo |
 | `/crear <producto> tarea` | Tarea de deuda |
@@ -220,7 +219,7 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 **Cómo crea una incidencia de Jira:**
 
-1. **Cursor:** hace las preguntas de su tipo y busca hallazgos e historias parecidas, para no duplicar.
+1. **Cursor:** hace las preguntas de su tipo y busca hallazgos parecidos, para no duplicar.
 2. **Scripts:** crean el borrador en `historias/borradores/` y el contexto del producto.
 3. **Cursor:** redacta el borrador con evidencia.
 4. **Scripts:** validan la estructura de `ADR-EQ-009` y el lenguaje, y muestran la vista previa.

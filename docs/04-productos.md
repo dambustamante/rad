@@ -168,18 +168,12 @@ tipo, origen y fecha.
 - **Evidencia:** se cita como `[doc]`. Si contradice al código, manda el código y la diferencia es un hallazgo.
 - **Acceso:** todos los que usan el harness ven estos documentos. Lo confidencial no se importa.
 
-## Fuente de historias de usuario
+## Proyecto de Jira
 
-Opcional. Permite proponer ADR a partir de historias de Jira y crear Tareas, Spikes, Errores y Hotfix. Se
-configura una vez por producto:
+Para crear Tareas de deuda, Spikes, Errores y Hotfix, se indica una vez por producto el proyecto donde se crean:
 
 ```sh
-.venv/bin/python herramientas/productos.py historias motor-fraudes --fuente jira \
-  --jql "project = FRAUD AND labels = motor-fraudes" --campo-tipo Tipo --proyecto FRAUD
+.venv/bin/python herramientas/productos.py jira motor-fraudes --proyecto FRAUD [--etiqueta motor-fraudes]
 ```
 
-- Conviene `--jql` antes que `--tablero`: sigue funcionando aunque el tablero se elimine.
-- `--campo-tipo` es el campo personalizado que clasifica la historia (Bau/Incidentes, Deuda
-  Operativa, Deuda Técnica, Spike…).
-- `--proyecto` es el proyecto donde se crean las Tareas, Spikes, Errores y Hotfix.
-- Para un proyecto archivado, exportar a CSV y usar `--fuente archivo --archivo export.csv`.
+Las historias no se guardan en radiografia: cada harness las lee de Jira cuando se ejecuta `/hdu`.

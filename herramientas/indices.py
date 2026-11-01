@@ -105,10 +105,6 @@ def indice_producto(raiz: Path, producto: str) -> Path:
         pendientes_jira = sum(1 for b in borradores if b["estado"] != "creada")
         lineas.append(f"- Tareas, Spikes, Errores y Hotfix: {len(borradores)} borrador(es) en `historias/borradores/` "
                       f"({pendientes_jira} sin crear en Jira)")
-    if (carpeta / "historias" / "INDICE.md").exists():
-        import jira as historias
-        lineas.append(f"- Historias de usuario: [historias/INDICE.md](historias/INDICE.md) "
-                      f"({len(historias.candidatas(raiz, producto))} candidata(s) por analizar)")
     if (carpeta / "as-is" / "PRODUCTO.md").exists():
         lineas.append("- AS IS del producto: [as-is/PRODUCTO.md](as-is/PRODUCTO.md)")
     if revisiones:

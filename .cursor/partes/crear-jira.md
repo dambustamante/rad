@@ -56,8 +56,8 @@
    ```
 
    El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").
-3. **Leer el contexto** (`…-contexto.md`): hallazgos, AS IS, decisiones, terceros, historias
-   parecidas de Jira y Sonar. Si una historia de Jira ya cubre lo mismo, avisar antes de seguir.
+3. **Leer el contexto** (`…-contexto.md`): hallazgos, AS IS, decisiones, terceros y Sonar.
+   Preguntar si alguna incidencia de Jira ya cubre lo mismo.
 4. **Redactar** `productos/<producto>/historias/borradores/<NNN>-<título>.md` sobre la plantilla ya
    cargada:
    - **Como**: un rol real, nunca "sistema". **Para**: el valor, sin repetir el Quiero.

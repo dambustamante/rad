@@ -1,7 +1,7 @@
 # 3. Arquitectura y coherencia (`/actualizar`)
 
 `/actualizar` deja todo al día: herramientas, documentos de arquitectura, coherencia de las
-decisiones, repositorios, documentación de terceros, historias de Jira e índices. Conviene
+decisiones, repositorios, páginas de Confluence e índices. Conviene
 ejecutarlo antes de cada sesión de revisión. `/estado` avisa cuando la copia de arquitectura tiene
 más de 7 días.
 
@@ -37,7 +37,6 @@ Encadena, en este orden:
 | `sync-arquitectura` | clona o actualiza cada fuente (solo git), copia los documentos en `arquitectura/decisiones/<id>/` o `arquitectura/estandares/<id>/`, fija el commit en `arquitectura/estado/fuentes.lock` y genera `arquitectura/INDICE.md` |
 | `coherencia` | regenera los `COHERENCIA.md` y lista los pares por evaluar |
 | `repos` | actualiza las copias de los repositorios activos de todos los productos |
-| `historias` | sincroniza las historias de Jira de los productos que las tienen configuradas |
 | `indices` | regenera los `INDICE.md` del equipo y de los productos |
 
 **Cómo se lee cada ADR de arquitectura:**

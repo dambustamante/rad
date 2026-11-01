@@ -31,6 +31,9 @@ un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código
    - **Tareas propuestas:** una fila por Tarea, con título en infinitivo, números de los criterios que cubre y repositorios.
      Entre todas deben cubrir todos los criterios.
 
+   Si la historia implica una decisión de diseño duradera, proponer también un ADR con
+   `python3 herramientas/harness.py adr --titulo "<decisión>" --historia <HISTORIA>`.
+
    Mostrarla y aceptar cambios.
 
 4. **Historia: crear las Tareas.**

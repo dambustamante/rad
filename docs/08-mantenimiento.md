@@ -14,8 +14,7 @@ Muestra un resumen y la lista "Qué sigue", en orden de prioridad:
 - coherencia con pares sin evaluar;
 - Sonar sin configurar;
 - por producto: repositorios por revisar, consolidación pendiente, hallazgos sin triar, excepciones
-  vencidas o inactivas, borradores sin crear en Jira, fichas de terceros incompletas, ADR con
-  historias de origen modificadas, historias candidatas por analizar,
+  vencidas o inactivas, borradores sin crear en Jira, fichas de terceros incompletas, 
   reporte semanal pendiente (más de 7 días) y la definición de terminado que se verifica sola: Tareas
   de Jira cuyos hallazgos de origen ya están corregidos (EQ-008.5, se pueden cerrar) y Spikes que
   superaron los 2 días sin un ADR de producto propuesto (EQ-008.8) y Hotfix sin su Error de
@@ -61,7 +60,6 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make sync-arquitectura` | descarga arquitectura y genera `arquitectura/INDICE.md` |
 | `make coherencia` | regenera los `COHERENCIA.md` y lista los pares por evaluar |
 | `make repos` | actualiza los repositorios activos de todos los productos |
-| `make historias` | sincroniza las historias de usuario configuradas |
 | `make harness-traer` | trae la última versión de cada harness de producto |
 | `make documentos` | trae las páginas de Confluence ya importadas que cambiaron |
 | `make harness-generar` | regenera lo generado en cada harness y hace commit local si cambió |

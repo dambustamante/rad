@@ -37,12 +37,12 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `SONAR_URL` | sí | por ejemplo `https://sonar.empresa.com` o `https://sonarcloud.io` |
 | `SONAR_ORGANIZACION` | solo SonarCloud | clave de la organización |
 | `SONAR_TOKEN` | sí | token con permiso de lectura (Browse) sobre los proyectos |
-| `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix |
+| `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | crear Tareas de deuda, Spikes, Errores y Hotfix |
 | `CONFLUENCE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_TOKEN` | no | importar documentos del producto desde Confluence, en solo lectura |
 | `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar MR o PR y publicar el comentario |
 
-Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer
-historias ni crear incidencias. Sin la plataforma git, no se revisan MR ni se publica el
+Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden crear
+incidencias. Sin la plataforma git, no se revisan MR ni se publica el
 comentario. El resto funciona igual.
 
 Permisos de los tokens de la plataforma: en GitLab, `api`; en GitHub, pull requests de lectura y

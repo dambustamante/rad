@@ -8,8 +8,7 @@ Uso:
   python herramientas/productos.py retirar --producto P --id ID --motivo TEXTO
   python herramientas/productos.py sincronizar [--producto P]
   python herramientas/productos.py sigla <producto> [--asignar SIGLA]
-  python herramientas/productos.py historias <producto> --fuente jira|archivo|ninguna [--jql JQL | --tablero N [--etiqueta E]]
-                                             [--campo-tipo NOMBRE] [--archivo export.csv] [--proyecto CLAVE]
+  python herramientas/productos.py jira <producto> --proyecto CLAVE [--etiqueta TEXTO]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
@@ -58,10 +57,8 @@ c4: null
 #   estado: activo | retirado
 repos: []
 
-# Historias de usuario para proponer ADR (ver herramientas/jira.py).
-#   fuente: jira (con jql o tablero, y campo_tipo) | archivo (exportación CSV en historias/) | ninguna
-historias:
-  fuente: ninguna
+# Proyecto de Jira donde se crean Tareas de deuda, Spikes, Errores y Hotfix. Las historias se leen desde el harness.
+jira: {{}}
 """
 
 
@@ -124,32 +121,12 @@ def asignar_sigla(raiz: Path, producto: str, sigla: str) -> None:
     escribir_yaml_conservador(archivo, datos)
 
 
-def configurar_historias(raiz: Path, producto: str, fuente: str, jql: str | None, tablero: int | None,
-                         etiqueta: str | None, campo_tipo: str | None, archivo_csv: str | None,
-                         proyecto: str | None = None) -> None:
+def configurar_jira(raiz: Path, producto: str, proyecto: str, etiqueta: str | None = None) -> None:
     archivo = archivo_producto(raiz, producto)
     if not archivo.exists():
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
-    if fuente == "jira" and not (jql or tablero):
-        raise ErrorRadiografia("Con fuente jira hay que indicar --jql o --tablero.")
-    if fuente == "archivo" and not archivo_csv:
-        raise ErrorRadiografia("Con fuente archivo hay que indicar --archivo (exportación CSV dentro de historias/).")
-    configuracion = CommentedMap(fuente=fuente)
-    if fuente == "jira":
-        if jql:
-            configuracion["jql"] = jql
-        if tablero:
-            configuracion["tablero"] = tablero
-            if etiqueta:
-                configuracion["etiqueta"] = etiqueta
-    if fuente == "archivo":
-        configuracion["archivo"] = archivo_csv
-    if campo_tipo and fuente != "ninguna":
-        configuracion["campo_tipo"] = campo_tipo
-    if proyecto:
-        configuracion["proyecto"] = proyecto  # donde se crean Tareas, Spikes, Errores y Hotfix
     datos = leer_yaml_conservador(archivo)
-    datos["historias"] = configuracion
+    datos["jira"] = CommentedMap(proyecto=proyecto, **({"etiqueta": etiqueta} if etiqueta else {}))
     escribir_yaml_conservador(archivo, datos)
 
 
@@ -444,15 +421,10 @@ def main(argumentos: list[str] | None = None) -> int:
     p_retirar.add_argument("--motivo", required=True)
     p_sincronizar = sub.add_parser("sincronizar", help="clona o actualiza los repositorios activos")
     p_sincronizar.add_argument("--producto")
-    p_historias = sub.add_parser("historias", help="configura la fuente de historias de usuario del producto")
-    p_historias.add_argument("producto")
-    p_historias.add_argument("--fuente", required=True, choices=("jira", "archivo", "ninguna"))
-    p_historias.add_argument("--jql")
-    p_historias.add_argument("--tablero", type=int)
-    p_historias.add_argument("--etiqueta")
-    p_historias.add_argument("--campo-tipo")
-    p_historias.add_argument("--archivo")
-    p_historias.add_argument("--proyecto", help="clave del proyecto de Jira donde se crean Tareas, Spikes, Errores y Hotfix")
+    p_jira = sub.add_parser("jira", help="proyecto de Jira donde se crean las incidencias")
+    p_jira.add_argument("producto")
+    p_jira.add_argument("--proyecto", required=True)
+    p_jira.add_argument("--etiqueta")
     p_sigla = sub.add_parser("sigla", help="muestra o cambia la sigla de un producto")
     p_sigla.add_argument("producto")
     p_sigla.add_argument("--asignar")
@@ -486,10 +458,9 @@ def main(argumentos: list[str] | None = None) -> int:
                 detalle = f"{r['commit'][:12]} ({r['fecha']})" if "commit" in r else r["detalle"]
                 print(f"  [{r['resultado']}] {r['producto']}/{r['repo']} ({r['rama']}): {detalle}")
             return 1 if any(r["resultado"] == "error" for r in resultados) else 0
-        elif opciones.accion == "historias":
-            configurar_historias(raiz, opciones.producto, opciones.fuente, opciones.jql, opciones.tablero,
-                                 opciones.etiqueta, opciones.campo_tipo, opciones.archivo, opciones.proyecto)
-            print(f"Historias de '{opciones.producto}': fuente {opciones.fuente}.")
+        elif opciones.accion == "jira":
+            configurar_jira(raiz, opciones.producto, opciones.proyecto, opciones.etiqueta)
+            print(f"Jira de '{opciones.producto}': proyecto {opciones.proyecto}.")
         elif opciones.accion == "sigla":
             if opciones.asignar:
                 asignar_sigla(raiz, opciones.producto, opciones.asignar)

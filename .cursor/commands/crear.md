@@ -6,7 +6,6 @@ Crea un ADR o una excepción, o una Tarea, un Spike, un Error o un Hotfix para J
 |---|---|---|
 | `/crear <producto> adr` o `excepcion` | ADR del producto | `.cursor/partes/crear-adr.md` |
 | `/crear equipo adr` | ADR del equipo (ADR-EQ) | `.cursor/partes/crear-adr.md` |
-| `/crear <producto> adr --desde-historias` | ADR propuestos desde historias de Jira | `.cursor/partes/crear-historias.md` |
 | `/crear <producto> tarea\|spike\|error\|hotfix` | borrador para Jira (ADR-EQ-009), creado solo con confirmación | `.cursor/partes/crear-jira.md` |
 | `/crear <producto> tarea --desde H-0041,H-0052` | Tarea de Deuda Técnica desde hallazgos | `.cursor/partes/crear-jira.md` |
 | `/crear <producto> error --hotfix FRAUD-300` | Error de seguimiento de un Hotfix | `.cursor/partes/crear-jira.md` |

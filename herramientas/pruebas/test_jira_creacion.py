@@ -78,8 +78,7 @@ class PruebaHistoria(unittest.TestCase):
 
     def setUp(self) -> None:
         self.setUp_revision()
-        productos.configurar_historias(self.raiz, "motor-fraudes", "jira", "project = FRAUD AND labels = motor-fraudes",
-                                       None, None, "Tipo", None)
+        productos.configurar_jira(self.raiz, "motor-fraudes", "FRAUD", "motor-fraudes")
         (self.raiz / ".env").write_text("JIRA_URL=https://ejemplo.atlassian.net\nJIRA_EMAIL=a@b.c\nJIRA_TOKEN=x\n", encoding="utf-8")
         (self.raiz / "harness.yaml").write_text((self.raiz / "harness.yaml").read_text(encoding="utf-8")
                                                 + "jira:\n  equipos: Back\n", encoding="utf-8")
@@ -110,7 +109,6 @@ class PruebaHistoria(unittest.TestCase):
         self.assertIn("**H-0001** · fraude-core · EQ-006.1", contexto)
         self.assertIn("`ADR-EQ-006`", contexto, "la decisión del hallazgo de origen aparece entre las que aplican")
         self.assertIn("## AS IS de los repositorios", contexto)
-        self.assertIn("## Historias de Jira parecidas", contexto)
 
     def test_validacion_segun_adr_eq_009(self) -> None:
         borrador = self.nueva("--tipo", "tarea", "--titulo", "Agregar el diagrama", "--desde", "H-0001")
