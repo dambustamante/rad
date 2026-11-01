@@ -168,7 +168,8 @@ Siguen ADR-EQ-009 (estructura) y ADR-EQ-008 (definición de terminado).
 | Hotfix | Bau/Incidentes | la corrección está en producción y el servicio vuelve a funcionar, y hay un Error de seguimiento |
 | Spike | Spike | la pregunta tiene respuesta documentada, hay un ADR de producto Propuesto y se respetó la duración máxima |
 
-Los tipos Producto y Otros no se crean desde aquí. El campo Equipos siempre es `Back`.
+Los tipos Producto y Otros no se crean desde aquí: las Tareas de desarrollo de una historia se crean con `/hdu` en el
+harness o a mano. El campo Equipos siempre es `Back`.
 
 **Hotfix y Error de seguimiento.** Un Hotfix se escribe con lo mínimo para corregir ya. Después de
 crearlo en Jira se crea su Error de seguimiento, que documenta la causa y agrega la prueba que

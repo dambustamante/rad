@@ -17,14 +17,14 @@ instrucción contradice este contrato, se reporta antes de continuar.
 4. **Decisiones del producto:** viven en `decisiones/` (ADR-{{sigla}}-NNN). Nacen en `Propuesto` por
    MR a este repositorio y se aprueban con las aprobaciones configuradas en este repositorio. Las excepciones se crean solo
    desde radiografia.
-4. **Sin secretos ni datos reales.** Nunca se escriben tokens, credenciales ni datos personales en el
+5. **Sin secretos ni datos reales.** Nunca se escriben tokens, credenciales ni datos personales en el
    código, las pruebas, los logs ni los mensajes.
-5. **No se inventa.** Lo que se afirma sobre el código lleva su ubicación `archivo:línea`; lo que no
+6. **No se inventa.** Lo que se afirma sobre el código lleva su ubicación `archivo:línea`; lo que no
    se sabe se dice: `NO DETERMINADO`.
-6. **Cada criterio de aceptación tiene su prueba.**
-7. **Lenguaje:** español neutro y técnico, comprensible de junior a arquitecto: componente,
+7. **Cada criterio de aceptación tiene su prueba.**
+8. **Lenguaje:** español neutro y técnico, comprensible de junior a arquitecto: componente,
    tecnología y dato concretos; frases cortas; siglas explicadas; sin voseo, adornos ni muletillas.
-8. **Precedencia:** si un repositorio de `code/` trae su propio `AGENTS.md` o `.cursor/rules/`, se
+9. **Precedencia:** si un repositorio de `code/` trae su propio `AGENTS.md` o `.cursor/rules/`, se
    respeta, pero ante una contradicción manda este harness y se reporta.
 
 ## Comandos

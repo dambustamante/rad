@@ -114,6 +114,7 @@ Si dos reglas tratan lo mismo, se aplica la de número menor:
 | **Hallazgo** | Incumplimiento concreto de una regla, con archivo y línea |
 | **MR** | Merge Request: propuesta de cambio que se revisa antes de integrarla |
 | **Harness** | Repositorio donde se desarrolla un producto. Hay uno por producto |
+| **Spec** | Página que dice qué construirá una Tarea, cómo se probará y qué reglas aplican. Se aprueba por MR antes de programar |
 
 Más términos en [Conceptos](docs/02-conceptos.md).
 

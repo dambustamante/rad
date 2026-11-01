@@ -183,13 +183,13 @@ contrasta, nunca se da por cierto.
 .venv/bin/python herramientas/mr.py bandeja [--producto motor-fraudes] [--mios]
 ```
 
-Lista los MR abiertos de los repositorios de cada producto y de su harness (Tareas y specs, y ADR), con el estado de su registro
-de `/listo`:
+Lista los MR abiertos de los repositorios de cada producto y de su harness, con el estado de su registro de `/listo`:
 
 | Estado | Qué significa |
 |---|---|
+| Spec | MR del harness con las Tareas y specs de una historia: se revisa y se aprueba en GitLab, antes de programar |
 | ADR del producto | MR del harness: revisar su coherencia antes de aprobarlo (paso 5) |
-| sin /listo | la historia no se cerró con `/listo` |
+| sin /listo | la Tarea no se cerró con `/listo` |
 | registro de /listo ilegible | el registro al final de la descripción está alterado |
 | desactualizado | hay commits después de `/listo` |
 | al día | `/listo` se ejecutó sobre el commit de cabeza |
@@ -217,14 +217,18 @@ de `/listo`:
 
 3. Contrasta el registro de `/listo` con lo que verifica radiografia: el commit, los secretos, la salida a
    consola, que la prueba de cada criterio exista en el cambio y no esté deshabilitada, la versión del
-   harness y que `listo.py` sea el de la rama principal del harness.
-4. Registra la **deuda que declaró la historia**, para llevarla a Jira con
-   `/crear motor-fraudes tarea --deuda FRAUD-123`. `/estado` la recuerda mientras no tenga Tarea.
+   harness y que `listo.py` sea el de la rama principal del harness. También avisa si la rama o los commits no
+   siguen ADR-EQ-010.
+4. Contrasta el MR con su **spec aprobada**: avisa si no está en la rama principal del harness, si cita un criterio que no
+   existe en ella o si declara desvíos, y agrega la spec al paquete. Un Hotfix o un Spike sin spec se marca para comprobar
+   su tipo en Jira.
+5. Registra la **deuda que declaró la Tarea**, para llevarla a Jira con
+   `/crear motor-fraudes tarea --deuda FRAUD-200`. `/estado` la recuerda mientras no tenga Tarea.
 
 ### Paso 3: revisar
 
 Cursor lee el paquete empezando por los cambios sensibles y el contraste, que son el foco, y revisa el
-diff completo contra lo decidido. Escribe en `lote.yaml` solo los hallazgos que el MR introduce o
+diff completo contra la spec y lo decidido. Escribe en `lote.yaml` solo los hallazgos que el MR introduce o
 empeora, con evidencia en archivos del cambio. Un cambio sensible sin motivo claro es un hallazgo.
 
 ### Paso 4: registrar, elegir y publicar

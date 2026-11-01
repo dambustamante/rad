@@ -1,7 +1,8 @@
 # 9. Harness del producto (`harness-<producto>`)
 
-Cada producto tiene, además de radiografia, su **harness**: el repositorio donde se desarrolla. Reúne los repositorios del producto en `code/`, las decisiones que el código debe
-cumplir y los ADR del producto.
+Cada producto tiene, además de radiografia, su **harness**: el repositorio donde se desarrolla. Reúne los repositorios
+del producto en `code/`, las decisiones que el código debe cumplir, los ADR del producto y las specs de cada Tarea. Esta
+guía explica cómo se crea y se mantiene. Cómo se usa está en su [README](../herramientas/plantilla_harness/README.md).
 
 ## Estructura
 
@@ -15,16 +16,18 @@ harness-motor-fraudes/
 ├── GENERADO.json                         versión de lo generado, huellas de lo generado y de la plantilla
 ├── .env.example                          conexión a Jira
 ├── .cursor/
-│   ├── arquitectura/<clave>.md               texto completo de los documentos vigentes (generado; se abre solo si hace falta)
+│   ├── arquitectura/<clave>.md           texto completo de los documentos vigentes (generado; se abre solo si hace falta)
 │   ├── rules/00-general.mdc              remite a AGENTS.md
 │   ├── rules/generado/decisiones.mdc     lo que el código debe cumplir (generado; se aplica siempre)
 │   ├── rules/generado/repo-<id>.mdc      contexto de cada repositorio (generado; se aplica al trabajar en code/<id>/)
-│   ├── commands/                          /hdu, /tarea, /desarrollar y /listo
+│   ├── commands/                         /hdu, /tarea, /desarrollar y /listo
 │   └── hooks.json                        guardia de comandos
+├── docs/comandos.md                      guía de comandos, de principio a fin
+├── specs/<HISTORIA>/                     propuesta.md y una spec por Tarea (<TAREA>.md), aprobadas por MR
 ├── decisiones/                           ADR del producto, plantilla, INDICE.md y COHERENCIA.md (estos dos, generados)
 ├── herramientas/                         harness.py (code, doctor, foco, adr), hdu.py, listo.py y guardia.py
 ├── code/                                 repositorios del producto (fuera de git del harness)
-└── trabajo/<CLAVE>/                      contexto de cada historia tomada (local, fuera de git)
+└── trabajo/<CLAVE>/                      contexto de cada historia o Tarea (local, fuera de git)
 ```
 
 **Lo generado** lo escribe radiografia y no se edita a mano:
