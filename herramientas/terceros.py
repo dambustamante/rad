@@ -4,23 +4,17 @@ Uso:
   python herramientas/terceros.py nuevo <producto> --id ID --nombre TEXTO [--rol producto-comprado|integracion]
   python herramientas/terceros.py listar <producto>
   python herramientas/terceros.py validar <producto> [--id ID]
-  python herramientas/terceros.py indexar [<producto>]
-  python herramientas/terceros.py buscar <producto> <texto> [--limite N]
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
-Cada tercero vive en productos/<producto>/terceros/<id>/, con una ficha (ficha.yaml) que se completa con
-el usuario y una carpeta docs/ donde se copia su documentación tal cual llega (PDF, Word, PowerPoint,
-Excel, HTML, markdown, texto, contratos OpenAPI o AsyncAPI). `indexar` extrae el texto de forma
-incremental a productos/<producto>/estado/terceros/<id>/ (no versionado) y reconoce los contratos por su
-contenido. Los documentos se buscan y se citan como terceros/<id>/docs/<archivo>. Los originales nunca
-se modifican.
+Cada tercero tiene una ficha en productos/<producto>/terceros/<id>/ficha.yaml, que se completa con el usuario. Su
+documentación queda en markdown en documentos/terceros/<id>/ del harness, importada con documentos.py --tercero, y se
+cita como documentos/terceros/<id>/<archivo>.md. Los contratos OpenAPI o AsyncAPI se reconocen por su contenido.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import shutil
@@ -34,13 +28,15 @@ from xml.etree import ElementTree
 import yaml
 
 import productos
-from comun import RAIZ, ErrorRadiografia, leer_json, normalizar
+from comun import RAIZ, ErrorRadiografia, normalizar
 
 ROLES = ("producto-comprado", "integracion")
 DIRECCIONES = ("saliente", "entrante", "bidireccional")
 POLITICAS = ("fail-open", "fail-closed", "no aplica")
 NO_DETERMINADO = "NO DETERMINADO"
-PREFIJO = "terceros/"
+PREFIJO = "documentos/terceros/"
+MARCA_PAGINA = re.compile(r"^<!-- pagina (\d+) -->$")
+MARCA_CONTRATO = "- **Contrato:**"
 
 TEXTO = {".md", ".markdown", ".txt", ".rst", ".adoc", ".csv"}
 ESTRUCTURADO = {".yaml", ".yml", ".json"}
@@ -50,7 +46,6 @@ NO_SOPORTADOS = {".doc": "formato Word antiguo: guardar como .docx o PDF",
                  ".ppt": "formato PowerPoint antiguo: guardar como .pptx o PDF",
                  ".xls": "formato Excel antiguo: guardar como .xlsx o CSV"}
 IMAGENES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".bmp", ".tiff", ".webp"}
-IGNORADOS = {"INDICE.md", ".DS_Store"}
 SALTO_PAGINA = "\f"
 
 
@@ -129,14 +124,6 @@ def extraer(archivo: Path) -> tuple[str | None, str | None]:
         return None, f"formato {extension or 'sin extensión'} no soportado"
     except (zipfile.BadZipFile, ElementTree.ParseError, KeyError, OSError) as error:
         return None, f"no se pudo leer el archivo: {error}"
-
-
-def contar_paginas(texto: str) -> int | None:
-    """Páginas de un texto con saltos de página; pdftotext también cierra la última con uno."""
-    if SALTO_PAGINA not in texto:
-        return None
-    saltos = texto.count(SALTO_PAGINA)
-    return saltos if texto.rstrip(" \n").endswith(SALTO_PAGINA) else saltos + 1
 
 
 def clasificar_contrato(archivo: Path, texto: str) -> dict | None:
@@ -227,8 +214,7 @@ def nuevo(raiz: Path, producto: str, id_tercero: str, nombre: str, rol: str = "i
     destino = carpeta_terceros(raiz, producto) / id_tercero
     if destino.exists():
         raise ErrorRadiografia(f"Ya existe el tercero '{id_tercero}' en el producto '{producto}'.")
-    (destino / "docs").mkdir(parents=True)
-    (destino / "docs" / ".gitkeep").write_text("", encoding="utf-8")
+    destino.mkdir(parents=True)
     (destino / "ficha.yaml").write_text(PLANTILLA.format(id=id_tercero, nombre=nombre, rol=rol), encoding="utf-8")
     return destino / "ficha.yaml"
 
@@ -274,8 +260,8 @@ def validar(raiz: Path, producto: str, id_tercero: str, ficha: dict) -> tuple[li
     if not repos:
         pendientes.append("repos")
     contrato = ficha.get("contrato")
-    if contrato and not (carpeta_terceros(raiz, producto) / id_tercero / "docs" / contrato).is_file():
-        errores.append(f"el contrato '{contrato}' no existe en docs/")
+    if contrato and not (carpeta_docs(raiz, producto, id_tercero) / contrato).is_file():
+        errores.append(f"el contrato '{contrato}' no existe en {PREFIJO}{id_tercero}/")
     return errores, pendientes
 
 
@@ -287,93 +273,34 @@ def para_repo(raiz: Path, producto: str, repo: str) -> list[dict]:
 
 # --- Documentación ------------------------------------------------------------------------------
 
-def carpetas(raiz: Path, producto: str, id_tercero: str) -> tuple[Path, Path]:
-    """(carpeta de originales, carpeta de estado) de la documentación de un tercero."""
-    base = base_producto(raiz, producto)
-    return base / "terceros" / id_tercero / "docs", base / "estado" / "terceros" / id_tercero
+def carpeta_docs(raiz: Path, producto: str, id_tercero: str) -> Path:
+    return base_producto(raiz, producto) / "harness" / "documentos" / "terceros" / id_tercero
 
 
-def indexar_tercero(raiz: Path, producto: str, id_tercero: str) -> dict:
-    origen, destino = carpetas(raiz, producto, id_tercero)
-    origen.mkdir(parents=True, exist_ok=True)
-    destino.mkdir(parents=True, exist_ok=True)
-    archivo_indice = destino / "indice.json"
-    anterior = leer_json(archivo_indice)
-    documentos: dict[str, dict] = {}
-    procesados = 0
-    for archivo in sorted(p for p in origen.rglob("*") if p.is_file() and p.name not in IGNORADOS | {".gitkeep"}):
-        relativo = archivo.relative_to(origen).as_posix()
-        huella = hashlib.sha256(archivo.read_bytes()).hexdigest()
-        texto_extraido = destino / "texto" / f"{relativo}.txt"
-        previo = anterior.get(relativo)
-        if previo and previo["sha256"] == huella and (previo["estado"] != "indexado" or texto_extraido.exists()):
-            documentos[relativo] = previo
-            continue
-        procesados += 1
-        texto, motivo = extraer(archivo)
-        registro = {"archivo": relativo, "formato": archivo.suffix.lower().lstrip(".") or "—", "sha256": huella,
-                    "bytes": archivo.stat().st_size, "estado": "indexado" if texto is not None else "no indexado",
-                    "motivo": motivo, "contrato": None, "paginas": None, "caracteres": 0}
-        if texto is not None:
-            texto_extraido.parent.mkdir(parents=True, exist_ok=True)
-            texto_extraido.write_text(texto, encoding="utf-8")
-            registro["caracteres"] = len(texto)
-            registro["paginas"] = contar_paginas(texto)
-            registro["contrato"] = clasificar_contrato(archivo, texto)
-        documentos[relativo] = registro
-    for relativo in set(anterior) - set(documentos):
-        (destino / "texto" / f"{relativo}.txt").unlink(missing_ok=True)
-    archivo_indice.write_text(json.dumps(documentos, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-    escribir_indice_docs(origen, id_tercero, documentos)
-    return {"documentos": documentos, "procesados": procesados, "eliminados": sorted(set(anterior) - set(documentos))}
+def linea_contrato(contrato: dict) -> str:
+    return (f"{MARCA_CONTRATO} {contrato['tipo']} {contrato['version_especificacion']} · {contrato['titulo'] or '—'} · versión "
+            f"{contrato['version'] or '—'} · {contrato['operaciones']} operaciones · {contrato['canales']} canales")
 
 
-def indexar(raiz: Path, producto: str) -> dict[str, dict]:
-    return {id_tercero: indexar_tercero(raiz, producto, id_tercero) for id_tercero in ids(raiz, producto)}
-
-
-def escribir_indice_docs(origen: Path, id_tercero: str, documentos: dict[str, dict]) -> None:
-    contratos = [d for d in documentos.values() if d["contrato"]]
-    otros = [d for d in documentos.values() if d["estado"] == "indexado" and not d["contrato"]]
-    pendientes = [d for d in documentos.values() if d["estado"] != "indexado"]
-    lineas = [f"# Documentación de {id_tercero}", "",
-              "> Archivo generado por `herramientas/terceros.py indexar`. No se edita a mano. Los documentos se "
-              "copian tal cual en esta carpeta.", "",
-              f"Documentos: {len(documentos)} · indexados: {len(documentos) - len(pendientes)} · no indexados: {len(pendientes)}", "",
-              "## Contratos", ""]
-    lineas += (["| Archivo | Tipo | Título | Versión | Operaciones | Canales |", "|---|---|---|---|---|---|"]
-               + [f"| [{d['archivo']}]({d['archivo']}) | {d['contrato']['tipo']} {d['contrato']['version_especificacion']} "
-                  f"| {d['contrato']['titulo'] or '—'} | {d['contrato']['version'] or '—'} | {d['contrato']['operaciones']} "
-                  f"| {d['contrato']['canales']} |" for d in contratos]) if contratos else ["Ninguno."]
-    lineas += ["", "## Documentos", ""]
-    lineas += (["| Archivo | Formato | Páginas | Caracteres |", "|---|---|---|---|"]
-               + [f"| [{d['archivo']}]({d['archivo']}) | {d['formato']} | {d['paginas'] or '—'} | {d['caracteres']} |" for d in otros]) if otros else ["Ninguno."]
-    lineas += ["", "## No indexados (la revisión no los usa)", ""]
-    lineas += (["| Archivo | Motivo |", "|---|---|"]
-               + [f"| [{d['archivo']}]({d['archivo']}) | {d['motivo']} |" for d in pendientes]) if pendientes else ["Ninguno."]
-    (origen / "INDICE.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
-
-
-def documentos_indexados(raiz: Path, producto: str, id_tercero: str) -> dict[str, dict]:
-    return leer_json(carpetas(raiz, producto, id_tercero)[1] / "indice.json")
+def documentos_de(raiz: Path, producto: str, id_tercero: str) -> dict[str, dict]:
+    return {a.name: {"archivo": a.name, "contrato": MARCA_CONTRATO in a.read_text(encoding="utf-8")}
+            for a in sorted(carpeta_docs(raiz, producto, id_tercero).glob("*.md"))}
 
 
 def separar(ruta: str) -> tuple[str, str]:
-    """(id del tercero, ruta dentro de docs/) a partir de terceros/<id>/docs/<archivo>."""
-    partes = ruta.removeprefix(PREFIJO).split("/", 2)
-    if len(partes) < 3 or partes[1] != "docs":
-        raise ErrorRadiografia(f"Ruta '{ruta}' inválida; formato: terceros/<id>/docs/<archivo>.")
-    return partes[0], partes[2]
+    """(id del tercero, archivo) a partir de documentos/terceros/<id>/<archivo>.md."""
+    partes = ruta.removeprefix(PREFIJO).split("/")
+    if not ruta.startswith(PREFIJO) or len(partes) != 2:
+        raise ErrorRadiografia(f"Ruta '{ruta}' inválida; formato: {PREFIJO}<id>/<archivo>.md.")
+    return partes[0], partes[1]
 
 
 def texto_de(raiz: Path, producto: str, ruta: str) -> str:
-    id_tercero, relativo = separar(ruta)
-    documento = documentos_indexados(raiz, producto, id_tercero).get(relativo)
-    if documento is None:
-        raise ErrorRadiografia(f"'{ruta}' no está en la documentación de {id_tercero} (ver terceros/{id_tercero}/docs/INDICE.md).")
-    if documento["estado"] != "indexado":
-        raise ErrorRadiografia(f"'{ruta}' no está indexado: {documento['motivo']}.")
-    return (carpetas(raiz, producto, id_tercero)[1] / "texto" / f"{relativo}.txt").read_text(encoding="utf-8")
+    id_tercero, nombre = separar(ruta)
+    archivo = carpeta_docs(raiz, producto, id_tercero) / nombre
+    if not archivo.is_file():
+        raise ErrorRadiografia(f"'{ruta}' no está en la documentación de {id_tercero}.")
+    return archivo.read_text(encoding="utf-8")
 
 
 def buscar(raiz: Path, producto: str, consulta: str, limite: int = 20) -> list[dict]:
@@ -383,17 +310,14 @@ def buscar(raiz: Path, producto: str, consulta: str, limite: int = 20) -> list[d
         raise ErrorRadiografia("La búsqueda necesita al menos una palabra.")
     resultados = []
     for id_tercero in ids(raiz, producto):
-        for relativo, documento in sorted(documentos_indexados(raiz, producto, id_tercero).items()):
-            if documento["estado"] != "indexado":
-                continue
-            ruta = f"{PREFIJO}{id_tercero}/docs/{relativo}"
-            pagina = 1
-            # split("\n") y no splitlines(): splitlines() descarta el salto de página que marca el cambio de página.
-            for numero, linea in enumerate(texto_de(raiz, producto, ruta).split("\n"), start=1):
-                pagina += linea.count(SALTO_PAGINA)
-                if all(p in normalizar(linea) for p in palabras):
-                    resultados.append({"archivo": ruta, "linea": numero, "pagina": pagina if documento["paginas"] else None,
-                                       "texto": " ".join(linea.replace(SALTO_PAGINA, " ").split())[:200]})
+        for nombre in documentos_de(raiz, producto, id_tercero):
+            ruta, pagina = f"{PREFIJO}{id_tercero}/{nombre}", None
+            for numero, linea in enumerate(texto_de(raiz, producto, ruta).splitlines(), start=1):
+                marca = MARCA_PAGINA.match(linea)
+                if marca:
+                    pagina = int(marca.group(1))
+                elif all(p in normalizar(linea) for p in palabras):
+                    resultados.append({"archivo": ruta, "linea": numero, "pagina": pagina, "texto": " ".join(linea.split())[:200]})
                     if len(resultados) >= limite:
                         return resultados
     return resultados
@@ -407,14 +331,13 @@ def listar(raiz: Path, producto: str) -> list[dict]:
     filas = []
     for id_tercero, ficha in leer_fichas(raiz, producto).items():
         errores, pendientes = validar(raiz, producto, id_tercero, ficha)
-        documentos = documentos_indexados(raiz, producto, id_tercero)
+        documentos = documentos_de(raiz, producto, id_tercero)
         sla = ficha.get("sla") or {}
         filas.append({
             "id": id_tercero, "nombre": ficha.get("nombre"), "rol": ficha.get("rol"), "direccion": ficha.get("direccion"),
             "protocolo": ficha.get("protocolo"), "p95_ms": sla.get("p95_ms"), "politica": ficha.get("politica_ante_falla"),
             "repos": ficha.get("repos") or [], "documentos": len(documentos),
             "contratos": sum(1 for d in documentos.values() if d["contrato"]),
-            "sin_indexar": sum(1 for d in documentos.values() if d["estado"] != "indexado"),
             "errores": errores, "pendientes": pendientes,
         })
     if filas:
@@ -427,13 +350,9 @@ def listar(raiz: Path, producto: str) -> list[dict]:
                 f"⏳ por completar: {', '.join(f['pendientes'])}" if f["pendientes"] else "✅ completa")
             lineas.append(f"| [{f['nombre'] or f['id']}]({f['id']}/ficha.yaml) | {f['rol']} | {f['direccion']} | {f['protocolo']} "
                           f"| {f['p95_ms'] if f['p95_ms'] is not None else '—'} | {f['politica']} | {', '.join(f['repos']) or '—'} "
-                          f"| [{f['documentos']}]({f['id']}/docs/INDICE.md) | {estado} |")
+                          f"| {f['documentos']} | {estado} |")
         (carpeta_terceros(raiz, producto) / "INDICE.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return filas
-
-
-def productos_registrados(raiz: Path) -> list[str]:
-    return sorted(p.parent.name for p in (raiz / "productos").glob("*/producto.yaml"))
 
 
 # --- Programa principal ------------------------------------------------------------------------
@@ -452,18 +371,12 @@ def main(argumentos: list[str] | None = None) -> int:
     p = sub.add_parser("validar")
     p.add_argument("producto")
     p.add_argument("--id")
-    p = sub.add_parser("indexar")
-    p.add_argument("producto", nargs="?")
-    p = sub.add_parser("buscar")
-    p.add_argument("producto")
-    p.add_argument("texto")
-    p.add_argument("--limite", type=int, default=20)
     o = parser.parse_args(argumentos)
     raiz = o.raiz.resolve()
     try:
         if o.accion == "nuevo":
             archivo = nuevo(raiz, o.producto, o.id, o.nombre, o.rol)
-            print(f"Creado: {archivo.relative_to(raiz)}. Copiar su documentación en {archivo.parent.relative_to(raiz)}/docs/.")
+            print(f"Creado: {archivo.relative_to(raiz)}. Importar su documentación con: documentos.py importar {o.producto} <archivo> --tercero {o.id}")
         elif o.accion in ("listar", "validar"):
             filas = [f for f in listar(raiz, o.producto) if not getattr(o, "id", None) or f["id"] == o.id]
             if not filas:
@@ -475,27 +388,8 @@ def main(argumentos: list[str] | None = None) -> int:
                     print(f"    ERROR: {error}")
             if o.accion == "validar" and any(f["errores"] for f in filas):
                 return 1
-        elif o.accion == "indexar":
-            for producto in [o.producto] if o.producto else productos_registrados(raiz):
-                for id_tercero, r in indexar(raiz, producto).items():
-                    docs = r["documentos"].values()
-                    no_indexados = [d for d in docs if d["estado"] != "indexado"]
-                    print(f"[{producto}] {id_tercero}: {len(r['documentos'])} documento(s), "
-                          f"{sum(1 for d in docs if d['contrato'])} contrato(s), {len(no_indexados)} no indexado(s). "
-                          f"Procesados ahora: {r['procesados']}.")
-                    for d in no_indexados:
-                        print(f"  No indexado: {d['archivo']}: {d['motivo']}")
-                    if r["eliminados"]:
-                        print(f"  Ya no están: {', '.join(r['eliminados'])}")
-        elif o.accion == "buscar":
-            resultados = buscar(raiz, o.producto, o.texto, o.limite)
-            if not resultados:
-                print("Sin coincidencias.")
-            for r in resultados:
-                print(f"  {r['archivo']}" + (f" (página {r['pagina']})" if r["pagina"] else "") + f":{r['linea']}: {r['texto']}")
-        if o.accion in ("nuevo", "listar", "validar") or (o.accion == "indexar" and o.producto):
-            import indices
-            indices.indice_producto(raiz, o.producto)
+        import indices
+        indices.indice_producto(raiz, o.producto)
     except ErrorRadiografia as error:
         print(f"ERROR: {error}")
         return 1

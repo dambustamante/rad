@@ -97,9 +97,8 @@ def indice_producto(raiz: Path, producto: str) -> Path:
         fichas = terceros.listar(raiz, producto)
         if fichas:
             incompletas = sum(1 for f in fichas if f["errores"] or f["pendientes"])
-            sin_indexar = sum(f["sin_indexar"] for f in fichas)
             lineas.append(f"- Terceros (producto comprado e integraciones): [terceros/INDICE.md](terceros/INDICE.md) "
-                          f"({len(fichas)} ficha(s), {incompletas} por completar, {sin_indexar} documento(s) sin indexar)")
+                          f"({len(fichas)} ficha(s), {incompletas} por completar)")
     import jira
     borradores = jira.listar(raiz, producto)
     if borradores:

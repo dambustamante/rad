@@ -9,18 +9,17 @@ tarjetas, listas de sanciones, otro producto…) se registran igual: una ficha y
    .venv/bin/python herramientas/terceros.py nuevo <producto> --id <id> --nombre "<nombre>" [--rol producto-comprado]
    ```
 
-2. Pedir al usuario que copie la documentación, tal como viene, en
-   `productos/<producto>/terceros/<id>/docs/` (manuales, contratos OpenAPI o AsyncAPI, acuerdos de
-   servicio, notas de versión; PDF, Word, PowerPoint, Excel, HTML, markdown o texto), e indexarla:
+2. Importar su documentación en markdown: manuales, contratos OpenAPI o AsyncAPI, acuerdos de servicio y notas de versión:
 
    ```sh
-   .venv/bin/python herramientas/terceros.py indexar <producto>
+   .venv/bin/python herramientas/documentos.py importar <producto> <archivo> --tercero <id>
+   .venv/bin/python herramientas/documentos.py confluence <producto> <url> --tercero <id>
    ```
 
-   Mostrar los contratos reconocidos y, sobre todo, los documentos **no indexados** con su motivo y
-   la acción sugerida (guardar un `.doc` como `.docx`, pedir un PDF con texto en lugar de uno escaneado).
+   Si un archivo no se puede convertir, mostrar el motivo y la acción sugerida (guardar un `.doc` como `.docx`, pedir un PDF con
+   texto en lugar de uno escaneado). Mostrar los contratos reconocidos.
 3. Completar `terceros/<id>/ficha.yaml` con el usuario. Proponer valores a partir de la documentación
-   (`terceros.py buscar <producto> "<palabras>"`), citando de dónde sale cada uno; lo que no se sepa
+   (`documentos.py buscar <producto> "<palabras>"`), citando de dónde sale cada uno; lo que no se sepa
    queda `NO DETERMINADO`. La política ante falla (fail-open o fail-closed) y su justificación son
    decisiones de negocio: las define el usuario.
 4. Validar:
@@ -29,6 +28,6 @@ tarjetas, listas de sanciones, otro producto…) se registran igual: una ficha y
    .venv/bin/python herramientas/terceros.py validar <producto> --id <id>
    ```
 
-Los originales nunca se modifican; `/actualizar` vuelve a indexar solo lo que cambió. `/revisar` usa
+`/revisar` usa
 las fichas para contrastar el código: integraciones sin ficha, timeouts frente al tiempo de respuesta
 del tercero y política ante falla declarada frente a la implementada.

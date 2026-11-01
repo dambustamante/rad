@@ -85,7 +85,6 @@ def revisar_estado(raiz: Path) -> dict:
             "triaje": len(triaje.pendientes(registro)),
             "excepciones": [f["id"] for f in filas_adr
                             if f["tipo"] == "excepcion" and (f["efecto"] == "vencida" or str(f["efecto"]).startswith("inactiva"))],
-            "sin_indexar": sum(f["sin_indexar"] for f in fichas_terceros),
             "dias_semanal": dias_desde(leer_json(archivo_semanal(raiz, nombre)).get("ultima")),
             "harness": harness.estado(raiz, nombre) if harness.existe(raiz, nombre) else None,
             "con_revision": len(al_dia),
@@ -159,9 +158,6 @@ def que_sigue(estado: dict) -> list[str]:
         if p["repos"] and (p["dias_semanal"] is None or p["dias_semanal"] > DIAS_SEMANAL):
             cuando = "sin reporte semanal" if p["dias_semanal"] is None else f"último reporte semanal hace {p['dias_semanal']} días"
             pasos.append(f"{p['nombre']}: {cuando}: `/estado semanal`.")
-        if p["sin_indexar"]:
-            pasos.append(f"{p['nombre']}: {p['sin_indexar']} documento(s) de terceros sin indexar: ver "
-                         f"`productos/{p['nombre']}/terceros/INDICE.md`.")
     return pasos or ["Todo al día."]
 
 

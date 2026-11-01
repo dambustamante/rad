@@ -53,7 +53,7 @@ hallazgos:
     evidencia: [src/main/java/BuroClient.java:41]
     fragmento: return restTemplate.getForObject(url, Respuesta.class);
     cita_documento: Ninguna llamada externa sin timeout explícito
-    # documento_tercero: terceros/buro-credito/docs/manual.pdf    (opcional)
+    # documento_tercero: documentos/terceros/buro-credito/manual.md    (opcional)
     # cita_tercero: Timeout recomendado de 800 ms
 componentes:                                  # todo lo que usa o expone, con evidencia
   - nombre: Buró de crédito
@@ -75,7 +75,7 @@ Reglas:
   mayor nivel, registrarlo en ese nivel.
 - Un hallazgo es una señal concreta en una ubicación concreta ("la clase X mezcla acceso a datos y
   llamadas HTTP"), no "no cumple SOLID".
-- Texto de un tercero: buscarlo con `terceros.py buscar <producto> "<palabras>"`.
+- Texto de un tercero: buscarlo con `documentos.py buscar <producto> "<palabras>"`.
 - Repositorio `proveedor` o `config`: foco en integraciones, contratos y configuración.
 
 ## 5. Cerrar

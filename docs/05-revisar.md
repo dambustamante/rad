@@ -101,7 +101,7 @@ hallazgos:                                                    # cada hallazgo ya
     evidencia: [src/main/java/BuroClient.java:41]
     fragmento: return restTemplate.getForObject(url, Respuesta.class);
     cita_documento: Ninguna llamada externa sin timeout explícito
-    documento_tercero: terceros/buro-credito/docs/manual.pdf    # opcional
+    documento_tercero: documentos/terceros/buro-credito/manual.md    # opcional
     cita_tercero: Timeout recomendado de 800 ms                 # opcional
 componentes:                                                  # todo lo que el repositorio usa o expone
   - nombre: Buró de crédito

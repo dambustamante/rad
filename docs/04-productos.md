@@ -61,15 +61,14 @@ ante falla). Lo que el código **usa de verdad** lo registra `/revisar` como com
 evidencia. El inventario del producto cruza ambos: integraciones del código sin ficha y fichas que
 ningún repositorio usa.
 
-Se registran en `productos/<p>/terceros/<id>/`:
+La ficha se registra en `productos/<p>/terceros/<id>/`. Su documentación queda en markdown, en
+`documentos/terceros/<id>/` del harness:
 
 ```
 terceros/
-├── INDICE.md                 estado de cada ficha y documentos sin indexar (generado)
+├── INDICE.md                 estado de cada ficha (generado)
 └── buro-credito/
-    ├── ficha.yaml            datos del tercero
-    └── docs/                 documentación tal como llega, en subcarpetas si se quiere
-        └── INDICE.md         documentos indexados y contratos reconocidos (generado)
+    └── ficha.yaml            datos del tercero
 ```
 
 ### Paso 1: crear la ficha
@@ -81,33 +80,24 @@ terceros/
 
 El rol es `producto-comprado` o `integracion` (por defecto).
 
-### Paso 2: copiar e indexar la documentación
+### Paso 2: importar la documentación
 
-Se copian los archivos tal como llegan en `terceros/<id>/docs/` y se indexan:
+Se convierte a markdown, igual que los [documentos del producto](#documentos-del-producto):
 
 ```sh
-.venv/bin/python herramientas/terceros.py indexar motor-fraudes
+.venv/bin/python herramientas/documentos.py importar motor-fraudes manual.pdf --tercero buro-credito
+.venv/bin/python herramientas/documentos.py confluence motor-fraudes <url> --tercero buro-credito
 ```
 
-| Formato | Cómo se lee |
-|---|---|
-| PDF | `pdftotext`, con número de página para citar |
-| Word, PowerPoint, Excel (`.docx`, `.pptx`, `.xlsx`) | texto interno del archivo |
-| HTML | texto visible, sin scripts ni estilos |
-| markdown, texto, YAML, JSON | tal cual |
-| OpenAPI y AsyncAPI | se reconocen por su contenido: título, versión y cantidad de operaciones |
-| `.doc`, `.ppt`, `.xls` antiguos | no se leen: guardarlos como `.docx`, `.pptx` o `.xlsx`, o como PDF |
-| imágenes y PDF escaneados | no tienen texto: pedir una versión con texto |
-
-- Los originales nunca se modifican.
-- Solo se vuelve a procesar lo que cambió; los archivos borrados salen del índice.
+Un PDF conserva sus páginas, para poder citarlas. Los contratos OpenAPI y AsyncAPI se reconocen por su contenido, y el
+documento indica su tipo, título, versión y cantidad de operaciones.
 
 ### Paso 3: completar la ficha
 
 Cursor propone los valores buscando en la documentación indexada y citando de dónde sale cada uno:
 
 ```sh
-.venv/bin/python herramientas/terceros.py buscar motor-fraudes "timeout 800"
+.venv/bin/python herramientas/documentos.py buscar motor-fraudes "timeout 800"
 ```
 
 ```yaml
@@ -128,7 +118,7 @@ datos_sensibles: [rut]
 politica_ante_falla: fail-closed   # fail-open | fail-closed | no aplica
 justificacion: Sin buró no se evalúa el riesgo crediticio
 repos: [fraude-core]           # vacío: se muestra en la revisión de todos los repositorios
-contrato: contratos/buro.yaml  # ruta dentro de docs/
+contrato: openapi-buro.md      # archivo en documentos/terceros/<id>/
 ```
 
 La política ante falla (`fail-open` o `fail-closed`) y su justificación son decisiones de negocio:
@@ -141,7 +131,7 @@ las define el usuario. Lo que no se sepa queda `NO DETERMINADO`.
 ```
 
 Distingue **errores** (un valor inválido, un repositorio inexistente, un contrato que no está en
-`docs/`) de **pendientes** (campos sin completar).
+`documentos/terceros/<id>/`) de **pendientes** (campos sin completar).
 
 ### Para qué sirve en la revisión
 
@@ -153,7 +143,7 @@ código:
 - política ante falla declarada frente a la implementada;
 - uso de sus contratos, códigos de error y límites.
 
-Un hallazgo puede citar la documentación del tercero (`terceros/<id>/docs/<archivo>`); la cita se
+Un hallazgo puede citar la documentación del tercero (`documentos/terceros/<id>/<archivo>.md`); la cita se
 valida contra el texto indexado.
 
 ## Documentos del producto
@@ -171,8 +161,9 @@ tipo, origen y fecha.
 
 - **Confluence es de solo lectura.** Se configura en `.env`: `CONFLUENCE_URL` y, si difieren de los de Jira,
   `CONFLUENCE_EMAIL` y `CONFLUENCE_TOKEN`. `/actualizar` trae las páginas importadas que cambiaron.
-- **Lo que no se importa:** las imágenes dentro de una página de Confluence, los formatos antiguos (`.doc`, `.ppt`, `.xls`) y
-  los PDF escaneados.
+- **Lo que no se importa:** las imágenes dentro de una página de Confluence, los formatos antiguos (`.doc`, `.ppt`, `.xls`),
+  que hay que guardar como `.docx`, `.pptx` o `.xlsx`, y los PDF escaneados, para los que hay que pedir una versión con texto.
+- **Lectura:** `documentos.py buscar`, `titulos` y `ver` leen solo la parte necesaria, hasta 150 líneas por vez.
 - **Secretos:** un documento con un posible secreto no se guarda. Necesita `gitleaks`. Los datos personales no se detectan.
 - **Evidencia:** se cita como `[doc]`. Si contradice al código, manda el código y la diferencia es un hallazgo.
 - **Acceso:** todos los que usan el harness ven estos documentos. Lo confidencial no se importa.

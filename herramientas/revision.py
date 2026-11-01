@@ -322,18 +322,18 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
                    "integraciones del código sin ficha (EQ-004.5, EQ-006.6), timeouts frente al p95 del tercero (EQ-002.1), "
                    "política ante falla declarada frente a la implementada (EQ-002.4; la ficha cuenta como documentación de "
                    "la política) y uso de sus contratos, códigos de error y límites. Buscar en su documentación con "
-                   f"`.venv/bin/python herramientas/terceros.py buscar {producto} \"<palabras>\"` y citarla como "
-                   "`terceros/<id>/docs/<archivo>`.", "",
+                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"` y citarla como "
+                   "`documentos/terceros/<id>/<archivo>.md`.", "",
                    "| Tercero | Rol | Protocolo | Autenticación | p95 (ms) | Límite (rps) | Política ante falla | Contrato | Documentos |",
                    "|---|---|---|---|---|---|---|---|---|"]
         for f in fichas:
             sla, limites = f.get("sla") or {}, f.get("limites") or {}
-            documentos = terceros.documentos_indexados(raiz, producto, f["id"])
+            documentos = terceros.documentos_de(raiz, producto, f["id"])
             lineas.append(f"| `{f['id']}` {f.get('nombre') or ''} | {f.get('rol')} | {f.get('protocolo')} | {f.get('autenticacion')} "
                           f"| {sla.get('p95_ms') if sla.get('p95_ms') is not None else '—'} "
                           f"| {limites.get('rps') if limites.get('rps') is not None else '—'} | {f.get('politica_ante_falla')} "
-                          f"| {('terceros/' + f['id'] + '/docs/' + f['contrato']) if f.get('contrato') else '—'} "
-                          f"| {sum(1 for d in documentos.values() if d['estado'] == 'indexado')} indexado(s) |")
+                          f"| {(terceros.PREFIJO + f['id'] + '/' + f['contrato']) if f.get('contrato') else '—'} "
+                          f"| {len(documentos)} |")
         lineas.append("")
 
     control = lista_de_control(raiz, ctx["tipo"], producto, repo)

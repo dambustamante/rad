@@ -88,7 +88,7 @@ equipo/                       nivel 3: decisiones del equipo
 productos/INDICE.md           portafolio: una fila por producto
 productos/<producto>/
 ├── INDICE.md · producto.yaml
-├── terceros/<id>/            ficha.yaml y docs/; terceros/INDICE.md
+├── terceros/<id>/            ficha.yaml; terceros/INDICE.md (sus documentos, en documentos/terceros/ del harness)
 ├── historias/                INDICE.md y borradores/ para Jira
 ├── as-is/                    <repo>.md y PRODUCTO.md
 ├── revisiones/<id>/          reporte, paquetes, lotes, AS IS y borradores C4

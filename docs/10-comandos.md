@@ -107,7 +107,7 @@ ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No public
 | PDF, Word, PowerPoint, Excel, HTML o texto | Extrae el texto y lo convierte a markdown | — |
 | Dibujo o imagen | Crea un markdown por completar | Mira la imagen y escribe qué muestra |
 | Conversación | Crea un markdown por completar | Escribe fecha, decisiones y pendientes, sin copiar el chat |
-| Documentos de un tercero | Los indexa en `terceros/<id>/docs/` | Ayuda a completar su ficha |
+| Documentos de un tercero | Los convierte a markdown en `documentos/terceros/<id>/` | Ayuda a completar su ficha |
 
 **Qué deja:** `productos/<producto>/producto.yaml`, el harness en `productos/<producto>/harness/`, los repositorios en
 `productos/<producto>/repos/` y los documentos en `documentos/` del harness.

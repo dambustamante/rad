@@ -1,9 +1,9 @@
 """Documentos de un producto, siempre en markdown, en documentos/ de su harness.
 
 Uso:
-  python herramientas/documentos.py importar <producto> <archivo> [--titulo TEXTO] [--conversacion]
-  python herramientas/documentos.py confluence <producto> <url o id de página> [...]
-  python herramientas/documentos.py confluence <producto> --espacio CLAVE
+  python herramientas/documentos.py importar <producto> <archivo> [--titulo TEXTO] [--conversacion] [--tercero ID]
+  python herramientas/documentos.py confluence <producto> <url o id de página> [...] [--tercero ID]
+  python herramientas/documentos.py confluence <producto> --espacio CLAVE [--tercero ID]
   python herramientas/documentos.py sincronizar [<producto>]     trae las páginas de Confluence que cambiaron
   python herramientas/documentos.py listar <producto>
   python herramientas/documentos.py buscar <producto> <texto>
@@ -14,7 +14,8 @@ Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
 PDF, Word, PowerPoint, Excel, HTML y texto se convierten a markdown. Un dibujo o una conversación dejan un markdown
 por completar con lo que muestran o lo que se decidió: el original no se copia. Confluence se conecta en solo lectura.
-Cada documento indica su origen y su fecha. Un documento con un posible secreto no se guarda.
+Cada documento indica su origen y su fecha. Un documento con un posible secreto no se guarda. Con --tercero, queda en
+documentos/terceros/<id>/.
 """
 
 from __future__ import annotations
@@ -190,14 +191,17 @@ def id_de_referencia(referencia: str) -> str:
 
 # --- Documentos --------------------------------------------------------------------------------
 
-def carpeta(raiz: Path, producto: str) -> Path:
+def carpeta(raiz: Path, producto: str, tercero: str | None = None) -> Path:
     if not harness.existe(raiz, producto):
         raise ErrorRadiografia(f"El producto '{producto}' no tiene harness.")
-    return harness.ruta(raiz, producto) / CARPETA
+    if tercero and tercero not in terceros.ids(raiz, producto):
+        raise ErrorRadiografia(f"El tercero '{tercero}' no tiene ficha: crearla con terceros.py nuevo.")
+    return terceros.carpeta_docs(raiz, producto, tercero) if tercero else harness.ruta(raiz, producto) / CARPETA
 
 
-def encabezado(titulo: str, tipo: str, origen: str, marca: str = "") -> str:
-    lineas = [f"# {titulo}", "", f"- **Tipo:** {tipo}", f"- **Origen:** {origen}", f"- **Importado:** {date.today().isoformat()}"]
+def encabezado(titulo: str, tipo: str, origen: str, marca: str = "", contrato: dict | None = None) -> str:
+    lineas = [f"# {titulo}", "", f"- **Tipo:** {tipo}", f"- **Origen:** {origen}", f"- **Importado:** {date.today().isoformat()}",
+              *([terceros.linea_contrato(contrato)] if contrato else [])]
     return "\n".join(lineas) + ("\n\n" + marca if marca else "") + "\n\n"
 
 
@@ -216,11 +220,19 @@ def guardar(destino: Path, contenido: str) -> None:
         raise ErrorRadiografia(f"{destino.name} tiene un posible secreto y no se guardó. El valor no se muestra: quitarlo del original.")
 
 
-def importar(raiz: Path, producto: str, archivo: Path, titulo: str | None = None, conversacion: bool = False) -> dict:
+def con_paginas(texto: str) -> str:
+    """Marca cada página de un PDF o una presentación, para poder citarla."""
+    paginas = [p.strip() for p in texto.split(terceros.SALTO_PAGINA)]
+    paginas = paginas[:-1] if len(paginas) > 1 and not paginas[-1] else paginas
+    return texto.strip() if len(paginas) == 1 else "\n\n".join(f"<!-- pagina {n} -->\n\n{p}" for n, p in enumerate(paginas, start=1))
+
+
+def importar(raiz: Path, producto: str, archivo: Path, titulo: str | None = None, conversacion: bool = False, tercero: str | None = None) -> dict:
     if not archivo.is_file():
         raise ErrorRadiografia(f"No existe el archivo {archivo}.")
     titulo = titulo or archivo.stem.replace("-", " ").replace("_", " ")
-    destino = carpeta(raiz, producto) / f"{slug(titulo)}.md"
+    destino = carpeta(raiz, producto, tercero) / f"{slug(titulo)}.md"
+    contrato = None
     if destino.exists():
         raise ErrorRadiografia(f"Ya existe {destino.name}: indicar otro título con --titulo.")
     if conversacion:
@@ -233,8 +245,8 @@ def importar(raiz: Path, producto: str, archivo: Path, titulo: str | None = None
         texto, motivo = terceros.extraer(archivo)
         if texto is None:
             raise ErrorRadiografia(f"No se pudo convertir {archivo.name}: {motivo}.")
-        tipo, cuerpo = archivo.suffix.lower().lstrip(".") or "texto", texto.replace(terceros.SALTO_PAGINA, "\n\n---\n\n").strip() + "\n"
-    guardar(destino, encabezado(titulo, tipo, archivo.name) + cuerpo)
+        tipo, cuerpo, contrato = archivo.suffix.lower().lstrip(".") or "texto", con_paginas(texto) + "\n", terceros.clasificar_contrato(archivo, texto)
+    guardar(destino, encabezado(titulo, tipo, archivo.name, contrato=contrato) + cuerpo)
     harness.commit(harness.ruta(raiz, producto), f"docs: agrega el documento {destino.stem}", [CARPETA])
     return {"archivo": destino, "pendiente": PENDIENTE in cuerpo}
 
@@ -248,8 +260,8 @@ def _escribir_pagina(destino_carpeta: Path, pagina: dict, base: str) -> Path:
     return destino
 
 
-def confluence(raiz: Path, producto: str, referencias: list[str], espacio: str | None = None, sesion=None) -> list[Path]:
-    destino = carpeta(raiz, producto)
+def confluence(raiz: Path, producto: str, referencias: list[str], espacio: str | None = None, sesion=None, tercero: str | None = None) -> list[Path]:
+    destino = carpeta(raiz, producto, tercero)
     cliente = ClienteConfluence(cargar_env(raiz), sesion)
     ids = [id_de_referencia(r) for r in referencias] + (cliente.ids_de_espacio(espacio) if espacio else [])
     if not ids:
@@ -262,7 +274,7 @@ def confluence(raiz: Path, producto: str, referencias: list[str], espacio: str |
 def sincronizar(raiz: Path, producto: str, sesion=None) -> dict:
     """Vuelve a traer las páginas de Confluence ya importadas que tienen una versión nueva."""
     destino = harness.ruta(raiz, producto) / CARPETA
-    importadas = [(a, MARCA_CONFLUENCE.search(a.read_text(encoding="utf-8"))) for a in sorted(destino.glob("*.md"))] if destino.exists() else []
+    importadas = [(a, MARCA_CONFLUENCE.search(a.read_text(encoding="utf-8"))) for a in sorted(destino.rglob("*.md"))] if destino.exists() else []
     importadas = [(a, m) for a, m in importadas if m]
     if not importadas:
         return {"actualizadas": [], "errores": []}
@@ -271,7 +283,7 @@ def sincronizar(raiz: Path, producto: str, sesion=None) -> dict:
     for archivo, marca in importadas:
         try:
             if cliente.pagina(marca.group(1), False)["version"]["number"] > int(marca.group(2)):
-                nuevo = _escribir_pagina(destino, cliente.pagina(marca.group(1)), cliente.url)
+                nuevo = _escribir_pagina(archivo.parent, cliente.pagina(marca.group(1)), cliente.url)
                 if nuevo != archivo:
                     archivo.unlink()
                 actualizadas.append(nuevo)
@@ -294,17 +306,18 @@ def listar(raiz: Path, producto: str) -> list[dict]:
 
 def buscar(raiz: Path, producto: str, consulta: str, limite: int = 20) -> list[str]:
     palabras = consulta.lower().split()
-    resultado = []
-    for archivo in sorted(carpeta(raiz, producto).glob("*.md")):
+    resultado, base = [], carpeta(raiz, producto)
+    for archivo in sorted(base.rglob("*.md")):
         for numero, linea in enumerate(archivo.read_text(encoding="utf-8").splitlines(), start=1):
             if all(p in linea.lower() for p in palabras):
-                resultado.append(f"{CARPETA}/{archivo.name}:{numero}: {linea.strip()[:160]}")
+                resultado.append(f"{CARPETA}/{archivo.relative_to(base).as_posix()}:{numero}: {linea.strip()[:160]}")
     return resultado[:limite]
 
 
 def _lineas(raiz: Path, producto: str, archivo: str) -> list[str]:
-    ruta = carpeta(raiz, producto) / Path(archivo).name
-    if not ruta.is_file():
+    base = carpeta(raiz, producto)
+    ruta = base / archivo.removeprefix(f"{CARPETA}/")
+    if base.resolve() not in ruta.resolve().parents or not ruta.is_file():
         raise ErrorRadiografia(f"No existe el documento '{archivo}'. Verlos con: documentos.py listar {producto}")
     return ruta.read_text(encoding="utf-8").splitlines()
 
@@ -339,10 +352,12 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("archivo", type=Path)
     p.add_argument("--titulo")
     p.add_argument("--conversacion", action="store_true")
+    p.add_argument("--tercero")
     p = sub.add_parser("confluence")
     p.add_argument("producto")
     p.add_argument("paginas", nargs="*")
     p.add_argument("--espacio")
+    p.add_argument("--tercero")
     p = sub.add_parser("sincronizar")
     p.add_argument("producto", nargs="?")
     p = sub.add_parser("listar")
@@ -362,10 +377,10 @@ def main(argumentos: list[str] | None = None) -> int:
     raiz = o.raiz.resolve()
     try:
         if o.accion == "importar":
-            r = importar(raiz, o.producto, o.archivo, o.titulo, o.conversacion)
+            r = importar(raiz, o.producto, o.archivo, o.titulo, o.conversacion, o.tercero)
             print(f"Documento: {r['archivo'].relative_to(raiz)}" + (" (por completar)" if r["pendiente"] else ""))
         elif o.accion == "confluence":
-            for archivo in confluence(raiz, o.producto, o.paginas, o.espacio):
+            for archivo in confluence(raiz, o.producto, o.paginas, o.espacio, tercero=o.tercero):
                 print(f"Documento: {archivo.relative_to(raiz)}")
         elif o.accion == "sincronizar":
             for nombre in harness.con_harness(raiz, o.producto):

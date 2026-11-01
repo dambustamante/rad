@@ -5,10 +5,13 @@ from __future__ import annotations
 import contextlib
 import io
 import shutil
+import subprocess
+import os
 import sys
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -17,6 +20,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import revision  # noqa: E402
+from comun import ErrorRadiografia  # noqa: E402
+import documentos  # noqa: E402
 import terceros  # noqa: E402
 import test_revision  # noqa: E402
 
@@ -70,6 +75,10 @@ A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
 
 
 
+GIT_PRUEBA = {"GIT_AUTHOR_NAME": "Prueba", "GIT_AUTHOR_EMAIL": "prueba@example.com",
+              "GIT_COMMITTER_NAME": "Prueba", "GIT_COMMITTER_EMAIL": "prueba@example.com"}
+
+
 class PruebaTerceros(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -84,30 +93,34 @@ class PruebaTerceros(unittest.TestCase):
               - {id: fraude-core, url: x, rama: main, tipo: propio, estado: activo}
               - {id: fraude-backoffice, url: y, rama: main, tipo: propio, estado: activo}
             """), encoding="utf-8")
+        parche = mock.patch.dict(os.environ, GIT_PRUEBA)
+        parche.start()
+        self.addCleanup(parche.stop)
+        (self.producto / "harness").mkdir()
+        subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=self.producto / "harness", check=True)
         terceros.nuevo(self.raiz, "motor-fraudes", "motor", "Motor de fraudes", "producto-comprado")
-        self.docs = self.producto / "terceros" / "motor" / "docs"
-        (self.docs / "contratos").mkdir()
-        (self.docs / "contratos" / "evaluacion.yaml").write_text(OPENAPI, encoding="utf-8")
-        (self.docs / "notas.md").write_text("# Notas de versión\n\nLa versión 2.4 agrega el campo canal.\n", encoding="utf-8")
-        (self.docs / "portal.html").write_text("<html><script>x()</script><p>Límite de 50 solicitudes por segundo</p></html>",
-                                               encoding="utf-8")
-        office(self.docs / "guia.docx", {"word/document.xml":
+        self.origen = self.raiz / "origen"
+        self.origen.mkdir()
+        (self.origen / "evaluacion.yaml").write_text(OPENAPI, encoding="utf-8")
+        (self.origen / "notas.md").write_text("# Notas de versión\n\nLa versión 2.4 agrega el campo canal.\n", encoding="utf-8")
+        (self.origen / "portal.html").write_text("<html><script>x()</script><p>Límite de 50 solicitudes por segundo</p></html>",
+                                                 encoding="utf-8")
+        office(self.origen / "guia.docx", {"word/document.xml":
                f'<w:document {W}><w:body><w:p><w:r><w:t>Usar mTLS para </w:t></w:r><w:r><w:t>autenticar</w:t></w:r></w:p>'
                "</w:body></w:document>"})
-        office(self.docs / "presentacion.pptx", {"ppt/slides/slide1.xml": f"<p:sld {A} xmlns:p=\"x\"><a:p><a:r><a:t>Arquitectura del motor</a:t></a:r></a:p></p:sld>"})
-        (self.docs / "antiguo.doc").write_bytes(b"\xd0\xcf\x11\xe0")
-        (self.docs / "diagrama.png").write_bytes(b"\x89PNG")
+        office(self.origen / "presentacion.pptx", {"ppt/slides/slide1.xml": f"<p:sld {A} xmlns:p=\"x\"><a:p><a:r><a:t>Arquitectura del motor</a:t></a:r></a:p></p:sld>"})
+        (self.origen / "antiguo.doc").write_bytes(b"\xd0\xcf\x11\xe0")
         if shutil.which("pdftotext"):
-            (self.docs / "manual.pdf").write_bytes(pdf(["Manual de integracion", "Timeout recomendado de 800 ms"]))
+            (self.origen / "manual.pdf").write_bytes(pdf(["Manual de integracion", "Timeout recomendado de 800 ms"]))
 
     def tearDown(self) -> None:
         self.temporal.cleanup()
 
-    def ejecutar(self, *argumentos: str) -> tuple[int, str]:
-        salida = io.StringIO()
-        with contextlib.redirect_stdout(salida):
-            codigo = terceros.main(["--raiz", str(self.raiz), *argumentos])
-        return codigo, salida.getvalue()
+    def importar(self, nombre: str) -> Path:
+        return documentos.importar(self.raiz, "motor-fraudes", self.origen / nombre, tercero="motor")["archivo"]
+
+    def texto(self, nombre: str) -> str:
+        return terceros.texto_de(self.raiz, "motor-fraudes", f"documentos/terceros/motor/{nombre}")
 
     def ficha(self, id_tercero: str, **cambios) -> None:
         archivo = self.producto / "terceros" / id_tercero / "ficha.yaml"
@@ -115,49 +128,43 @@ class PruebaTerceros(unittest.TestCase):
         datos.update(cambios)
         archivo.write_text(yaml.safe_dump(datos, allow_unicode=True), encoding="utf-8")
 
-    def test_indexar_por_formato(self) -> None:
-        codigo, salida = self.ejecutar("indexar", "motor-fraudes")
-        self.assertEqual(codigo, 0, salida)
-        docs = terceros.documentos_indexados(self.raiz, "motor-fraudes", "motor")
-        contrato = docs["contratos/evaluacion.yaml"]["contrato"]
-        self.assertEqual((contrato["tipo"], contrato["titulo"], contrato["version"], contrato["operaciones"]),
-                         ("OpenAPI", "API de evaluación del motor", "2.4.0", 2), "el contrato se reconoce por su contenido")
-        texto = lambda nombre: terceros.texto_de(self.raiz, "motor-fraudes", f"terceros/motor/docs/{nombre}")  # noqa: E731
-        self.assertIn("Usar mTLS para autenticar", texto("guia.docx"))
-        self.assertIn("Arquitectura del motor", texto("presentacion.pptx"))
-        self.assertIn("Límite de 50 solicitudes", texto("portal.html"))
-        self.assertNotIn("x()", texto("portal.html"), "los scripts del HTML no se indexan")
-        self.assertIn("guardar como .docx o PDF", docs["antiguo.doc"]["motivo"])
-        self.assertIn("imagen", docs["diagrama.png"]["motivo"])
-        self.assertNotIn(".gitkeep", docs)
-        indice = (self.docs / "INDICE.md").read_text(encoding="utf-8")
-        self.assertIn("| [contratos/evaluacion.yaml](contratos/evaluacion.yaml) | OpenAPI 3.0.3 |", indice)
-        self.assertIn("No indexado: antiguo.doc", salida)
+    def test_todo_queda_en_markdown(self) -> None:
+        for nombre in ("evaluacion.yaml", "notas.md", "portal.html", "guia.docx", "presentacion.pptx"):
+            self.assertEqual(self.importar(nombre).suffix, ".md")
+        docs = terceros.documentos_de(self.raiz, "motor-fraudes", "motor")
+        self.assertTrue(docs["evaluacion.md"]["contrato"], "el contrato se reconoce por su contenido")
+        self.assertFalse(docs["notas.md"]["contrato"])
+        self.assertIn("OpenAPI 3.0.3 · API de evaluación del motor · versión 2.4.0 · 2 operaciones", self.texto("evaluacion.md"))
+        self.assertIn("Usar mTLS para autenticar", self.texto("guia.md"))
+        self.assertIn("Arquitectura del motor", self.texto("presentacion.md"))
+        self.assertIn("Límite de 50 solicitudes", self.texto("portal.md"))
+        self.assertNotIn("x()", self.texto("portal.md"), "los scripts del HTML no se importan")
+        with self.assertRaises(ErrorRadiografia) as error:
+            self.importar("antiguo.doc")
+        self.assertIn("guardar como .docx o PDF", str(error.exception))
+        with self.assertRaises(ErrorRadiografia):
+            documentos.importar(self.raiz, "motor-fraudes", self.origen / "notas.md", tercero="no-existe")
+        self.assertEqual(documentos.listar(self.raiz, "motor-fraudes"), [], "lo de un tercero no se mezcla con lo del producto")
+        self.assertIn("documentos/terceros/motor/guia.md:", documentos.buscar(self.raiz, "motor-fraudes", "mtls")[0],
+                      "una sola búsqueda para todo")
+        self.assertIn("mTLS", documentos.ver(self.raiz, "motor-fraudes", "terceros/motor/guia.md"))
 
     @unittest.skipUnless(shutil.which("pdftotext"), "pdftotext no está instalado")
     def test_pdf_con_paginas_y_busqueda(self) -> None:
-        self.ejecutar("indexar", "motor-fraudes")
-        self.assertEqual(terceros.documentos_indexados(self.raiz, "motor-fraudes", "motor")["manual.pdf"]["paginas"], 2)
-        codigo, salida = self.ejecutar("buscar", "motor-fraudes", "timeout 800")
-        self.assertIn("terceros/motor/docs/manual.pdf (página 2)", salida)
-
-    def test_solo_reprocesa_lo_que_cambia(self) -> None:
-        self.ejecutar("indexar", "motor-fraudes")
-        self.assertEqual(terceros.indexar(self.raiz, "motor-fraudes")["motor"]["procesados"], 0)
-        (self.docs / "notas.md").write_text("# Notas\n\nCambio.\n", encoding="utf-8")
-        (self.docs / "portal.html").unlink()
-        resultado = terceros.indexar(self.raiz, "motor-fraudes")["motor"]
-        self.assertEqual((resultado["procesados"], resultado["eliminados"]), (1, ["portal.html"]))
+        self.importar("manual.pdf")
+        self.assertIn("<!-- pagina 2 -->", self.texto("manual.md"))
+        resultado = terceros.buscar(self.raiz, "motor-fraudes", "timeout 800")[0]
+        self.assertEqual((resultado["archivo"], resultado["pagina"]), ("documentos/terceros/motor/manual.md", 2))
 
     def test_citas_y_fichas(self) -> None:
-        self.ejecutar("indexar", "motor-fraudes")
-        cita = revision.validar_cita_tercero(self.raiz, "motor-fraudes", "terceros/motor/docs/guia.docx", "Usar mTLS para autenticar")
-        self.assertEqual(cita["documento"], "terceros/motor/docs/guia.docx")
-        for documento, texto, mensaje in (("terceros/motor/docs/guia.docx", "Usar API key", "no aparece textualmente"),
-                                          ("terceros/motor/docs/antiguo.doc", "algo", "no está indexado"),
-                                          ("terceros/motor/docs/no-existe.pdf", "algo", "no está en la documentación"),
-                                          ("guia.docx", "algo", "formato: terceros/<id>/docs/<archivo>"),
-                                          ("terceros/motor/docs/guia.docx", None, "se indican juntos")):
+        self.importar("guia.docx")
+        ruta = "documentos/terceros/motor/guia.md"
+        cita = revision.validar_cita_tercero(self.raiz, "motor-fraudes", ruta, "Usar mTLS para autenticar")
+        self.assertEqual(cita["documento"], ruta)
+        for documento, texto, mensaje in ((ruta, "Usar API key", "no aparece textualmente"),
+                                          ("documentos/terceros/motor/no-existe.md", "algo", "no está en la documentación"),
+                                          ("guia.md", "algo", "formato: documentos/terceros/<id>/<archivo>.md"),
+                                          (ruta, None, "se indican juntos")):
             with self.assertRaises(Exception) as contexto:
                 revision.validar_cita_tercero(self.raiz, "motor-fraudes", documento, texto)
             self.assertIn(mensaje, str(contexto.exception))
@@ -168,12 +175,13 @@ class PruebaTerceros(unittest.TestCase):
         self.assertEqual(errores, [], "la plantilla recién creada es válida, solo incompleta")
         self.assertIn("politica_ante_falla", pendientes)
         self.ficha("buro-credito", politica_ante_falla="fail-closed", repos=["fraude-core", "no-existe"],
-                   sla={"p95_ms": "rápido"}, contrato="openapi.yaml", rol="otro")
+                   sla={"p95_ms": "rápido"}, contrato="openapi.md", rol="otro")
         errores, _ = terceros.validar(self.raiz, "motor-fraudes", "buro-credito",
                                       terceros.leer_fichas(self.raiz, "motor-fraudes")["buro-credito"])
         for esperado in ("una política fail-open o fail-closed necesita su justificación de negocio",
                          "repositorios que no existen en el producto: no-existe", "sla.p95_ms debe ser un número o null",
-                         "el contrato 'openapi.yaml' no existe en docs/", "rol 'otro' inválido; valores válidos: producto-comprado, integracion"):
+                         "el contrato 'openapi.md' no existe en documentos/terceros/buro-credito/",
+                         "rol 'otro' inválido; valores válidos: producto-comprado, integracion"):
             self.assertIn(esperado, errores)
 
         self.ficha("buro-credito", proveedor="Buró S.A.", protocolo="HTTPS/JSON", autenticacion="mTLS", rol="integracion",

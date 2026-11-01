@@ -3,7 +3,7 @@ ENTORNO := .venv/.instalado
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv estado doctor sync-arquitectura harness-traer coherencia repos terceros historias documentos harness-generar harness-al-dia indices actualizar revisar semanal test
+.PHONY: help venv estado doctor sync-arquitectura harness-traer coherencia repos historias documentos harness-generar harness-al-dia indices actualizar revisar semanal test
 
 help: ## Lista los comandos disponibles
 	@echo "Uso habitual:"
@@ -36,9 +36,6 @@ coherencia: $(ENTORNO) #- Actualiza equipo/COHERENCIA.md y lista los pares por e
 repos: $(ENTORNO) #- Descarga o actualiza los repositorios activos de todos los productos
 	@$(PYTHON) herramientas/productos.py sincronizar
 
-terceros: $(ENTORNO) #- Indexa la documentación de los terceros de todos los productos
-	@$(PYTHON) herramientas/terceros.py indexar
-
 documentos: $(ENTORNO) #- Trae las páginas de Confluence ya importadas que cambiaron
 	-@$(PYTHON) herramientas/documentos.py sincronizar
 
@@ -56,7 +53,7 @@ harness-al-dia: sync-arquitectura harness-traer coherencia harness-generar #- Re
 indices: $(ENTORNO) #- Regenera equipo/INDICE.md y los índices de los productos
 	@$(PYTHON) herramientas/indices.py
 
-actualizar: doctor sync-arquitectura harness-traer coherencia repos terceros historias documentos harness-generar indices ## Ejecuta la parte automática de /actualizar
+actualizar: doctor sync-arquitectura harness-traer coherencia repos historias documentos harness-generar indices ## Ejecuta la parte automática de /actualizar
 
 revisar: $(ENTORNO) ## Parte automática de /revisar: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1] [COMPLETA=1]
 	@test -n "$(P)" || (echo "Uso: make revisar P=<producto> [R=<repo>] [SIN_SONAR=1]"; exit 1)

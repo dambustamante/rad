@@ -37,7 +37,6 @@ Encadena, en este orden:
 | `sync-arquitectura` | clona o actualiza cada fuente (solo git), copia los documentos en `arquitectura/decisiones/<id>/` o `arquitectura/estandares/<id>/`, fija el commit en `arquitectura/estado/fuentes.lock` y genera `arquitectura/INDICE.md` |
 | `coherencia` | regenera los `COHERENCIA.md` y lista los pares por evaluar |
 | `repos` | actualiza las copias de los repositorios activos de todos los productos |
-| `terceros` | vuelve a indexar la documentación de terceros que cambió |
 | `historias` | sincroniza las historias de Jira de los productos que las tienen configuradas |
 | `indices` | regenera los `INDICE.md` del equipo y de los productos |
 
