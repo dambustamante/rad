@@ -114,7 +114,7 @@ def bandeja(raiz: Path, producto: str | None = None, mios: bool = False, cliente
                     continue
                 filas.append({"producto": nombre, "repo": id_repo, "tipo": tipo, "numero": mr["numero"], "titulo": mr["titulo"],
                               "url": mr["url"], "autor": mr.get("autor"), "rama": mr.get("rama"),
-                              "listo": ("Spec" if re.fullmatch(r"docs/.+-spec", str(mr.get("rama"))) else "ADR del producto")
+                              "listo": ("Spec" if re.fullmatch(r"docs/.+-(spec|tareas)", str(mr.get("rama"))) else "ADR del producto")
                               if tipo == "harness" else estado_listo(mr)})
     prioridad = {"Spec": -1, "ADR del producto": 0, "sin /listo": 1, "registro de /listo ilegible": 1, "desactualizado": 2, "al día": 3}
     return sorted(filas, key=lambda f: (prioridad.get(f.get("listo"), 9), f["producto"], f["repo"], f.get("numero", 0)))
@@ -171,8 +171,9 @@ def convencion(clon: Path, base: str, commit: str, nombre_rama: str) -> list[str
 
 def texto_spec(raiz: Path, producto: str, registro: dict | None) -> str | None:
     """Spec aprobada: la de la rama principal en la copia de radiografia."""
-    archivo = harness.ruta(raiz, producto) / "specs" / str((registro or {}).get("clave")) / "spec.md"
-    return archivo.read_text(encoding="utf-8") if archivo.exists() else None
+    clave = str((registro or {}).get("clave"))
+    encontradas = sorted((harness.ruta(raiz, producto) / "specs").glob(f"*/{clave}.md"))
+    return encontradas[0].read_text(encoding="utf-8") if encontradas else None
 
 
 def contraste_spec(raiz: Path, producto: str, registro: dict) -> list[str]:

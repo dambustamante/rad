@@ -1,16 +1,12 @@
-"""Tomar una historia de Jira para desarrollarla (/hdu). Solo biblioteca estándar.
+"""Harness: refinar una historia, crear sus Tareas y programar cada una contra su spec aprobada.
 
 Uso:
-  python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]
+  python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]   /hdu: refina una historia o toma otra incidencia
+  python3 herramientas/hdu.py tarea <HISTORIA> [--confirmar]             /tarea: crea las Tareas propuestas y sus specs
+  python3 herramientas/hdu.py spec <CLAVE>                               valida las specs antes de su MR
+  python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo T] [--sin-rama] /desarrollar: comprueba la aprobación y crea las ramas
 
-1. Lee la Tarea de Jira y su historia enlazada (lectura, con JIRA_URL, JIRA_EMAIL y JIRA_TOKEN de .env).
-2. Revisa su Medición HU: con un valor aceptado (config.json) se toma; vacía, se toma y queda marcada para
-   revisar la deuda que deja; con cualquier otro valor no se toma.
-3. Identifica los repositorios que toca (componentes, etiquetas o menciones en la historia, o --repos).
-4. Crea la rama de trabajo en cada uno (salvo --sin-rama o cambios sin commit) y deja visibles en Cursor
-   solo esos repositorios (.cursorignore).
-5. Escribe trabajo/<CLAVE>/contexto.md: historia, criterios de aceptación y lo relacionado de cada
-   repositorio (hallazgos abiertos, componentes y terceros, desde contexto.json).
+Solo /tarea escribe en Jira, con vista previa y confirmación.
 """
 
 from __future__ import annotations
@@ -163,14 +159,13 @@ def leer_historia(clave: str, env: dict, config: dict) -> dict:
     por_nombre = {normalizar(c.get("name", "")): c["id"] for c in campos}
     id_medicion = por_nombre.get(normalizar(config["jira"]["campo_medicion"]))
     id_tipo = por_nombre.get(normalizar(config["jira"]["campo_tipo"]))
-    pedidos = ["summary", "description", "issuetype", "status", "labels", "components", "parent", "subtasks", id_medicion, id_tipo]
+    pedidos = ["summary", "description", "issuetype", "status", "labels", "components", "parent", id_medicion, id_tipo]
     datos = pedir(env, f"/rest/api/3/issue/{urllib.parse.quote(clave)}", {"fields": ",".join(filter(None, pedidos))})
     f = datos.get("fields") or {}
     descripcion = adf_a_texto(f.get("description")) if f.get("description") else ""
     padre = f.get("parent") or {}
     return {
         "padre": {"clave": padre.get("key"), "tipo_incidencia": valor_campo((padre.get("fields") or {}).get("issuetype"))} if padre else None,
-        "hijas": [h.get("key") for h in f.get("subtasks") or []],
         "clave": clave, "titulo": f.get("summary") or "", "descripcion": descripcion,
         "tipo_incidencia": valor_campo(f.get("issuetype")), "tipo": valor_campo(f.get(id_tipo)) if id_tipo else None,
         "estado": valor_campo(f.get("status")),
@@ -329,6 +324,10 @@ def rama_spec(clave: str) -> str:
     return f"docs/{clave}-spec"
 
 
+def rama_tareas(clave: str) -> str:
+    return f"docs/{clave}-tareas"
+
+
 def avisos_convencion(rama: str, mensajes: list[str]) -> list[str]:
     """Rama y commits que no siguen ADR-EQ-010."""
     avisos = [f"La rama `{rama}` no sigue `<tipo>/<CLAVE>-<descripción>` (EQ-010.1)."] if not RAMA_VALIDA.match(rama) else []
@@ -336,22 +335,53 @@ def avisos_convencion(rama: str, mensajes: list[str]) -> list[str]:
 
 
 def ruta_spec(clave: str) -> Path:
-    return RAIZ / "specs" / clave / "spec.md"
+    """Spec de una incidencia: specs/<HISTORIA>/<CLAVE>.md, o specs/<CLAVE>/<CLAVE>.md si no tiene historia."""
+    encontradas = sorted((RAIZ / "specs").glob(f"*/{clave}.md"))
+    return encontradas[0] if encontradas else RAIZ / "specs" / clave / f"{clave}.md"
 
 
-def texto_spec(historia: dict, repos: list[str]) -> str:
-    criterios = [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or ["<completar: la historia no trae criterios>"]
-    criterios += ["", "<completar: dejar solo los criterios que cubre esta Tarea, renumerados, y borrar esta línea>"] if historia.get("historia_origen") else []
-    pruebas = [f"| {i} | <completar: nombre> | <completar: qué verifica> |" for i in range(1, len(historia["criterios"]) + 1)]
-    lineas = [f"# {historia['clave']}: {historia['titulo']}", "", f"- Jira: {historia['url']}",
-              f"- Tipo: {historia['tipo_incidencia'] or 'NO DETERMINADO'}", f"- Repositorios: {', '.join(repos)}", "",
+def ruta_propuesta(clave: str) -> Path:
+    return RAIZ / "specs" / clave / "propuesta.md"
+
+
+def texto_spec(incidencia: dict, criterios: list[str], repos: list[str] | None, historia: str | None = None) -> str:
+    lista = [f"{i}. {c}" for i, c in enumerate(criterios, start=1)] or ["<completar: criterios de aceptación>"]
+    pruebas = [f"| {i} | <completar: nombre> | <completar: qué verifica> |" for i in range(1, len(criterios) + 1)]
+    lineas = [f"# {incidencia['clave']}: {incidencia['titulo']}", "", f"- Jira: {incidencia['url']}",
+              *([f"- Historia: {historia}"] if historia else []), f"- Tipo: {incidencia['tipo_incidencia'] or 'NO DETERMINADO'}",
+              f"- Repositorios: {', '.join(repos) if repos else '<completar: repo-a, repo-b>'}", "",
               "## Objetivo", "", "<completar: qué problema resuelve, en una o dos frases>", "",
-              "## Criterios de aceptación", "", *criterios, "",
+              "## Criterios de aceptación", "", *lista, "",
               "## Diseño", "", "<completar: qué cambia en cada repositorio, citando archivo:línea>", "",
               "## Pruebas", "", "| Criterio | Prueba | Qué verifica |", "|---|---|---|", *pruebas, "",
               "## Reglas que aplican", "", "<completar: ID de los documentos y decisiones, con la sección citada>", "",
               "## Fuera de alcance", "", "<completar: lo que este cambio no hace>", ""]
     return "\n".join(lineas)
+
+
+def texto_propuesta(historia: dict, medicion: str) -> str:
+    criterios = [f"{i}. {c}" for i, c in enumerate(historia["criterios"], start=1)] or ["NO DETERMINADO: la historia no trae criterios."]
+    return "\n".join([f"# {historia['clave']}: {historia['titulo']}", "", f"- Jira: {historia['url']}",
+                      f"- Medición HU: {historia['medicion'] or 'vacía'} ({medicion})", "",
+                      "## Criterios de la historia", "", *criterios, "",
+                      "## Preguntas para refinar", "", "<completar: criterios ambiguos o faltantes, como preguntas; si no hay, Ninguna>", "",
+                      "## Tareas propuestas", "", "| Tarea | Criterios | Repositorios |", "|---|---|---|",
+                      "| <completar: título en infinitivo> | <completar: 1, 2> | <completar: repo-a, repo-b> |", ""])
+
+
+def filas_propuesta(texto: str) -> list[dict]:
+    """Tareas ya completadas de la propuesta."""
+    filas = []
+    for linea in (seccion_spec(texto, "Tareas propuestas") or "").splitlines():
+        celdas = [c.strip() for c in linea.strip().strip("|").split("|")]
+        if len(celdas) == 3 and celdas[0] != "Tarea" and not set(celdas[0]) <= {"-"} and PENDIENTE_SPEC not in linea:
+            filas.append({"titulo": celdas[0], "criterios": [int(n) for n in re.findall(r"\d+", celdas[1])],
+                          "repos": [r.strip() for r in celdas[2].split(",") if r.strip()]})
+    return filas
+
+
+def criterios_propuesta(texto: str) -> list[str]:
+    return re.findall(r"^\d+\.\s+(.+)$", seccion_spec(texto, "Criterios de la historia") or "", re.MULTILINE)
 
 
 def seccion_spec(texto: str, nombre: str) -> str | None:
@@ -366,7 +396,7 @@ def criterios_spec(texto: str) -> list[str]:
 def errores_spec(clave: str) -> list[str]:
     archivo = ruta_spec(clave)
     if not archivo.exists():
-        return [f"no existe specs/{clave}/spec.md"]
+        return [f"no existe la spec de {clave}"]
     texto = archivo.read_text(encoding="utf-8")
     errores = [f"falta la sección {s}" for s in SECCIONES_SPEC if seccion_spec(texto, s) is None]
     if PENDIENTE_SPEC in texto:
@@ -382,50 +412,83 @@ def errores_spec(clave: str) -> list[str]:
     return errores + [f"lenguaje: {a}" for a in avisos_lenguaje(texto)]
 
 
+def errores_refinamiento(clave: str) -> list[str]:
+    """Una historia: propuesta completa, todas sus specs válidas y todos sus criterios cubiertos por alguna Tarea."""
+    propuesta = ruta_propuesta(clave)
+    if not propuesta.exists():
+        return errores_spec(clave)
+    texto = propuesta.read_text(encoding="utf-8")
+    errores = ["propuesta: quedan partes por completar"] if PENDIENTE_SPEC in texto else []
+    specs = sorted(a for a in propuesta.parent.glob("*.md") if a.name != propuesta.name)
+    if not specs:
+        errores.append("no hay specs: crear las Tareas con /tarea")
+    cubiertos = set()
+    for archivo in specs:
+        errores += [f"{archivo.stem}: {e}" for e in errores_spec(archivo.stem)]
+        cubiertos |= {normalizar(c) for c in criterios_spec(archivo.read_text(encoding="utf-8"))}
+    errores += [f"ninguna Tarea cubre el criterio: {c}" for c in criterios_propuesta(texto) if specs and normalizar(c) not in cubiertos]
+    return errores
+
+
 def spec_aprobada(clave: str) -> bool:
     """Una spec está aprobada cuando su MR se integró en la rama principal del harness."""
     referencia = RAMA_PRINCIPAL
     if git("remote", "get-url", "origin", cwd=RAIZ)[0] == 0:
         git("fetch", "--quiet", "origin", RAMA_PRINCIPAL, cwd=RAIZ)
         referencia = f"origin/{RAMA_PRINCIPAL}"
-    return git("cat-file", "-e", f"{referencia}:specs/{clave}/spec.md", cwd=RAIZ)[0] == 0
+    codigo, salida = git("ls-tree", "-r", "--name-only", referencia, "specs/", cwd=RAIZ)
+    return codigo == 0 and any(re.fullmatch(rf"specs/[^/]+/{re.escape(clave)}\.md", l) for l in salida.splitlines())
 
 
-def preparar_spec(historia: dict, repos: list[str], crear_rama: bool) -> str:
-    """Rama docs/<CLAVE>-spec del harness y borrador. Un Spike no lleva spec: su entregable es un ADR."""
-    clave = historia["clave"]
-    if tipo_historia(historia["tipo_incidencia"]) == "spike":
+def rama_del_harness(nombre: str) -> None:
+    actual = git("branch", "--show-current", cwd=RAIZ)[1]
+    if actual == nombre:
+        return
+    if actual != RAMA_PRINCIPAL:
+        raise ErrorHdu(f"El harness está en la rama {actual}. Volver a {RAMA_PRINCIPAL} y repetir.")
+    existe = git("rev-parse", "--verify", "--quiet", nombre, cwd=RAIZ)[0] == 0
+    codigo, salida = git("switch", "--quiet", *([nombre] if existe else ["-c", nombre]), cwd=RAIZ)
+    if codigo != 0:
+        raise ErrorHdu(f"No se pudo crear la rama {nombre}: {salida}")
+
+
+def preparar_spec(incidencia: dict, repos: list[str], crear_rama: bool) -> str:
+    """Rama docs/<CLAVE>-spec del harness y spec de una incidencia sin historia. Un Spike entrega un ADR."""
+    clave = incidencia["clave"]
+    if tipo_historia(incidencia["tipo_incidencia"]) == "spike":
         return "sin spec: el entregable del Spike es un ADR"
     if spec_aprobada(clave):
-        return f"specs/{clave}/spec.md (ya aprobada)"
+        return f"{ruta_spec(clave).relative_to(RAIZ)} (ya aprobada)"
     if crear_rama:
-        nombre, actual = rama_spec(clave), git("branch", "--show-current", cwd=RAIZ)[1]
-        if actual not in (RAMA_PRINCIPAL, nombre):
-            raise ErrorHdu(f"El harness está en la rama {actual}. Volver a {RAMA_PRINCIPAL} y repetir.")
-        if actual == RAMA_PRINCIPAL:
-            existe = git("rev-parse", "--verify", "--quiet", nombre, cwd=RAIZ)[0] == 0
-            codigo, salida = git("switch", "--quiet", *([nombre] if existe else ["-c", nombre]), cwd=RAIZ)
-            if codigo != 0:
-                raise ErrorHdu(f"No se pudo crear la rama {nombre}: {salida}")
+        rama_del_harness(rama_spec(clave))
     archivo = ruta_spec(clave)
     if not archivo.exists():
         archivo.parent.mkdir(parents=True, exist_ok=True)
-        archivo.write_text(texto_spec(historia, repos), encoding="utf-8")
-    return f"specs/{clave}/spec.md (borrador)"
+        archivo.write_text(texto_spec(incidencia, incidencia["criterios"], repos), encoding="utf-8")
+    return f"{archivo.relative_to(RAIZ)} (borrador)"
 
 
-def desarrollar(clave: str) -> dict:
-    """Comprueba que se puede programar: spec aprobada y vigente, salvo Hotfix (su spec se completa al cerrar)."""
-    archivo = RAIZ / "trabajo" / clave / "hdu.json"
-    if not archivo.exists():
-        raise ErrorHdu(f"La historia {clave} no se tomó con /hdu.")
-    tomada = json.loads(archivo.read_text(encoding="utf-8"))
-    tipo = tipo_historia(tomada.get("tipo_incidencia"))
+def repos_de_spec(clave: str) -> list[str]:
+    coincidencia = re.search(r"^- Repositorios: (.+)$", ruta_spec(clave).read_text(encoding="utf-8"), re.MULTILINE)
+    if not coincidencia or PENDIENTE_SPEC in coincidencia.group(1):
+        return []
+    return [r.strip() for r in coincidencia.group(1).split(",") if r.strip()]
+
+
+def desarrollar(clave: str, tipo_rama: str | None = None, crear_rama: bool = True) -> dict:
+    """Comprueba la spec (aprobada, salvo Hotfix), crea las ramas de código y deja el contexto de la Tarea."""
+    config, env = leer_json("config.json"), cargar_env()
+    incidencia = leer_historia(clave, env, config)
+    if es_tipo(incidencia, "historia", config):
+        raise ErrorHdu(f"{clave} es una historia: se programan sus Tareas, con /desarrollar <TAREA>.")
+    tipo = tipo_historia(incidencia["tipo_incidencia"])
     if tipo == "spike":
         raise ErrorHdu("Un Spike no se desarrolla: su entregable es un ADR del producto.")
-    actual = git("branch", "--show-current", cwd=RAIZ)[1]
+    incidencia = con_su_historia(incidencia, env, config)
     if tipo != "hotfix":
-        if actual == rama_spec(clave):
+        actual = git("branch", "--show-current", cwd=RAIZ)[1]
+        propias = {rama_spec(clave), *([rama_tareas(incidencia["historia_origen"])] if incidencia.get("historia_origen") else [])}
+        if actual in propias:
             codigo, salida = git("switch", "--quiet", RAMA_PRINCIPAL, cwd=RAIZ)
             if codigo != 0:
                 raise ErrorHdu(f"No se pudo volver a {RAMA_PRINCIPAL}: {salida}")
@@ -437,8 +500,27 @@ def desarrollar(clave: str) -> dict:
         errores = errores_spec(clave)
         if errores:
             raise ErrorHdu("La spec aprobada no es válida:\n  - " + "\n  - ".join(errores))
-    foco(tomada["repos"], [r["id"] for r in leer_json("repos.json")["repos"]])
-    return {"spec": ruta_spec(clave), "tipo": tipo, "ramas": tomada["ramas"]}
+    if not ruta_spec(clave).exists():
+        raise ErrorHdu(f"No existe la spec de {clave}: crearla con /hdu {clave}.")
+    repos_config = leer_json("repos.json")["repos"]
+    ids = [r["id"] for r in repos_config]
+    repos = repos_de_spec(clave)
+    desconocidos = [r for r in repos if r not in ids]
+    if not repos or desconocidos:
+        raise ErrorHdu(f"La spec debe indicar repositorios del producto. Disponibles: {', '.join(ids)}.")
+    deuda = normalizar(incidencia["tipo"] or "").startswith("deuda")
+    tipo_cambio = tipo_rama or ("chore" if deuda else TIPO_RAMA.get(tipo, "feat"))
+    nombre_rama = f"{tipo_cambio}/{clave}-{slug(incidencia['titulo'])}"
+    ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama (--sin-rama)")
+             for r in repos_config if r["id"] in repos}
+    foco(repos, ids)
+    medicion = evaluar_medicion(incidencia["medicion"], config["jira"]["medicion_aceptada"])
+    contexto = json.loads((RAIZ / "contexto.json").read_text(encoding="utf-8")) if (RAIZ / "contexto.json").exists() else {}
+    relacion = relacionado(incidencia, contexto, repos)
+    avisos = avisos_arquitectura()
+    archivo = escribir_contexto(incidencia, medicion, repos, ramas, relacion, arquitectura_relacionada(incidencia, relacion), avisos,
+                                str(ruta_spec(clave).relative_to(RAIZ)))
+    return {"spec": ruta_spec(clave), "tipo": tipo, "ramas": ramas, "contexto": archivo, "avisos": avisos}
 
 
 def avisos_lenguaje(texto: str) -> list[str]:
@@ -509,7 +591,7 @@ def escribir_contexto(historia: dict, medicion: str, repos: list[str], ramas: di
     return archivo
 
 
-def solicitud_tarea(historia: dict, config: dict, campos: list[dict], titulo: str | None) -> dict:
+def solicitud_tarea(historia: dict, titulo: str, config: dict, campos: list[dict]) -> dict:
     jira = config["jira"]
     por_nombre = {normalizar(c.get("name", "")): c for c in campos}
     faltantes = [n for n in (jira["campo_tipo"], jira["campo_equipos"]) if normalizar(n) not in por_nombre]
@@ -519,129 +601,163 @@ def solicitud_tarea(historia: dict, config: dict, campos: list[dict], titulo: st
         campo = por_nombre[normalizar(nombre)]
         return {campo["id"]: [{"value": dato}] if (campo.get("schema") or {}).get("type") == "array" else {"value": dato}}
     parrafos = [f"Parte del desarrollo de la historia {historia['clave']}: {historia['titulo']}.",
-                "Los criterios de aceptación están en la historia. La spec indica cuáles cubre esta Tarea y queda en specs/<clave de esta Tarea>/spec.md del harness."]
+                f"La spec indica los criterios que cubre y queda en specs/{historia['clave']}/ del harness."]
     return {"fields": {"project": {"key": historia["clave"].rsplit("-", 1)[0]}, "parent": {"key": historia["clave"]},
-                       "issuetype": {"name": jira["tipos_incidencia"]["tarea_desarrollo"]},
-                       "summary": titulo or f"Desarrollar {historia['titulo']}",
+                       "issuetype": {"name": jira["tipos_incidencia"]["tarea_desarrollo"]}, "summary": titulo,
                        "description": {"type": "doc", "version": 1, "content": [
                            {"type": "paragraph", "content": [{"type": "text", "text": p}]} for p in parrafos]},
                        **valor(jira["campo_tipo"], jira["tipo_tarea_desarrollo"]), **valor(jira["campo_equipos"], jira["equipos"])}}
 
 
-def crear_tarea(clave: str, confirmar: bool, titulo: str | None = None) -> dict:
-    """/tarea: Tarea de desarrollo que cuelga de su historia. Una historia puede tener varias. Sin confirmar, solo muestra la solicitud."""
+def tareas_de(clave: str, env: dict) -> list[dict]:
+    datos = pedir(env, "/rest/api/3/search/jql", {"jql": f"parent = {clave}", "fields": "summary", "maxResults": 100})
+    return [{"clave": i["key"], "titulo": (i.get("fields") or {}).get("summary") or ""} for i in datos.get("issues") or []]
+
+
+def crear_tareas(clave: str, confirmar: bool) -> dict:
+    """/tarea: crea las Tareas propuestas que faltan, reconoce las creadas a mano y deja una spec por cada una."""
     config, env = leer_json("config.json"), cargar_env()
     historia = leer_historia(clave, env, config)
     if not es_tipo(historia, "historia", config):
         raise ErrorHdu(f"{clave} es {historia['tipo_incidencia']}, no una historia.")
-    if evaluar_medicion(historia["medicion"], config["jira"]["medicion_aceptada"]) == "rechazada":
-        raise ErrorHdu("La Medición HU no es una de las aceptadas: completar la historia antes de crear su Tarea.")
-    solicitud = solicitud_tarea(historia, config, pedir(env, "/rest/api/3/field"), titulo)
-    if not confirmar:
-        return {"creada": False, "solicitud": solicitud, "existentes": historia["hijas"]}
-    return {"creada": True, "clave": enviar(env, "/rest/api/3/issue", solicitud)["key"], "solicitud": solicitud, "existentes": historia["hijas"]}
+    propuesta = ruta_propuesta(clave)
+    if not propuesta.exists():
+        raise ErrorHdu(f"Falta la propuesta de {clave}: ejecutar primero /hdu {clave}.")
+    texto = propuesta.read_text(encoding="utf-8")
+    filas, existentes = filas_propuesta(texto), tareas_de(clave, env)
+    titulos = {normalizar(e["titulo"]) for e in existentes}
+    pendientes = [f for f in filas if normalizar(f["titulo"]) not in titulos]
+    if not filas and not existentes:
+        raise ErrorHdu(f"La propuesta de {clave} no tiene Tareas y la historia tampoco: completarla o crearlas a mano.")
+    campos = pedir(env, "/rest/api/3/field")
+    solicitudes = [solicitud_tarea(historia, f["titulo"], config, campos) for f in pendientes]
+    if pendientes and not confirmar:
+        return {"creadas": [], "pendientes": pendientes, "existentes": existentes, "solicitudes": solicitudes, "specs": []}
+    creadas = [{"clave": enviar(env, "/rest/api/3/issue", s)["key"], "titulo": f["titulo"]} for f, s in zip(pendientes, solicitudes)]
+    criterios, por_titulo, specs = criterios_propuesta(texto), {normalizar(f["titulo"]): f for f in filas}, []
+    url_base = env["JIRA_URL"].rstrip("/")
+    for tarea in [*existentes, *creadas]:
+        archivo = propuesta.parent / f"{tarea['clave']}.md"
+        if archivo.exists():
+            continue
+        fila = por_titulo.get(normalizar(tarea["titulo"]))
+        propios = [criterios[n - 1] for n in fila["criterios"] if 1 <= n <= len(criterios)] if fila else criterios
+        incidencia = {**tarea, "url": f"{url_base}/browse/{tarea['clave']}", "tipo_incidencia": config["jira"]["tipos_incidencia"]["tarea_desarrollo"]}
+        contenido = texto_spec(incidencia, propios, fila["repos"] if fila else None, clave)
+        if not fila:
+            contenido = contenido.replace("## Diseño", "<completar: dejar solo los criterios que cubre esta Tarea, renumerados, y borrar esta línea>\n\n## Diseño", 1)
+        archivo.write_text(contenido, encoding="utf-8")
+        specs.append(archivo)
+    return {"creadas": creadas, "pendientes": [], "existentes": existentes, "solicitudes": solicitudes, "specs": specs}
 
 
-def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool, tipo_rama: str | None = None) -> dict:
+def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict:
     actualizar_harness()
     config, repos_config = leer_json("config.json"), leer_json("repos.json")["repos"]
     ids = [r["id"] for r in repos_config]
     env = cargar_env()
-    historia = leer_historia(clave, env, config)
-    if es_tipo(historia, "historia", config):
-        return {"historia": historia, "medicion": "historia", "tomada": False, "es_historia": True}
-    historia = con_su_historia(historia, env, config)
-    medicion = evaluar_medicion(historia["medicion"], config["jira"]["medicion_aceptada"])
+    incidencia = leer_historia(clave, env, config)
+    es_historia = es_tipo(incidencia, "historia", config)
+    if not es_historia:
+        incidencia = con_su_historia(incidencia, env, config)
+        if incidencia.get("historia_origen"):
+            return {"historia": incidencia, "medicion": "tarea", "tomada": False, "de_historia": incidencia["historia_origen"]}
+    medicion = evaluar_medicion(incidencia["medicion"], config["jira"]["medicion_aceptada"])
     if medicion == "rechazada":
-        return {"historia": historia, "medicion": medicion, "tomada": False}
+        return {"historia": incidencia, "medicion": medicion, "tomada": False}
     desconocidos = [r for r in repos_pedidos or [] if r not in ids]
     if desconocidos:
         raise ErrorHdu(f"Repositorios que no son del producto: {', '.join(desconocidos)}. Disponibles: {', '.join(ids)}.")
-    repos = repos_pedidos or inferir_repos(historia, ids)
-    if not repos:
-        return {"historia": historia, "medicion": medicion, "tomada": False, "faltan_repos": ids}
-    spec = preparar_spec(historia, repos, crear_rama)
-    deuda = normalizar(historia["tipo"] or "").startswith("deuda")
-    tipo_cambio = tipo_rama or ("chore" if deuda else TIPO_RAMA.get(tipo_historia(historia["tipo_incidencia"]), "feat"))
-    nombre_rama = f"{tipo_cambio}/{clave}-{slug(historia['titulo'])}"
-    ramas = {r["id"]: (preparar_rama(r, nombre_rama) if crear_rama else "sin cambio de rama (--sin-rama)")
-             for r in repos_config if r["id"] in repos}
-    foco(repos, ids)
+    repos = repos_pedidos or inferir_repos(incidencia, ids)
+    if es_historia:
+        repos = repos or ids  # para refinar se puede mirar todo el producto: cada Tarea indica después los suyos
+        if crear_rama:
+            rama_del_harness(rama_tareas(clave))
+        archivo_propuesta = ruta_propuesta(clave)
+        if not archivo_propuesta.exists():
+            archivo_propuesta.parent.mkdir(parents=True, exist_ok=True)
+            archivo_propuesta.write_text(texto_propuesta(incidencia, medicion), encoding="utf-8")
+        spec = str(archivo_propuesta.relative_to(RAIZ))
+    elif not repos:
+        return {"historia": incidencia, "medicion": medicion, "tomada": False, "faltan_repos": ids}
+    else:
+        spec = preparar_spec(incidencia, repos, crear_rama)
     contexto = json.loads((RAIZ / "contexto.json").read_text(encoding="utf-8")) if (RAIZ / "contexto.json").exists() else {}
-    relacion = relacionado(historia, contexto, repos)
+    relacion = relacionado(incidencia, contexto, repos)
     avisos = avisos_arquitectura()
-    archivo = escribir_contexto(historia, medicion, repos, ramas, relacion, arquitectura_relacionada(historia, relacion), avisos, spec)
-    return {"historia": historia, "medicion": medicion, "tomada": True, "repos": repos, "ramas": ramas, "contexto": archivo,
-            "avisos": avisos, "spec": spec}
+    archivo = escribir_contexto(incidencia, medicion, repos, {}, relacion, arquitectura_relacionada(incidencia, relacion), avisos, spec)
+    return {"historia": incidencia, "medicion": medicion, "tomada": True, "repos": repos, "contexto": archivo, "avisos": avisos,
+            "spec": spec, "es_historia": es_historia}
 
 
 def main(argumentos: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Tomar una historia de Jira (/hdu).")
+    parser = argparse.ArgumentParser(description="Refinar historias, crear Tareas y programarlas.")
     sub = parser.add_subparsers(dest="accion", required=True)
     p = sub.add_parser("tomar")
     p.add_argument("clave")
     p.add_argument("--repos", default="")
     p.add_argument("--sin-rama", action="store_true")
-    p.add_argument("--tipo", choices=TIPOS_CAMBIO, help="tipo de cambio de la rama (ADR-EQ-010); por defecto, según la historia")
     p = sub.add_parser("tarea")
     p.add_argument("clave")
-    p.add_argument("--titulo", help="qué parte de la historia desarrolla esta Tarea")
-    p.add_argument("--confirmar", action="store_true", help="crea la Tarea en Jira; sin esto solo muestra la vista previa")
-    for nombre in ("spec", "desarrollar"):
-        p = sub.add_parser(nombre)
-        p.add_argument("clave")
+    p.add_argument("--confirmar", action="store_true", help="crea las Tareas en Jira; sin esto solo muestra la vista previa")
+    p = sub.add_parser("spec")
+    p.add_argument("clave")
+    p = sub.add_parser("desarrollar")
+    p.add_argument("clave")
+    p.add_argument("--tipo", choices=TIPOS_CAMBIO, help="tipo de cambio de la rama (ADR-EQ-010); por defecto, según la incidencia")
+    p.add_argument("--sin-rama", action="store_true")
     o = parser.parse_args(argumentos)
-    if o.accion == "tarea":
-        try:
-            r = crear_tarea(o.clave.upper(), o.confirmar, o.titulo)
-        except ErrorHdu as error:
-            print(f"ERROR: {error}")
-            return 1
-        campos = r["solicitud"]["fields"]
-        if r["creada"]:
-            print(f"Tarea creada: {r['clave']}, cuelga de {o.clave.upper()}. Siguiente: /hdu {r['clave']}.")
-        else:
-            print(f"Vista previa · Proyecto: {campos['project']['key']} · Tipo de incidencia: {campos['issuetype']['name']}\n"
-                  f"Título: {campos['summary']}\nTareas que ya cuelgan de la historia: {', '.join(r['existentes']) or 'ninguna'}\nSolicitud: {json.dumps(campos, ensure_ascii=False)}\nPara crearla: repetir con --confirmar.")
-        return 0
-    if o.accion == "spec":
-        errores = errores_spec(o.clave.upper())
-        print("Spec válida: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
-        return 1 if errores else 0
-    if o.accion == "desarrollar":
-        try:
-            r = desarrollar(o.clave.upper())
-        except ErrorHdu as error:
-            print(f"ERROR: {error}")
-            return 1
-        print(f"Spec: {r['spec'].relative_to(RAIZ)}" + (" (Hotfix: se completa al cerrar)" if r["tipo"] == "hotfix" else " (aprobada)"))
-        for repo, estado in r["ramas"].items():
-            print(f"  {repo}: {estado}")
-        return 0
+    clave = o.clave.upper()
     try:
-        r = tomar(o.clave.upper(), [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama, o.tipo)
+        if o.accion == "spec":
+            errores = errores_refinamiento(clave)
+            print("Válido: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
+            return 1 if errores else 0
+        if o.accion == "tarea":
+            r = crear_tareas(clave, o.confirmar)
+            print(f"Ya existen: {', '.join(e['clave'] for e in r['existentes']) or 'ninguna'}")
+            if r["pendientes"]:
+                print("Vista previa de las Tareas por crear:")
+                for f, s in zip(r["pendientes"], r["solicitudes"]):
+                    print(f"  - {f['titulo']} · criterios {f['criterios']} · {', '.join(f['repos'])}\n    {json.dumps(s['fields'], ensure_ascii=False)}")
+                print("Para crearlas: repetir con --confirmar.")
+                return 0
+            for c in r["creadas"]:
+                print(f"Tarea creada: {c['clave']} · {c['titulo']}")
+            for archivo in r["specs"]:
+                print(f"Spec: {archivo.relative_to(RAIZ)}")
+            print(f"Siguiente: completar las specs, validar con hdu.py spec {clave} y abrir el MR de las Tareas.")
+            return 0
+        if o.accion == "desarrollar":
+            r = desarrollar(clave, o.tipo, not o.sin_rama)
+            for aviso in r["avisos"]:
+                print(f"Aviso: {aviso}")
+            print(f"Spec: {r['spec'].relative_to(RAIZ)}" + (" (Hotfix: se completa antes de /listo)" if r["tipo"] == "hotfix" else " (aprobada)"))
+            for repo, estado in r["ramas"].items():
+                print(f"  {repo}: {estado}")
+            print(f"Contexto: {r['contexto'].relative_to(RAIZ)}")
+            return 0
+        r = tomar(clave, [x.strip() for x in o.repos.split(",") if x.strip()] or None, not o.sin_rama)
     except ErrorHdu as error:
         print(f"ERROR: {error}")
         return 1
     h = r["historia"]
-    if r.get("es_historia"):
-        print(f"{h['clave']} es una historia: se desarrolla en una Tarea. Crearla con /tarea {h['clave']} y tomarla con /hdu <TAREA>.")
+    if r.get("de_historia"):
+        print(f"{h['clave']} cuelga de la historia {r['de_historia']}: se refina con /hdu {r['de_historia']} y se programa con /desarrollar {h['clave']}.")
         return 4
     print(f"{h['clave']}: {h['titulo']} · Medición HU: {h['medicion'] or 'vacía'} ({r['medicion']})")
     if r["medicion"] == "rechazada":
-        print(f"No se toma: la Medición HU debe ser una de las aceptadas. Completar la historia "
-              f"(criterios de aceptación medibles, Como/Quiero/Para) y volver a medirla.")
+        print("No se toma: la Medición HU debe ser una de las aceptadas. Completar la historia "
+              "(criterios de aceptación medibles, Como/Quiero/Para) y volver a medirla.")
         return 2
     if not h["campo_medicion_existe"]:
         print("Aviso: no se encontró el campo de Medición HU en Jira (revisar config.json).")
     if r.get("faltan_repos") is not None:
         print(f"No se pudo saber qué repositorios toca. Indicarlos con --repos (disponibles: {', '.join(r['faltan_repos'])}).")
         return 3
-    for repo, estado in r["ramas"].items():
-        print(f"  {repo}: {estado}")
     for aviso in r["avisos"]:
         print(f"Aviso: {aviso}")
-    print(f"Reglas: harness versión {version_harness()}. Spec: {r['spec']}.")
+    print(f"Reglas: harness versión {version_harness()}. {'Propuesta' if r['es_historia'] else 'Spec'}: {r['spec']}.")
     print(f"Criterios de aceptación: {len(h['criterios'])}. Contexto: {r['contexto'].relative_to(RAIZ)}")
     return 0
 

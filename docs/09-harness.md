@@ -19,7 +19,7 @@ harness-motor-fraudes/
 │   ├── rules/00-general.mdc              remite a AGENTS.md
 │   ├── rules/generado/decisiones.mdc     lo que el código debe cumplir (generado; se aplica siempre)
 │   ├── rules/generado/repo-<id>.mdc      contexto de cada repositorio (generado; se aplica al trabajar en code/<id>/)
-│   ├── commands/hdu.md · listo.md        comandos /hdu y /listo
+│   ├── commands/                          /hdu, /tarea, /desarrollar y /listo
 │   └── hooks.json                        guardia de comandos
 ├── decisiones/                           ADR del producto, plantilla, INDICE.md y COHERENCIA.md (estos dos, generados)
 ├── herramientas/                         harness.py (code, doctor, foco, adr), hdu.py, listo.py y guardia.py

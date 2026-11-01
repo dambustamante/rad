@@ -53,7 +53,7 @@ def git(*argumentos: str, cwd: Path) -> str:
 def carpeta_trabajo(clave: str) -> Path:
     carpeta = RAIZ / "trabajo" / clave
     if not (carpeta / "hdu.json").exists():
-        raise ErrorListo(f"La historia {clave} no se tomó con /hdu (falta trabajo/{clave}/hdu.json).")
+        raise ErrorListo(f"La incidencia {clave} no se preparó con /desarrollar (falta trabajo/{clave}/hdu.json).")
     return carpeta
 
 
@@ -267,7 +267,7 @@ def cerrar(clave: str) -> list[Path]:
         lineas += [f"| {n} | {c} | `{pruebas.get(str(n), '—').split(':', 1)[-1]}` |" for n, c in enumerate(criterios, start=1)
                    if str(pruebas.get(str(n), "")).startswith(f"{r['id']}:")] or ["| — | Sin criterios en este repositorio | — |"]
         if hdu.ruta_spec(clave).exists():
-            lineas += ["", f"Spec: `specs/{clave}/spec.md`, en el harness."]
+            lineas += ["", f"Spec: `{hdu.ruta_spec(clave).relative_to(RAIZ)}`, en el harness."]
         if registro.get("desvios"):
             lineas += ["", "### Desvíos de la spec", "", *[f"- {d}" for d in registro["desvios"]]]
         lineas += ["", "### Deuda que deja esta HU", ""]

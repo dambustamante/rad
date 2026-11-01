@@ -183,7 +183,7 @@ contrasta, nunca se da por cierto.
 .venv/bin/python herramientas/mr.py bandeja [--producto motor-fraudes] [--mios]
 ```
 
-Lista los MR abiertos de los repositorios de cada producto y de su harness, con el estado de su registro
+Lista los MR abiertos de los repositorios de cada producto y de su harness (Tareas y specs, y ADR), con el estado de su registro
 de `/listo`:
 
 | Estado | Qué significa |

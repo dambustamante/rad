@@ -1,101 +1,99 @@
 # Comandos de harness-{{producto}}
 
-Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan la historia `FRAUD-123` y la
-Tarea `FRAUD-200`. Para preparar el entorno, ver el [README](../README.md).
+Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan la historia `FRAUD-123` y su Tarea
+`FRAUD-200`. Para preparar el entorno, ver el [README](../README.md).
 
 ## Qué comando usar
 
 | Qué se necesita | Comando |
 |---|---|
-| Crear la Tarea de una historia en Jira | [`/tarea <HISTORIA>`](#tarea) |
-| Empezar una Tarea, un Error, un Hotfix o un Spike | [`/hdu <CLAVE>`](#hdu) |
-| Validar la spec antes de su MR | [`python3 herramientas/hdu.py spec <CLAVE>`](#hdu) |
-| Aprobar la spec | [MR de la spec](#mr-de-la-spec) |
-| Programar con la spec aprobada | [`/desarrollar <CLAVE>`](#desarrollar) |
-| Cerrar antes del MR del código | [`/listo <CLAVE>`](#listo) |
+| Refinar una historia y proponer sus Tareas | [`/hdu <HISTORIA>`](#hdu) |
+| Crear en Jira las Tareas y sus specs | [`/tarea <HISTORIA>`](#tarea) |
+| Generar las specs de Tareas creadas a mano | [`/tarea <HISTORIA>`](#tarea) |
+| Validar las specs antes de su MR | [`python3 herramientas/hdu.py spec <HISTORIA>`](#tarea) |
+| Aprobar las specs | [MR de las Tareas](#mr-de-las-tareas) |
+| Programar con la spec aprobada | [`/desarrollar <TAREA>`](#desarrollar) |
+| Cerrar antes del MR del código | [`/listo <TAREA>`](#listo) |
 | Entregar el código | [MR del código](#mr-del-código) |
 | Traer la última versión de todo | [`make actualizar`](#comandos-de-apoyo) |
 | Cambiar los repositorios visibles en Cursor | [`make foco`](#comandos-de-apoyo) |
 | Proponer un ADR del producto | [`harness.py adr`](#comandos-de-apoyo) |
-| Saber qué cambia en un Hotfix, un Error o un Spike | [Casos distintos](#casos-distintos) |
+| Atender un Error, un Hotfix, un Spike o una Tarea sin historia | [Casos distintos](#casos-distintos) |
 
 ## Detalle de cada comando
 
-### /tarea
-
-**Cuándo:** cuando la Tarea todavía no existe. Es opcional, porque también se puede crear a mano. Una historia puede
-tener varias Tareas.
-
-```text
-/tarea FRAUD-123 --titulo "Desarrollar la consulta al buró"
-```
-
-- Muestra una vista previa y las Tareas que ya cuelgan de la historia.
-- Con confirmación, crea la Tarea con Tipo `Producto`, colgando de la historia.
-- Es el único comando de este repositorio que escribe en Jira.
-
-**Se detiene si:** la incidencia no es una historia o su Medición HU no es aceptada.
-
-**Después:** `/hdu` con la clave de la Tarea creada.
-
 ### /hdu
 
-**Cuándo:** al empezar una Tarea, un Error, un Hotfix o un Spike.
+**Cuándo:** al empezar una historia.
 
 ```text
-/hdu FRAUD-200
+/hdu FRAUD-123
 ```
 
-| Opción | Para qué |
-|---|---|
-| `--repos a,b` | Indica los repositorios, si no se pueden deducir de Jira |
-| `--tipo fix` | Cambia el tipo de la rama: `feat`, `fix`, `docs`, `chore`, `test` o `refactor` |
-| `--sin-rama` | No crea ramas |
+- Trae la última versión de las reglas y revisa la Medición HU.
+- Crea la rama `docs/FRAUD-123-tareas` en este repositorio. **No crea ramas de código.**
+- Escribe `trabajo/FRAUD-123/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados, y el
+  borrador `specs/FRAUD-123/propuesta.md`.
 
-- Trae la última versión de las reglas.
-- Lee la Tarea y su historia: de ahí salen la Medición HU y los criterios de aceptación.
-- Crea la rama `feat/FRAUD-200-...` en cada repositorio que toca y `docs/FRAUD-200-spec` en este repositorio.
-- Deja visibles en Cursor solo esos repositorios.
-- Escribe `trabajo/FRAUD-200/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados, y
-  el borrador `specs/FRAUD-200/spec.md`.
+Cursor ayuda a completar la propuesta: preguntas sobre criterios ambiguos o faltantes, y una fila por Tarea con su título,
+los criterios que cubre y sus repositorios. La historia no se edita en Jira: las dudas quedan como preguntas.
 
-Cursor ayuda a completar la spec: objetivo, diseño, una prueba por criterio, reglas que aplican y lo que queda fuera
-de alcance. Si la historia tiene varias Tareas, la spec deja solo los criterios que cubre esta. La validación es:
+**Se detiene si:** no puede actualizar las reglas, este repositorio no está en `main`, o la Medición HU no es Óptima,
+Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda.
+
+### /tarea
+
+**Cuándo:** con la propuesta completa. Si prefieres crear las Tareas a mano, créalas en Jira colgando de la historia y
+ejecuta igual este comando: les genera su spec.
+
+```text
+/tarea FRAUD-123
+```
+
+- Muestra una vista previa de las Tareas por crear y de las que ya cuelgan de la historia.
+- Con confirmación, las crea con Tipo `Producto`. Es el único comando de este repositorio que escribe en Jira.
+- Escribe una spec por Tarea, por ejemplo `specs/FRAUD-123/FRAUD-200.md`, con solo los criterios que cubre.
+
+Cursor ayuda a completar cada spec: objetivo, diseño, una prueba por criterio, reglas que aplican y lo que queda fuera de
+alcance. Después se valida:
 
 ```sh
-python3 herramientas/hdu.py spec FRAUD-200
+python3 herramientas/hdu.py spec FRAUD-123
 ```
 
-**Se detiene si:**
+La validación exige que entre todas las Tareas se cubran todos los criterios de la historia.
 
-- no puede actualizar las reglas, o este repositorio no está en `main`;
-- la Medición HU no es Óptima, Completa o Adecuada (vacía se toma, y `/listo` exige revisar la deuda);
-- la clave es de una historia (salida 4): primero hay que crear su Tarea;
-- no sabe qué repositorios toca (salida 3): repetir con `--repos`.
+**Se detiene si:** la incidencia no es una historia, falta la propuesta, o no hay Tareas propuestas ni creadas.
 
-### MR de la spec
+### MR de las Tareas
 
-**Cuándo:** con la spec válida. Todavía no se programa.
+**Cuándo:** con las specs válidas. Todavía no se programa.
 
 ```sh
-git add specs/FRAUD-200
-git commit -m "docs: agrega la spec de FRAUD-200"
-git push -u origin docs/FRAUD-200-spec
+git add specs/FRAUD-123
+git commit -m "docs: agrega las Tareas de FRAUD-123"
+git push -u origin docs/FRAUD-123-tareas
 ```
 
-El MR se abre en GitLab. La spec queda **aprobada** cuando ese MR se integra en `main`.
+El MR se abre en GitLab y revisa de una vez la división del trabajo. Las specs quedan **aprobadas** cuando se integra en
+`main`. Si el MR elimina o cambia una Tarea, hay que ajustarla en Jira a mano.
 
 ### /desarrollar
 
-**Cuándo:** con la spec aprobada.
+**Cuándo:** con la spec aprobada, por cada Tarea.
 
 ```text
 /desarrollar FRAUD-200
 ```
 
+| Opción | Para qué |
+|---|---|
+| `--tipo refactor` | Cambia el tipo de la rama: `feat`, `fix`, `docs`, `chore`, `test` o `refactor` |
+| `--sin-rama` | No crea ramas |
+
 - Vuelve a `main`, trae las reglas y comprueba la aprobación.
-- Cursor lee la spec, propone los pasos por criterio y pide confirmación.
-- Programa en `code/<repo>/` y ejecuta las pruebas.
+- Crea la rama `feat/FRAUD-200-...` en cada repositorio de la spec y deja visibles en Cursor solo esos repositorios.
+- Cursor propone los pasos por criterio, pide confirmación, programa en `code/<repo>/` y ejecuta las pruebas.
 
 La conversación sigue siendo normal: "implementemos el criterio 2" o "revisa por qué falla esta prueba". Los commits
 siguen Conventional Commits, por ejemplo `feat(buro): consulta el puntaje`.
@@ -103,7 +101,7 @@ siguen Conventional Commits, por ejemplo `feat(buro): consulta el puntaje`.
 Si algo no calza con la spec, un cambio menor se declara como desvío en `/listo`. Un cambio de alcance o de diseño se
 detiene y se corrige la spec en un MR.
 
-**Se detiene si:** la spec no está aprobada o no es válida.
+**Se detiene si:** la spec no está aprobada o no es válida, o no indica repositorios del producto.
 
 ### /listo
 
@@ -144,10 +142,12 @@ registro del final no se edita: lo usa la revisión. El MR se aprueba en GitLab,
 
 ## Casos distintos
 
-| Caso | Qué cambia |
+Sin historia no hay propuesta ni `/tarea`: `/hdu <CLAVE>` crea una sola spec, `specs/<CLAVE>/<CLAVE>.md`, en la rama
+`docs/<CLAVE>-spec`. La validación es `hdu.py spec <CLAVE>`.
+
+| Caso | Recorrido |
 |---|---|
-| **Hotfix** | No espera la aprobación: completa la spec antes de `/listo` y la integra después. Rama `fix/` |
-| **Error** | Mismo recorrido, con rama `fix/` |
-| **Tarea de deuda** | Mismo recorrido, con rama `chore/` o la que indique `--tipo` |
-| **Spike** | No lleva spec ni código: entrega un ADR del producto por MR |
-| **Tarea sin historia** | Usa sus propios criterios y queda sin medir: `/listo` exige revisar la deuda |
+| **Error** | `/hdu`, MR de la spec, `/desarrollar`, `/listo` y MR del código. Rama `fix/` |
+| **Hotfix** | `/hdu`, `/desarrollar`, `/listo` y MR del código, sin esperar la aprobación. La spec se completa antes de `/listo` y se integra después. Rama `fix/` |
+| **Spike** | `/hdu` y un ADR del producto por MR. No lleva spec ni código |
+| **Tarea sin historia** | Igual que un Error, con rama `feat/`, o `chore/` si es de deuda. Queda sin medir: `/listo` exige revisar la deuda |

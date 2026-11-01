@@ -66,6 +66,7 @@ class PruebaHarness(unittest.TestCase):
             self.assertEqual(revision.main(["--raiz", str(self.raiz), "cerrar", "motor-fraudes", "fraude-core"]), 0)
         self.adr_previo = adr.nuevo(self.raiz, "motor-fraudes", "decision", "Latencia de evaluación")
         self.destino = harness.ruta(self.raiz, "motor-fraudes")
+        self.hijas = []
 
     def commits(self) -> int:
         return int(git("rev-list", "--count", "HEAD", cwd=self.destino))
@@ -140,7 +141,7 @@ class PruebaHarness(unittest.TestCase):
         guardia_dev = cargar(self.destino / "herramientas" / "guardia.py", "guardia_dev")
         casos = {"git -C code/fraude-core push origin main": "deny", "git push --force origin feature/x": "deny",
                  "git push origin +feature/x": "deny", "glab mr merge 12": "deny",
-                 "git -C code/fraude-core push -u origin feature/FRAUD-123": "allow",
+                 "git -C code/fraude-core push -u origin feature/FRAUD-200": "allow",
                  "git -C code/fraude-core commit -m 'Agrega timeout'": "allow",
                  "python3 herramientas/hdu.py tarea FRAUD-100 --confirmar": "ask"}
         for comando, esperado in casos.items():
@@ -189,6 +190,8 @@ class PruebaHarness(unittest.TestCase):
             if ruta.endswith("/field"):
                 return [{"id": "customfield_1", "name": "Medición HU"}, {"id": "customfield_2", "name": "Tipo"},
                         {"id": "customfield_3", "name": "Equipos", "schema": {"type": "array"}}]
+            if ruta.endswith("/search/jql"):
+                return {"issues": self.hijas}
             if "FRAUD-100" in ruta:
                 return self.historia(medicion, "Historia")
             return self.historia(None if tipo == "Tarea" else medicion, tipo, enlazada and tipo == "Tarea")
@@ -196,109 +199,142 @@ class PruebaHarness(unittest.TestCase):
         modulo.cargar_env = lambda: {"JIRA_URL": "https://jira.example", "JIRA_EMAIL": "e", "JIRA_TOKEN": "t"}
         return modulo
 
-    def test_hdu_toma_segun_medicion_y_prepara_el_trabajo(self) -> None:
+    def test_hdu_refina_la_historia_y_no_toca_el_codigo(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
-        r = self.hdu("Completa").tomar("FRAUD-123", None, True)
-        self.assertTrue(r["tomada"])
-        self.assertEqual(r["repos"], ["fraude-core"], "el repositorio sale del componente de Jira")
-        self.assertEqual(r["historia"]["criterios"], ["La consulta responde en menos de 800 ms.",
-                                                      "Si el buró falla, la transacción queda en revisión."])
-        self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"),
-                         "feat/FRAUD-123-consultar-el-buro-en-la-evaluacion")
+        modulo = self.hdu("Completa")
+        r = modulo.tomar("FRAUD-100", None, True)
+        self.assertTrue(r["es_historia"])
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "docs/FRAUD-100-tareas")
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"), "main", "refinar no crea ramas de código")
+        propuesta = modulo.ruta_propuesta("FRAUD-100").read_text(encoding="utf-8")
+        self.assertIn("1. La consulta responde en menos de 800 ms.", propuesta)
+        self.assertIn("## Tareas propuestas", propuesta)
         contexto = r["contexto"].read_text(encoding="utf-8")
-        self.assertIn("1. La consulta responde en menos de 800 ms.", contexto)
         self.assertIn("decisiones:ADR-010 · alta: Llamada sin timeout", contexto, "los hallazgos altos del repo siempre se muestran")
 
-        self.assertFalse(self.hdu("Incompleta").tomar("FRAUD-124", None, False)["tomada"], "una medición no aceptada no se toma")
-        sin_medir = self.hdu(None).tomar("FRAUD-125", None, False)
-        self.assertEqual(sin_medir["medicion"], "sin medir")
-        self.assertIn("`/listo` exige revisar la deuda", sin_medir["contexto"].read_text(encoding="utf-8"))
+        self.assertFalse(self.hdu("Incompleta").tomar("FRAUD-100", None, False)["tomada"], "una medición no aceptada no se refina")
+        self.assertEqual(self.hdu("Completa").tomar("FRAUD-200", None, False)["de_historia"], "FRAUD-100",
+                         "una Tarea de una historia no se toma: se programa")
+        sin_historia = self.hdu(None, enlazada=False).tomar("FRAUD-125", None, False)
+        self.assertEqual(sin_historia["medicion"], "sin medir")
+        self.assertIn("`/listo` exige revisar la deuda", sin_historia["contexto"].read_text(encoding="utf-8"))
+        self.assertTrue((self.destino / "specs" / "FRAUD-125" / "FRAUD-125.md").exists(), "sin historia, una sola spec")
         spike = self.hdu("Óptima", "Spike").tomar("FRAUD-126", None, False)
         self.assertIn("## Entregable del Spike", spike["contexto"].read_text(encoding="utf-8"))
         self.assertEqual({l[3:].split("/")[0] for l in git("status", "--porcelain", cwd=self.destino).splitlines()}, {"specs"},
                          "trabajo/ y .cursorignore quedan fuera de git")
 
-        modulo = self.hdu("Completa")
         modulo.foco(["fraude-core"], ["fraude-core", "fraude-backoffice"])
         self.assertIn("code/fraude-backoffice/", (self.destino / ".cursorignore").read_text(encoding="utf-8"))
         modulo.foco(None, ["fraude-core", "fraude-backoffice"])
         self.assertFalse((self.destino / ".cursorignore").exists(), "sin foco no queda nada oculto")
 
-    def test_tarea_cuelga_de_su_historia(self) -> None:
-        harness.crear(self.raiz, "motor-fraudes")
-        modulo = self.hdu("Completa")
-        self.assertTrue(modulo.tomar("FRAUD-100", None, False)["es_historia"], "una historia se desarrolla en una Tarea")
-        r = modulo.tomar("FRAUD-200", None, False)
-        self.assertEqual((r["historia"]["medicion"], r["historia"]["historia_origen"]), ("Completa", "FRAUD-100"))
-        self.assertIn("- Historia: FRAUD-100", r["contexto"].read_text(encoding="utf-8"))
-        self.assertFalse(self.hdu("Incompleta").tomar("FRAUD-201", None, False)["tomada"], "manda la medición de la historia")
-        self.assertEqual(self.hdu("Completa", enlazada=False).tomar("FRAUD-202", None, False)["medicion"], "sin medir")
+    def completar_propuesta(self, modulo, filas: str = "| Consultar el buró | 1, 2 | fraude-core |") -> None:
+        archivo = modulo.ruta_propuesta("FRAUD-100")
+        texto = archivo.read_text(encoding="utf-8")
+        texto = re.sub(r"\| <completar: título.*\|", filas, texto)
+        archivo.write_text(re.sub(r"<completar[^>]*>", "Ninguna", texto), encoding="utf-8")
 
+    def test_tarea_crea_las_propuestas_y_reconoce_las_manuales(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
         modulo = self.hdu("Completa")
         enviados = []
         def enviar(env, ruta, cuerpo):
             enviados.append((ruta, cuerpo))
-            return {"key": "FRAUD-300"}
+            return {"key": f"FRAUD-{200 + len(enviados)}"}
         modulo.enviar = enviar
-        previa = modulo.crear_tarea("FRAUD-100", False, "Desarrollar la consulta al buró")
-        self.assertEqual(previa["existentes"], ["FRAUD-200"], "una historia puede tener varias Tareas")
-        self.assertEqual(previa["solicitud"]["fields"]["summary"], "Desarrollar la consulta al buró")
-        self.assertEqual(enviados, [], "sin confirmar no escribe en Jira")
-        campos = previa["solicitud"]["fields"]
-        self.assertEqual((campos["issuetype"]["name"], campos["customfield_2"], campos["customfield_3"], campos["project"]["key"]),
-                         ("Tarea", {"value": "Producto"}, [{"value": "Back"}], "FRAUD"))
-        self.assertEqual(modulo.crear_tarea("FRAUD-100", True)["clave"], "FRAUD-300")
-        self.assertEqual([r for r, _ in enviados], ["/rest/api/3/issue"])
-        self.assertEqual(enviados[0][1]["fields"]["parent"], {"key": "FRAUD-100"})
         with self.assertRaises(modulo.ErrorHdu):
-            modulo.crear_tarea("FRAUD-200", False)
-        rechazada = self.hdu("Incompleta")
-        with self.assertRaises(rechazada.ErrorHdu):
-            rechazada.crear_tarea("FRAUD-100", False)
+            modulo.crear_tareas("FRAUD-100", False)  # falta /hdu
+        modulo.tomar("FRAUD-100", None, False)
+        with self.assertRaises(modulo.ErrorHdu):
+            modulo.crear_tareas("FRAUD-100", False)  # propuesta sin completar y sin Tareas a mano
+        self.completar_propuesta(modulo, "| Consultar el buró | 1 | fraude-core |\n| Dejar en revisión | 2 | fraude-core |")
+        self.hijas = [{"key": "FRAUD-150", "fields": {"summary": "Dejar en revisión"}}]
 
-    def aprobar_spec(self, clave: str) -> None:
-        """Completa la spec e integra su rama en main, como lo haría su MR."""
-        archivo = self.destino / "specs" / clave / "spec.md"
+        previa = modulo.crear_tareas("FRAUD-100", False)
+        self.assertEqual((enviados, previa["specs"]), ([], []), "sin confirmar no escribe nada")
+        self.assertEqual([f["titulo"] for f in previa["pendientes"]], ["Consultar el buró"], "la creada a mano no se duplica")
+        campos = previa["solicitudes"][0]["fields"]
+        self.assertEqual((campos["issuetype"]["name"], campos["customfield_2"], campos["customfield_3"], campos["parent"], campos["summary"]),
+                         ("Tarea", {"value": "Producto"}, [{"value": "Back"}], {"key": "FRAUD-100"}, "Consultar el buró"))
+
+        r = modulo.crear_tareas("FRAUD-100", True)
+        self.assertEqual([c["clave"] for c in r["creadas"]], ["FRAUD-201"])
+        carpeta = self.destino / "specs" / "FRAUD-100"
+        nueva, manual = (carpeta / "FRAUD-201.md").read_text(encoding="utf-8"), (carpeta / "FRAUD-150.md").read_text(encoding="utf-8")
+        self.assertIn("1. La consulta responde en menos de 800 ms.", nueva)
+        self.assertNotIn("Si el buró falla", nueva, "cada spec lleva solo sus criterios")
+        self.assertIn("1. Si el buró falla", manual, "se reconoce por su título")
+        self.assertIn("- Historia: FRAUD-100", manual)
+
+        self.assertIn("FRAUD-201: quedan partes por completar", modulo.errores_refinamiento("FRAUD-100"))
+        for archivo in carpeta.glob("FRAUD-*.md"):
+            archivo.write_text(re.sub(r"<completar[^>]*>", "Definido", archivo.read_text(encoding="utf-8")), encoding="utf-8")
+        self.assertEqual(modulo.errores_refinamiento("FRAUD-100"), [])
+        (carpeta / "FRAUD-150.md").unlink()
+        self.assertIn("ninguna Tarea cubre el criterio: Si el buró falla, la transacción queda en revisión.",
+                      modulo.errores_refinamiento("FRAUD-100"))
+
+        rechazada = self.hdu("Incompleta")
+        self.assertFalse(rechazada.tomar("FRAUD-100", None, False)["tomada"])
+
+    def especificar(self, modulo) -> None:
+        """/hdu de la historia, /tarea y specs completas en la rama, sin integrar. La Tarea creada es FRAUD-200."""
+        modulo.enviar = lambda env, ruta, cuerpo: {"key": "FRAUD-200"}
+        modulo.tomar("FRAUD-100", None, True)
+        self.completar_propuesta(modulo)
+        modulo.crear_tareas("FRAUD-100", True)
+        archivo = modulo.ruta_spec("FRAUD-200")
         archivo.write_text(re.sub(r"<completar[^>]*>", "Definido", archivo.read_text(encoding="utf-8")), encoding="utf-8")
         git("add", "-A", cwd=self.destino)
-        git("commit", "--quiet", "-m", f"Spec de {clave}", cwd=self.destino)
+        git("commit", "--quiet", "-m", "docs: agrega las Tareas de FRAUD-100", cwd=self.destino)
+
+    def integrar_tareas(self) -> None:
         git("switch", "--quiet", "main", cwd=self.destino)
-        git("merge", "--quiet", "--no-ff", "-m", f"Integra spec de {clave}", f"docs/{clave}-spec", cwd=self.destino)
+        git("merge", "--quiet", "--no-ff", "-m", "docs: integra las Tareas de FRAUD-100", "docs/FRAUD-100-tareas", cwd=self.destino)
 
     def test_no_se_programa_sin_spec_aprobada(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
         modulo = self.hdu("Completa")
-        self.assertIn("borrador", modulo.tomar("FRAUD-123", None, True)["spec"])
-        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "docs/FRAUD-123-spec")
-        self.assertIn("quedan partes por completar", modulo.errores_spec("FRAUD-123"))
-        self.assertIn("1. La consulta responde en menos de 800 ms.", modulo.ruta_spec("FRAUD-123").read_text(encoding="utf-8"))
+        self.especificar(modulo)
         with self.assertRaises(modulo.ErrorHdu) as error:
-            modulo.desarrollar("FRAUD-123")
+            modulo.desarrollar("FRAUD-200")
         self.assertIn("no está aprobada", str(error.exception))
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"), "main")
 
-        git("switch", "--quiet", "docs/FRAUD-123-spec", cwd=self.destino)
-        self.aprobar_spec("FRAUD-123")
-        self.assertEqual(modulo.errores_spec("FRAUD-123"), [])
-        self.assertEqual(modulo.desarrollar("FRAUD-123")["tipo"], "tarea")
-        self.assertIn("ya aprobada", modulo.tomar("FRAUD-123", None, False)["spec"])
+        git("switch", "--quiet", "docs/FRAUD-100-tareas", cwd=self.destino)
+        self.integrar_tareas()
+        self.assertEqual(modulo.errores_spec("FRAUD-200"), [])
+        r = modulo.desarrollar("FRAUD-200")
+        self.assertEqual(r["tipo"], "tarea")
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino / "code" / "fraude-core"),
+                         "feat/FRAUD-200-consultar-el-buro-en-la-evaluacion", "la rama de código nace al desarrollar")
+        tomada = json.loads((self.destino / "trabajo" / "FRAUD-200" / "hdu.json").read_text(encoding="utf-8"))
+        self.assertEqual((tomada["medicion"], tomada["historia_origen"]), ("Completa", "FRAUD-100"))
 
-        archivo = modulo.ruta_spec("FRAUD-123")
+        archivo = modulo.ruta_spec("FRAUD-200")
         original = archivo.read_text(encoding="utf-8")
         archivo.write_text(original.replace("| 2 |", "| x |"), encoding="utf-8")
-        self.assertIn("el criterio 2 no tiene prueba", modulo.errores_spec("FRAUD-123"))
+        self.assertIn("el criterio 2 no tiene prueba", modulo.errores_spec("FRAUD-200"))
         archivo.write_text(original + "\n" * 100, encoding="utf-8")
-        self.assertIn("supera las 80 líneas", modulo.errores_spec("FRAUD-123"))
+        self.assertIn("supera las 80 líneas", modulo.errores_spec("FRAUD-200"))
         archivo.write_text(original, encoding="utf-8")
 
         hotfix = self.hdu("Completa", "Hotfix")
         self.assertIn("borrador", hotfix.tomar("FRAUD-127", None, False)["spec"])
-        self.assertEqual(hotfix.desarrollar("FRAUD-127")["tipo"], "hotfix", "un Hotfix no espera la aprobación")
+        self.assertEqual(hotfix.desarrollar("FRAUD-127", crear_rama=False)["tipo"], "hotfix", "un Hotfix no espera la aprobación")
+        error_rama = self.hdu("Completa", "Error")
+        error_rama.tomar("FRAUD-129", None, False)
+        with self.assertRaises(error_rama.ErrorHdu):
+            error_rama.desarrollar("FRAUD-129")
         spike = self.hdu("Completa", "Spike")
         self.assertIn("sin spec", spike.tomar("FRAUD-128", None, False)["spec"])
         with self.assertRaises(spike.ErrorHdu):
             spike.desarrollar("FRAUD-128")
+        with self.assertRaises(modulo.ErrorHdu):
+            modulo.desarrollar("FRAUD-100")  # una historia no se programa
 
     def test_todo_producto_nace_con_su_harness(self) -> None:
         import productos
@@ -389,7 +425,10 @@ class PruebaHarness(unittest.TestCase):
     def test_listo_verifica_registra_criterios_y_deuda(self) -> None:
         harness.crear(self.raiz, "motor-fraudes")
         subprocess.run([sys.executable, str(self.destino / "herramientas" / "harness.py"), "code"], capture_output=True, check=True)
-        self.hdu("Completa").tomar("FRAUD-123", None, True)
+        modulo = self.hdu("Completa")
+        self.especificar(modulo)
+        self.integrar_tareas()
+        modulo.desarrollar("FRAUD-200")
         codigo_repo = self.destino / "code" / "fraude-core"
         (codigo_repo / "src/main/java/BuroClient.java").write_text(
             "class BuroClient {\n  String consultar() {\n    // TODO timeout\n    System.out.println(\"x\");\n    return null;\n  }\n}\n",
@@ -400,7 +439,7 @@ class PruebaHarness(unittest.TestCase):
         git("add", "-A", cwd=codigo_repo)
         git("commit", "--quiet", "-m", "Cliente del buró", cwd=codigo_repo)
         listo = cargar(self.destino / "herramientas" / "listo.py", "listo_prueba")
-        paquete = listo.preparar("FRAUD-123").read_text(encoding="utf-8")
+        paquete = listo.preparar("FRAUD-200").read_text(encoding="utf-8")
         self.assertIn("- Consola: `src/main/java/BuroClient.java:4`", paquete)
         self.assertIn("- Pendientes: `src/main/java/BuroClient.java:3`", paquete)
         self.assertIn("1. La consulta responde en menos de 800 ms.", paquete)
@@ -412,21 +451,23 @@ class PruebaHarness(unittest.TestCase):
         self.assertEqual(len(modulo.avisos_convencion("feature/x", ["wip", "build: x"])), 3)
         self.assertEqual(modulo.TIPO_RAMA["hotfix"], "fix")
 
-        registro = self.destino / "trabajo" / "FRAUD-123" / "listo.json"
+        registro = self.destino / "trabajo" / "FRAUD-200" / "listo.json"
         registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3"}, "deuda": [],
                                         "decisiones_aplicadas": ["ADR-EQ-002"]}), encoding="utf-8")
+        aprobada = listo.hdu.spec_aprobada
+        listo.hdu.spec_aprobada = lambda clave: False
         with self.assertRaises(listo.ErrorListo) as error:
-            listo.cerrar("FRAUD-123")
+            listo.cerrar("FRAUD-200")
         self.assertIn("el criterio 2 no tiene prueba", str(error.exception))
         self.assertIn("spec: no está aprobada", str(error.exception))
-        self.aprobar_spec("FRAUD-123")
+        listo.hdu.spec_aprobada = aprobada
         registro.write_text(json.dumps({
             "criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:3", "2": "fraude-core:src/test/java/BuroClientTest.java:5"},
             "deuda": [{"tipo": "tecnica", "descripcion": "El timeout del buró queda fijo en el código; falta llevarlo a configuración.",
                        "evidencia": "fraude-core:src/main/java/BuroClient.java:3"}],
             "desvios": ["El timeout se definió en el cliente y no en el servicio."],
             "decisiones_aplicadas": ["ADR-EQ-002", "decisiones:ADR-010"]}), encoding="utf-8")
-        archivos = listo.cerrar("FRAUD-123")
+        archivos = listo.cerrar("FRAUD-200")
         descripcion = archivos[0].read_text(encoding="utf-8")
         self.assertIn("| 1 | La consulta responde en menos de 800 ms. | `src/test/java/BuroClientTest.java:3` |", descripcion)
         self.assertIn("- **Técnica:** El timeout del buró queda fijo en el código", descripcion)
@@ -434,24 +475,24 @@ class PruebaHarness(unittest.TestCase):
         self.assertIn("<!-- radiografia:listo ", descripcion)
         import mr
         datos = mr.registro_listo(descripcion)
-        self.assertEqual((datos["clave"], datos["repo"], datos["commit"]), ("FRAUD-123", "fraude-core", git("rev-parse", "HEAD", cwd=codigo_repo)))
+        self.assertEqual((datos["clave"], datos["repo"], datos["commit"]), ("FRAUD-200", "fraude-core", git("rev-parse", "HEAD", cwd=codigo_repo)))
         self.assertEqual(datos["senales"]["consola"], 1)
         self.assertEqual(mr.contraste_spec(self.raiz, "motor-fraudes", datos),
                          ["Desvío declarado respecto de la spec: El timeout se definió en el cliente y no en el servicio."])
         self.assertIn("no está en la rama principal", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-9"})[0])
         self.assertIn("Comprobar el tipo en Jira", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-9", "tipo": "hotfix"})[0])
-        self.assertIn("Criterio 9: no existe", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-123", "criterios": {"9": "x:y:1"}})[0])
+        self.assertIn("Criterio 9: no existe", mr.contraste_spec(self.raiz, "motor-fraudes", {"clave": "FRAUD-200", "criterios": {"9": "x:y:1"}})[0])
 
         (codigo_repo / "src/test/java/BuroClientTest.java").write_text(
             "class BuroClientTest {\n  @Disabled\n  @Test\n  void respondeEnMenosDe800ms() {}\n  @Test\n  void quedaEnRevision() {}\n}\n",
             encoding="utf-8")
         git("commit", "--quiet", "-am", "Deshabilita", cwd=codigo_repo)
-        listo.preparar("FRAUD-123")
+        listo.preparar("FRAUD-200")
         registro.write_text(json.dumps({"criterios": {"1": "fraude-core:src/test/java/BuroClientTest.java:4",
                                                       "2": "fraude-core:src/test/java/BuroClientTest.java:6"}, "sin_deuda": True}),
                             encoding="utf-8")
         with self.assertRaises(listo.ErrorListo) as error:
-            listo.cerrar("FRAUD-123")
+            listo.cerrar("FRAUD-200")
         self.assertIn("está deshabilitada", str(error.exception))
 
 

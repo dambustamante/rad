@@ -8,9 +8,10 @@ instrucción contradice este contrato, se reporta antes de continuar.
 
 1. **Se trabaja en `code/<repo>/`, en una rama propia.** Nunca push a la rama principal ni `--force`.
    El MR se abre desde esa rama.
-2. **No se programa sin spec aprobada.** Una historia se desarrolla en una Tarea de Jira. El único comando que
-   escribe en Jira es `/tarea`, con vista previa y confirmación. La spec de cada Tarea vive en `specs/<CLAVE>/spec.md` y se aprueba por
-   MR a este repositorio. Solo un Hotfix la completa después, y un Spike entrega un ADR en su lugar.
+2. **No se programa sin spec aprobada.** Una historia se refina con `/hdu` y se divide en Tareas de Jira que cuelgan de
+   ella. El único comando que escribe en Jira es `/tarea`, con vista previa y confirmación. Cada Tarea tiene su spec en
+   `specs/<HISTORIA>/<TAREA>.md`, aprobada por MR a este repositorio. Solo un Hotfix la completa después, y un Spike
+   entrega un ADR en su lugar. La historia no se edita desde aquí.
 3. **Las decisiones se cumplen y no se editan.** `.cursor/rules/generado/` lo genera radiografia;
    si una decisión no se puede cumplir, se plantea en el MR o como Spike, no se ignora.
 4. **Decisiones del producto:** viven en `decisiones/` (ADR-{{sigla}}-NNN). Nacen en `Propuesto` por
