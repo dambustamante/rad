@@ -37,49 +37,85 @@ Después: `/estado` y `/revisar mr` cada día; `/estado semanal` y `/actualizar`
 
 ## Detalle de cada comando
 
+Cada comando tiene dos partes. Los **scripts** hacen lo repetible, sin IA y sin gastar tokens. **Cursor** aporta el criterio:
+lee, compara y redacta. Lo que sale hacia GitLab o Jira siempre muestra una vista previa y pide confirmación.
+
 ### /estado
 
 | Comando | Qué hace |
 |---|---|
-| `/estado` | Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos locales: no usa la red ni gasta análisis |
-| `/estado semanal` | Actualiza las copias de los repositorios y escribe `productos/<producto>/semanal/<AAAA-Wnn>.md` con commits, ramas activas y hallazgos nuevos, corregidos y reaparecidos. No publica nada |
+| `/estado` | Muestra el estado general y qué hacer a continuación |
+| `/estado semanal` | Escribe el reporte de lo que cambió en la semana |
 
-**Cuándo:** `/estado` al empezar, o si no se sabe qué comando usar. `/estado semanal` cada semana.
+**Cuándo:** `/estado` al empezar, o si no sabes qué comando usar. `/estado semanal`, cada semana.
+
+**Cómo lo hace:**
+
+- **`/estado`:** el script `make estado` lee los archivos locales, sin usar la red. Revisa fuentes de arquitectura,
+  coherencia, repositorios por revisar, hallazgos sin triar, excepciones vencidas, deuda sin Tarea, commits sin subir en los
+  harness y más. Cursor muestra el resultado en orden de prioridad y ofrece ejecutar el primer paso.
+- **`/estado semanal`:** el script `make semanal` actualiza las copias de los repositorios y compara con el reporte anterior.
+
+**Qué deja:** `/estado` no escribe nada. `/estado semanal` escribe `productos/<producto>/semanal/<AAAA-Wnn>.md`, con commits,
+ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No publica nada.
 
 ### /actualizar
 
 | Comando | Qué hace |
 |---|---|
-| `/actualizar` | Trae y publica las reglas. La primera vez, pide los repositorios de arquitectura |
+| `/actualizar` | Trae las reglas de arquitectura, verifica su coherencia y las publica en cada harness |
 
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
 
-1. Descarga arquitectura y actualiza su índice.
-2. Trae los ADR propuestos en cada harness.
-3. Compara las decisiones con arquitectura. Si hay pares nuevos, Cursor los evalúa. Lo que choca queda suspendido.
-4. Actualiza repositorios, terceros e historias, y regenera las reglas de cada harness.
-5. Muestra qué cambió y, con confirmación, lo sube a GitLab (`harness.py subir --confirmar`).
+**Qué te pide:** la primera vez, los repositorios de arquitectura. Al final, confirmar la publicación.
 
-Un harness con coherencia por evaluar queda retenido y no se sube.
+**Cómo lo hace:**
+
+1. **Scripts:** descargan los ADR y estándares de arquitectura y actualizan su índice.
+2. **Scripts:** traen los ADR propuestos en cada harness.
+3. **Scripts:** buscan pares nuevos de decisión y documento de arquitectura.
+4. **Cursor:** evalúa esos pares. Primero filtra por tema, con la regla rápida, y lee más solo si tratan lo mismo. Cada par queda
+   como `sin_relacion`, `compatible`, `duplica` o `choca`, con citas textuales. Lo que choca queda suspendido.
+5. **Scripts:** actualizan repositorios, terceros, historias y páginas de Confluence, y regeneran las reglas de cada harness.
+6. **Scripts:** muestran qué cambió y, si confirmas, lo suben a GitLab.
+
+**Qué deja:** `arquitectura/INDICE.md`, `equipo/COHERENCIA.md`, reglas al día en cada harness y un resumen de los cambios.
+
+**Se detiene si:** faltan herramientas del entorno. Un harness con coherencia por evaluar queda retenido y no se sube.
 
 ### /producto
 
 | Comando | Qué hace |
 |---|---|
-| `/producto <nombre>` | Si el producto no existe, lo crea con su harness y pide sus repositorios, sus páginas de Confluence y su documentación. Si existe, permite administrarlos |
+| `/producto <nombre>` | Crea el producto con su harness y reúne lo que se va a revisar. Si ya existe, permite administrarlo |
 
-**Cuándo:** al recibir o iniciar un producto, y para agregar o retirar repositorios.
+**Cuándo:** al recibir o iniciar un producto, y cuando cambian sus repositorios o documentos.
 
-- **Producto nuevo:** pide descripción, origen (`heredado` o `nuevo`) y sigla, y crea el producto **con su harness**.
-  La sigla queda fija. Después pide de una vez los repositorios git, las páginas de Confluence y los demás documentos.
-- **Producto existente:** permite agregar o retirar repositorios, registrar terceros, cargar documentos y configurar
-  historias.
-- **Documentos:** Confluence, PDF, Word, PowerPoint, Excel, HTML, texto, conversaciones y dibujos quedan en markdown en
-  `documentos/` del harness. Ver [Documentos del producto](04-productos.md#documentos-del-producto).
-- **Repositorios:** inspecciona cada uno, propone el registro y los agrega solo con confirmación.
+**Qué te pide:**
 
-**Paso manual:** crear el repositorio `harness-motor-fraudes` en GitLab y hacer el primer push, con los comandos que
-muestra el script.
+- **Producto nuevo:** descripción, origen (`heredado` o `nuevo`) y sigla, que queda fija.
+- **De una vez, lo que tengas:** repositorios git, páginas o espacios de Confluence, y documentos en otros formatos.
+- **Producto existente:** qué hacer: agregar o retirar repositorios, cargar documentos, registrar terceros o configurar historias.
+
+**Cómo lo hace:**
+
+| Qué entra | Scripts | Cursor |
+|---|---|---|
+| Repositorio git | Lo inspecciona (rama, stack, Sonar, README, C4, contratos), lo registra y lo descarga en solo lectura | Propone la tabla de registro y pide confirmarla |
+| Página o espacio de Confluence | Lo lee en solo lectura y lo convierte a markdown | — |
+| PDF, Word, PowerPoint, Excel, HTML o texto | Extrae el texto y lo convierte a markdown | — |
+| Dibujo o imagen | Crea un markdown por completar | Mira la imagen y escribe qué muestra |
+| Conversación | Crea un markdown por completar | Escribe fecha, decisiones y pendientes, sin copiar el chat |
+| Documentos de un tercero | Los indexa en `terceros/<id>/docs/` | Ayuda a completar su ficha |
+
+**Qué deja:** `productos/<producto>/producto.yaml`, el harness en `productos/<producto>/harness/`, los repositorios en
+`productos/<producto>/repos/` y los documentos en `documentos/` del harness.
+
+**Paso manual:** crear el repositorio `harness-<producto>` en GitLab y hacer el primer push, con los comandos que muestra
+el script.
+
+**Se detiene si:** un repositorio ya está en otro producto, no se puede acceder a él o un documento tiene un posible secreto.
+Más detalle en [Productos y terceros](04-productos.md).
 
 ### /revisar
 
@@ -90,27 +126,39 @@ muestra el script.
 | `/revisar mr --producto <producto>` | Muestra solo los MR de ese producto |
 | `/revisar mr --mios` | Muestra solo los MR donde eres revisor. Necesita `GITLAB_USUARIO` en `.env` |
 
-**Cuándo:** `/revisar <producto>` al recibir un producto y cuando cambia la rama principal de un repositorio, con un chat por repositorio. `/revisar mr` una o dos veces al día.
+**Cuándo:** `/revisar <producto>` al recibir un producto y cuando cambia la rama principal de un repositorio, con un chat por
+repositorio. `/revisar mr`, una o dos veces al día.
 
-**Revisión de un repositorio:** trae las páginas de Confluence que cambiaron, ejecuta las verificaciones automáticas y
-Sonar, y Cursor revisa el código contra las reglas y contra los documentos del producto. Lo que un documento afirma y el
-código contradice queda como hallazgo de `documentacion`. Deja el estado del repositorio
-(`as-is/<repo>.md`), sus hallazgos y su veredicto. Cuando todos están revisados, consolida el producto en
-`as-is/PRODUCTO.md`.
+**Cómo revisa un repositorio:**
 
-**Revisión de MR:**
+1. **Scripts:** traen las páginas de Confluence que cambiaron y actualizan la copia del repositorio.
+2. **Scripts:** detectan el stack, ejecutan gitleaks y las verificaciones automáticas, y consultan Sonar.
+3. **Scripts:** arman un paquete con el mapa del repositorio, señales en el código, terceros, documentos del producto y la lista
+   de lo que hay que evaluar. Si cambió menos del 40% de los archivos, la revisión es incremental.
+4. **Cursor:** lee el paquete, abre el código y los documentos relacionados, y contrasta. Escribe el estado del repositorio y un
+   lote con lo que cumple, lo que no aplica, lo no determinado, los hallazgos y los componentes.
+5. **Scripts:** validan el lote, rechazan citas o evidencia que no existan, generan los diagramas C4 y calculan el veredicto.
+
+Lo que un documento afirma y el código contradice queda como hallazgo de `documentacion`: manda el código.
+
+**Cómo consolida el producto:** cuando todos los repositorios están al día, Cursor escribe la visión y las conclusiones, incluido lo
+que los documentos describen y no se encontró en ningún repositorio. Los scripts generan el C4 del producto y los cruces.
+
+**Qué deja:** `as-is/<repo>.md`, `as-is/PRODUCTO.md`, los hallazgos con archivo y línea, y el veredicto.
+
+**Cómo revisa los MR:**
 
 1. **Publica las reglas nuevas:** ejecuta `make harness-al-dia` y `harness.py subir`, y pide confirmación si hay cambios.
 2. **Muestra la bandeja:** primero las specs, después los ADR y los MR de código.
-3. **Revisa el MR elegido:** repite las verificaciones con su propio código, detecta cambios sensibles y contrasta el MR
-   con `/listo`, la spec y el formato de ramas y commits.
+3. **Revisa el MR elegido:** los scripts repiten las verificaciones con su propio código, detectan cambios sensibles y contrastan
+   el MR con `/listo`, la spec y el formato de ramas y commits. Cursor revisa el diff y escribe los hallazgos.
 4. **Publica el comentario:** muestra una vista previa y lo publica solo con confirmación.
 
 | MR de la bandeja | Cómo se atiende |
 |---|---|
 | Spec | Se revisa y se aprueba en GitLab |
-| ADR del producto | `mr.py adr <producto> <número>` verifica su coherencia antes de aprobarlo en GitLab |
-| Código | `mr.py revisar <producto> <repo> <número>` y `rama.py publicar` |
+| ADR del producto | Los scripts validan el ADR y Cursor evalúa su coherencia, antes de aprobarlo en GitLab |
+| Código | Se revisa como en los pasos 3 y 4 |
 
 radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
@@ -118,9 +166,11 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 | Comando | Qué hace |
 |---|---|
-| `/triar <producto> [repo]` | Decide sobre los hallazgos de ese repositorio o, sin indicarlo, de todo el producto |
+| `/triar <producto> [repo]` | Registra tu decisión sobre los hallazgos de ese repositorio o, sin indicarlo, de todo el producto |
 
 **Cuándo:** después de revisar.
+
+**Qué te pide:** una decisión por hallazgo. La decisión siempre es tuya: Cursor recomienda solo si se lo pides.
 
 | Decisión | Significado |
 |---|---|
@@ -128,6 +178,15 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 | Conversar | Se decide con el equipo y va a la agenda |
 | Deuda | Se acepta con un motivo. Sin fecha, vence a los 90 días |
 | Falso positivo | La herramienta o la revisión se equivocó. Exige un motivo |
+
+**Cómo lo hace:**
+
+1. **Scripts:** generan una planilla con los hallazgos pendientes. Primero, las deudas vencidas y los que reaparecieron.
+2. **Tú:** marcas una decisión por fila y guardas. También se puede decidir en grupo, con una simulación previa.
+3. **Scripts:** aplican la planilla, todo o nada, y calculan qué fuentes generan demasiados falsos positivos.
+4. **Cursor:** sugiere qué sigue: llevar la deuda a Jira o ajustar una fuente con ruido.
+
+**Qué deja:** el registro de decisiones, la agenda en `triaje/agenda-<fecha>.md` si hay temas para conversar, y la calibración.
 
 ### /crear
 
@@ -148,7 +207,23 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 **Cuándo:** cuando hace falta.
 
-Todo lo que va a Jira muestra una vista previa y se crea solo con confirmación. Las Tareas de desarrollo no se crean
-aquí, sino con `/hdu` en el harness o a mano.
+**Cómo crea un ADR o una excepción:**
+
+1. **Scripts:** muestran los que existen y crean el archivo en `Propuesto`, con el siguiente número libre.
+2. **Cursor:** lo completa contigo, sección por sección. Lo que no sepas queda `NO DETERMINADO`.
+3. **Scripts:** lo validan y `/actualizar` verifica su coherencia.
+4. **Tú:** lo apruebas: un ADR de producto, por MR a su harness. Una excepción requiere motivo y vencimiento.
+
+**Cómo crea una incidencia de Jira:**
+
+1. **Cursor:** hace las preguntas de su tipo y busca hallazgos e historias parecidas, para no duplicar.
+2. **Scripts:** crean el borrador en `historias/borradores/` y el contexto del producto.
+3. **Cursor:** redacta el borrador con evidencia.
+4. **Scripts:** validan la estructura de `ADR-EQ-009` y el lenguaje, y muestran la vista previa.
+5. **Tú:** confirmas y se crea en Jira. La clave queda en el borrador y en los hallazgos de origen.
+
+Las Tareas de desarrollo de una historia no se crean aquí, sino con `/hdu` en el harness o a mano.
+
+## Comandos de `make`
 
 Los objetivos de `make` están en [Mantenimiento](08-mantenimiento.md#objetivos-de-make).
