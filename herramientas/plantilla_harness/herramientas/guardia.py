@@ -35,7 +35,7 @@ def evaluar(comando: str) -> tuple[str, str]:
     if HTTP_ESCRITURA.search(comando):
         return "deny", "No se escribe por HTTP directamente desde el harness."
     if re.search(r"(^|\s)--confirmar(\s|$)", comando):
-        return "ask", "Este comando crea una Tarea en Jira. Aprobarlo solo si ya se revisó la vista previa."
+        return "ask", "Este comando crea Tareas en Jira. Aprobarlo solo si ya se revisó la vista previa."
     return "allow", ""
 
 

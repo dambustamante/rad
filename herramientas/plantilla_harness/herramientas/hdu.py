@@ -2,11 +2,12 @@
 
 Uso:
   python3 herramientas/hdu.py tomar <CLAVE> [--repos a,b] [--sin-rama]   /hdu: refina una historia o toma otra incidencia
-  python3 herramientas/hdu.py tarea <HISTORIA> [--confirmar]             /tarea: crea las Tareas propuestas y sus specs
+  python3 herramientas/hdu.py crear-tareas <HISTORIA> [--confirmar]      /hdu: crea las Tareas propuestas y sus specs
+  python3 herramientas/hdu.py tarea <HISTORIA> [--sin-rama]              /tarea: specs de las Tareas creadas a mano
   python3 herramientas/hdu.py spec <CLAVE>                               valida las specs antes de su MR
   python3 herramientas/hdu.py desarrollar <CLAVE> [--tipo T] [--sin-rama] /desarrollar: comprueba la aprobación y crea las ramas
 
-Solo /tarea escribe en Jira, con vista previa y confirmación.
+Solo crear-tareas escribe en Jira, con vista previa y confirmación.
 """
 
 from __future__ import annotations
@@ -91,7 +92,7 @@ def pedir(env: dict, ruta: str, parametros: dict | None = None):
 
 
 def enviar(env: dict, ruta: str, cuerpo: dict) -> dict:
-    """Escritura en Jira. Solo la usa /tarea, después de la vista previa y la confirmación."""
+    """Escritura en Jira. Solo la usa crear-tareas, después de la vista previa y la confirmación."""
     url = env["JIRA_URL"].rstrip("/") + ruta
     credencial = base64.b64encode(f"{env['JIRA_EMAIL']}:{env['JIRA_TOKEN']}".encode()).decode()
     pedido = urllib.request.Request(url, data=json.dumps(cuerpo).encode("utf-8"), method="POST", headers={
@@ -614,29 +615,13 @@ def tareas_de(clave: str, env: dict) -> list[dict]:
     return [{"clave": i["key"], "titulo": (i.get("fields") or {}).get("summary") or ""} for i in datos.get("issues") or []]
 
 
-def crear_tareas(clave: str, confirmar: bool) -> dict:
-    """/tarea: crea las Tareas propuestas que faltan, reconoce las creadas a mano y deja una spec por cada una."""
-    config, env = leer_json("config.json"), cargar_env()
-    historia = leer_historia(clave, env, config)
-    if not es_tipo(historia, "historia", config):
-        raise ErrorHdu(f"{clave} es {historia['tipo_incidencia']}, no una historia.")
-    propuesta = ruta_propuesta(clave)
-    if not propuesta.exists():
-        raise ErrorHdu(f"Falta la propuesta de {clave}: ejecutar primero /hdu {clave}.")
+def escribir_specs(historia: dict, tareas: list[dict], config: dict, env: dict) -> list[Path]:
+    """Una spec por Tarea que todavía no la tiene. Una Tarea sin fila en la propuesta parte con todos los criterios."""
+    clave, propuesta = historia["clave"], ruta_propuesta(historia["clave"])
     texto = propuesta.read_text(encoding="utf-8")
-    filas, existentes = filas_propuesta(texto), tareas_de(clave, env)
-    titulos = {normalizar(e["titulo"]) for e in existentes}
-    pendientes = [f for f in filas if normalizar(f["titulo"]) not in titulos]
-    if not filas and not existentes:
-        raise ErrorHdu(f"La propuesta de {clave} no tiene Tareas y la historia tampoco: completarla o crearlas a mano.")
-    campos = pedir(env, "/rest/api/3/field")
-    solicitudes = [solicitud_tarea(historia, f["titulo"], config, campos) for f in pendientes]
-    if pendientes and not confirmar:
-        return {"creadas": [], "pendientes": pendientes, "existentes": existentes, "solicitudes": solicitudes, "specs": []}
-    creadas = [{"clave": enviar(env, "/rest/api/3/issue", s)["key"], "titulo": f["titulo"]} for f, s in zip(pendientes, solicitudes)]
-    criterios, por_titulo, specs = criterios_propuesta(texto), {normalizar(f["titulo"]): f for f in filas}, []
+    criterios, por_titulo, specs = criterios_propuesta(texto), {normalizar(f["titulo"]): f for f in filas_propuesta(texto)}, []
     url_base = env["JIRA_URL"].rstrip("/")
-    for tarea in [*existentes, *creadas]:
+    for tarea in tareas:
         archivo = propuesta.parent / f"{tarea['clave']}.md"
         if archivo.exists():
             continue
@@ -648,7 +633,57 @@ def crear_tareas(clave: str, confirmar: bool) -> dict:
             contenido = contenido.replace("## Diseño", "<completar: dejar solo los criterios que cubre esta Tarea, renumerados, y borrar esta línea>\n\n## Diseño", 1)
         archivo.write_text(contenido, encoding="utf-8")
         specs.append(archivo)
-    return {"creadas": creadas, "pendientes": [], "existentes": existentes, "solicitudes": solicitudes, "specs": specs}
+    return specs
+
+
+def historia_para_tareas(clave: str, config: dict, env: dict) -> dict:
+    historia = leer_historia(clave, env, config)
+    if not es_tipo(historia, "historia", config):
+        raise ErrorHdu(f"{clave} es {historia['tipo_incidencia']}, no una historia.")
+    return historia
+
+
+def crear_tareas(clave: str, confirmar: bool) -> dict:
+    """Parte final de /hdu: con confirmación, crea en Jira las Tareas propuestas y escribe sus specs."""
+    config, env = leer_json("config.json"), cargar_env()
+    historia = historia_para_tareas(clave, config, env)
+    propuesta = ruta_propuesta(clave)
+    if not propuesta.exists():
+        raise ErrorHdu(f"Falta la propuesta de {clave}: ejecutar primero /hdu {clave}.")
+    filas, existentes = filas_propuesta(propuesta.read_text(encoding="utf-8")), tareas_de(clave, env)
+    titulos = {normalizar(e["titulo"]) for e in existentes}
+    pendientes = [f for f in filas if normalizar(f["titulo"]) not in titulos]
+    if not filas and not existentes:
+        raise ErrorHdu(f"La propuesta de {clave} no tiene Tareas y la historia tampoco: completarla o crearlas a mano.")
+    campos = pedir(env, "/rest/api/3/field")
+    solicitudes = [solicitud_tarea(historia, f["titulo"], config, campos) for f in pendientes]
+    if pendientes and not confirmar:
+        return {"creadas": [], "pendientes": pendientes, "existentes": existentes, "solicitudes": solicitudes, "specs": []}
+    creadas = [{"clave": enviar(env, "/rest/api/3/issue", s)["key"], "titulo": f["titulo"]} for f, s in zip(pendientes, solicitudes)]
+    return {"creadas": creadas, "pendientes": [], "existentes": existentes, "solicitudes": solicitudes,
+            "specs": escribir_specs(historia, [*existentes, *creadas], config, env)}
+
+
+def registrar_manuales(clave: str, crear_rama: bool = True) -> dict:
+    """/tarea: spec de las Tareas creadas a mano que cuelgan de la historia. No escribe en Jira."""
+    config, env = leer_json("config.json"), cargar_env()
+    historia = historia_para_tareas(clave, config, env)
+    medicion = evaluar_medicion(historia["medicion"], config["jira"]["medicion_aceptada"])
+    if medicion == "rechazada":
+        raise ErrorHdu("La Medición HU no es una de las aceptadas: completar la historia antes de desarrollarla.")
+    existentes = tareas_de(clave, env)
+    if not existentes:
+        raise ErrorHdu(f"No hay Tareas colgando de {clave}. Crearlas a mano en Jira, o usar /hdu {clave} para que se propongan.")
+    actualizar_harness()
+    if crear_rama:
+        rama_del_harness(rama_tareas(clave))
+    propuesta = ruta_propuesta(clave)
+    if not propuesta.exists():
+        propuesta.parent.mkdir(parents=True, exist_ok=True)
+        texto = texto_propuesta(historia, medicion).replace(
+            "<completar: criterios ambiguos o faltantes, como preguntas; si no hay, Ninguna>", "Ninguna")
+        propuesta.write_text(re.sub(r"\| <completar: título.*\n", "", texto), encoding="utf-8")
+    return {"existentes": existentes, "specs": escribir_specs(historia, existentes, config, env)}
 
 
 def tomar(clave: str, repos_pedidos: list[str] | None, crear_rama: bool) -> dict:
@@ -697,9 +732,12 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("clave")
     p.add_argument("--repos", default="")
     p.add_argument("--sin-rama", action="store_true")
-    p = sub.add_parser("tarea")
+    p = sub.add_parser("crear-tareas")
     p.add_argument("clave")
     p.add_argument("--confirmar", action="store_true", help="crea las Tareas en Jira; sin esto solo muestra la vista previa")
+    p = sub.add_parser("tarea")
+    p.add_argument("clave")
+    p.add_argument("--sin-rama", action="store_true")
     p = sub.add_parser("spec")
     p.add_argument("clave")
     p = sub.add_parser("desarrollar")
@@ -714,6 +752,13 @@ def main(argumentos: list[str] | None = None) -> int:
             print("Válido: hacer commit, push de la rama y abrir su MR." if not errores else "\n".join(f"  - {e}" for e in errores))
             return 1 if errores else 0
         if o.accion == "tarea":
+            r = registrar_manuales(clave, not o.sin_rama)
+            print(f"Tareas de {clave}: {', '.join(e['clave'] for e in r['existentes'])}")
+            for archivo in r["specs"]:
+                print(f"Spec: {archivo.relative_to(RAIZ)}")
+            print(f"Siguiente: completar las specs, validar con hdu.py spec {clave} y abrir el MR de las Tareas.")
+            return 0
+        if o.accion == "crear-tareas":
             r = crear_tareas(clave, o.confirmar)
             print(f"Ya existen: {', '.join(e['clave'] for e in r['existentes']) or 'ninguna'}")
             if r["pendientes"]:

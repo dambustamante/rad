@@ -11,8 +11,8 @@ dice qué se construirá, cómo se probará y qué reglas aplican.
 
 | Paso | Dónde | Qué pasa |
 |---|---|---|
-| 1. `/hdu <HISTORIA>` | Harness | Trae la historia, ayuda a refinarla y **propone las Tareas**: título, criterios que cubre y repositorios |
-| 2. `/tarea <HISTORIA>` | Harness y Jira | Crea las Tareas propuestas y una spec por cada una. También se pueden crear a mano |
+| 1. `/hdu <HISTORIA>` | Harness y Jira | Refina la historia, **propone las Tareas** y, si confirmas, las crea en Jira con una spec por cada una |
+| 2. `/tarea <HISTORIA>` | Harness | Opcional: genera la spec de las Tareas que creaste a mano |
 | 3. MR de las Tareas | Harness | Se revisan y se aprueban todas las specs, antes de programar |
 | 4. `/desarrollar <TAREA>` | `code/<repo>/` | Crea la rama de código y programa contra la spec aprobada |
 | 5. `/listo <TAREA>` | Harness | Verifica que el código cumple la spec |
@@ -24,7 +24,7 @@ Spike o una Tarea sin historia tienen [otro recorrido](docs/comandos.md#casos-di
 
 ## Empezar
 
-Requisitos: Python 3.11, `git`, `make`, Cursor, `gitleaks` y un token de Jira con lectura. `/tarea` también necesita permiso para crear incidencias.
+Requisitos: Python 3.11, `git`, `make`, Cursor, `gitleaks` y un token de Jira con lectura. Para que `/hdu` cree las Tareas, también debe poder crear incidencias.
 
 ```sh
 cp .env.example .env    # JIRA_URL, JIRA_EMAIL y JIRA_TOKEN

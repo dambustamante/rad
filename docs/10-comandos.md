@@ -1,7 +1,7 @@
 # 10. Comandos de radiografia
 
 Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos usan el producto `motor-fraudes`.
-Los comandos del harness (`/tarea`, `/hdu`, `/desarrollar` y `/listo`) están en
+Los comandos del harness (`/hdu`, `/tarea`, `/desarrollar` y `/listo`) están en
 [su propia guía](../herramientas/plantilla_harness/docs/comandos.md). Para preparar el entorno, ver
 [Instalación](01-instalacion.md).
 
@@ -156,6 +156,6 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 `/crear motor-fraudes` pregunta qué crear y no crea nada todavía.
 
 Todo lo que va a Jira muestra una vista previa y se crea solo con confirmación. Las Tareas de desarrollo no se crean
-aquí, sino con `/tarea` en el harness o a mano.
+aquí, sino con `/hdu` en el harness o a mano.
 
 Los objetivos de `make` están en [Mantenimiento](08-mantenimiento.md#objetivos-de-make).

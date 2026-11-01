@@ -7,10 +7,9 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 
 | Qué se necesita | Comando |
 |---|---|
-| Refinar una historia y proponer sus Tareas | [`/hdu <HISTORIA>`](#hdu) |
-| Crear en Jira las Tareas y sus specs | [`/tarea <HISTORIA>`](#tarea) |
-| Generar las specs de Tareas creadas a mano | [`/tarea <HISTORIA>`](#tarea) |
-| Validar las specs antes de su MR | [`python3 herramientas/hdu.py spec <HISTORIA>`](#tarea) |
+| Refinar una historia, y que te proponga y cree sus Tareas | [`/hdu <HISTORIA>`](#hdu) |
+| Generar la spec de Tareas creadas a mano | [`/tarea <HISTORIA>`](#tarea) |
+| Validar las specs antes de su MR | [`python3 herramientas/hdu.py spec <HISTORIA>`](#hdu) |
 | Aprobar las specs | [MR de las Tareas](#mr-de-las-tareas) |
 | Programar con la spec aprobada | [`/desarrollar <TAREA>`](#desarrollar) |
 | Cerrar antes del MR del código | [`/listo <TAREA>`](#listo) |
@@ -30,41 +29,40 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 /hdu FRAUD-123
 ```
 
-- Trae la última versión de las reglas y revisa la Medición HU.
-- Crea la rama `docs/FRAUD-123-tareas` en este repositorio. **No crea ramas de código.**
-- Escribe `trabajo/FRAUD-123/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados, y el
-  borrador `specs/FRAUD-123/propuesta.md`.
+1. **Prepara:** trae la última versión de las reglas y revisa la Medición HU. Crea la rama `docs/FRAUD-123-tareas` en este
+   repositorio y `trabajo/FRAUD-123/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados.
+   **No crea ramas de código.**
+2. **Cursor te propone las Tareas:** lee la historia y el código, y escribe `specs/FRAUD-123/propuesta.md` con una fila por
+   Tarea: título, criterios que cubre y repositorios. Deja como preguntas los criterios ambiguos o faltantes, porque la
+   historia no se edita en Jira. Puedes cambiar la propuesta.
+3. **Crea las Tareas si confirmas:** muestra una vista previa y las crea en Jira con Tipo `Producto`, colgando de la historia.
+   Es el único comando de este repositorio que escribe en Jira. Si no confirmas, no crea nada.
+4. **Escribe una spec por Tarea,** por ejemplo `specs/FRAUD-123/FRAUD-200.md`, con solo los criterios que cubre. Cursor ayuda a
+   completarla: objetivo, diseño, una prueba por criterio, reglas que aplican y lo que queda fuera de alcance.
+5. **Valida:**
 
-**Cursor te propone las Tareas:** lee la historia y el código, y escribe en la propuesta una fila por Tarea con su título,
-los criterios que cubre y sus repositorios. También deja como preguntas los criterios ambiguos o faltantes, porque la
-historia no se edita en Jira. Revisas la propuesta y puedes cambiarla antes de seguir. Ninguna Tarea se crea en este paso.
+   ```sh
+   python3 herramientas/hdu.py spec FRAUD-123
+   ```
+
+   La validación exige que entre todas las Tareas se cubran todos los criterios de la historia.
 
 **Se detiene si:** no puede actualizar las reglas, este repositorio no está en `main`, o la Medición HU no es Óptima,
 Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda.
 
 ### /tarea
 
-**Cuándo:** con la propuesta completa. Si prefieres crear las Tareas a mano, créalas en Jira colgando de la historia y
-ejecuta igual este comando: les genera su spec.
+**Cuándo:** solo si creaste Tareas a mano en Jira, colgando de la historia, en lugar de usar las que propone `/hdu`, o si
+agregaste una después. No escribe en Jira.
 
 ```text
 /tarea FRAUD-123
 ```
 
-- Muestra una vista previa de las Tareas por crear y de las que ya cuelgan de la historia.
-- Con confirmación, las crea con Tipo `Producto`. Es el único comando de este repositorio que escribe en Jira.
-- Escribe una spec por Tarea, por ejemplo `specs/FRAUD-123/FRAUD-200.md`, con solo los criterios que cubre.
+Escribe la spec de cada Tarea que todavía no la tiene. Cursor ayuda a completarla y a dejar solo los criterios que cubre y
+sus repositorios. Se valida igual que en `/hdu`.
 
-Cursor ayuda a completar cada spec: objetivo, diseño, una prueba por criterio, reglas que aplican y lo que queda fuera de
-alcance. Después se valida:
-
-```sh
-python3 herramientas/hdu.py spec FRAUD-123
-```
-
-La validación exige que entre todas las Tareas se cubran todos los criterios de la historia.
-
-**Se detiene si:** la incidencia no es una historia, falta la propuesta, o no hay Tareas propuestas ni creadas.
+**Se detiene si:** la incidencia no es una historia, su Medición HU no es aceptada o no hay Tareas colgando de ella.
 
 ### MR de las Tareas
 

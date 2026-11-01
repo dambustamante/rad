@@ -1,7 +1,7 @@
 # /hdu
 
-Refinar una historia de Jira y proponer sus Tareas. Uso: `/hdu <HISTORIA>`, por ejemplo `/hdu FRAUD-123`. También toma
-un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código ni se programa todavía.
+Refinar una historia de Jira, proponer sus Tareas y, con confirmación, crearlas. Uso: `/hdu <HISTORIA>`, por ejemplo `/hdu FRAUD-123`. También toma
+un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código ni se programa todavía. Es el único comando del harness que escribe en Jira.
 
 1. **Tomar:**
 
@@ -30,14 +30,42 @@ un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código
    - **Tareas propuestas:** una fila por Tarea, con título en infinitivo, números de los criterios que cubre y repositorios.
      Entre todas deben cubrir todos los criterios.
 
-   Mostrarla, aceptar cambios, pedir confirmación y seguir con `/tarea <HISTORIA>`. Ninguna Tarea se crea en este paso. Quien prefiera crear las Tareas a mano las crea en Jira
-   colgando de la historia, y `/tarea` les genera su spec.
+   Mostrarla y aceptar cambios.
 
-4. **Error, Hotfix o Tarea sin historia: completar `specs/<CLAVE>/<CLAVE>.md`**, como en `/tarea`. Validar con
+4. **Historia: crear las Tareas.**
+
+   ```sh
+   python3 herramientas/hdu.py crear-tareas <HISTORIA>
+   ```
+
+   Muestra la vista previa de las Tareas por crear y de las que ya cuelgan de la historia. Una Tarea que ya existe con el
+   mismo título no se duplica. Pedir confirmación y crearlas:
+
+   ```sh
+   python3 herramientas/hdu.py crear-tareas <HISTORIA> --confirmar
+   ```
+
+   Crea cada Tarea con el campo Tipo en `Producto`, Equipos según `config.json`, colgando de la historia, y escribe
+   `specs/<HISTORIA>/<TAREA>.md`. Si se rechaza la propuesta o el token no puede crear incidencias, no crear nada: las
+   Tareas se crean a mano en Jira y se sigue con `/tarea <HISTORIA>`.
+
+5. **Historia: completar cada spec** (una página como máximo; todavía no se programa): objetivo, diseño por repositorio
+   citando `archivo:línea`, una prueba por criterio, reglas que aplican con la sección citada, y lo que queda fuera de
+   alcance. Validar:
+
+   ```sh
+   python3 herramientas/hdu.py spec <HISTORIA>
+   ```
+
+   Exige la propuesta y todas las specs completas, y que entre todas las Tareas se cubran todos los criterios. Si es válido,
+   hacer commit en la rama `docs/<HISTORIA>-tareas`, hacer push y abrir el MR en GitLab. Al integrarse, las specs quedan
+   aprobadas. Seguir con `/desarrollar <TAREA>`.
+
+6. **Error, Hotfix o Tarea sin historia: completar `specs/<CLAVE>/<CLAVE>.md`**, igual que en el paso 5. Validar con
    `python3 herramientas/hdu.py spec <CLAVE>`, hacer commit en la rama `docs/<CLAVE>-spec`, hacer push y abrir el MR en
    GitLab. **Hotfix:** no espera la aprobación: seguir con `/desarrollar`; la spec se completa antes de `/listo`.
 
-5. **Spike:** el entregable es un ADR del producto en Propuesto. Al cerrar la investigación, crearlo con
+7. **Spike:** el entregable es un ADR del producto en Propuesto. Al cerrar la investigación, crearlo con
    `python3 herramientas/harness.py adr --titulo "<decisión>" --historia <CLAVE>`, completarlo y abrir un MR a este
    repositorio.
 

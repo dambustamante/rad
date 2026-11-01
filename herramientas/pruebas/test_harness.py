@@ -143,7 +143,7 @@ class PruebaHarness(unittest.TestCase):
                  "git push origin +feature/x": "deny", "glab mr merge 12": "deny",
                  "git -C code/fraude-core push -u origin feature/FRAUD-200": "allow",
                  "git -C code/fraude-core commit -m 'Agrega timeout'": "allow",
-                 "python3 herramientas/hdu.py tarea FRAUD-100 --confirmar": "ask"}
+                 "python3 herramientas/hdu.py crear-tareas FRAUD-100 --confirmar": "ask"}
         for comando, esperado in casos.items():
             self.assertEqual(guardia_dev.evaluar(comando)[0], esperado, comando)
         self.assertEqual(guardia.evaluar("git -C productos/motor-fraudes/harness push origin main")[0], "ask",
@@ -335,6 +335,25 @@ class PruebaHarness(unittest.TestCase):
             spike.desarrollar("FRAUD-128")
         with self.assertRaises(modulo.ErrorHdu):
             modulo.desarrollar("FRAUD-100")  # una historia no se programa
+
+    def test_tarea_genera_la_spec_de_las_hechas_a_mano(self) -> None:
+        harness.crear(self.raiz, "motor-fraudes")
+        modulo = self.hdu("Completa")
+        modulo.enviar = mock.Mock(side_effect=AssertionError("/tarea no escribe en Jira"))
+        with self.assertRaises(modulo.ErrorHdu):
+            modulo.registrar_manuales("FRAUD-100", False)  # sin Tareas colgando
+        self.hijas = [{"key": "FRAUD-150", "fields": {"summary": "Dejar en revisión"}}]
+        r = modulo.registrar_manuales("FRAUD-100", True)
+        self.assertEqual(git("branch", "--show-current", cwd=self.destino), "docs/FRAUD-100-tareas")
+        self.assertEqual([a.name for a in r["specs"]], ["FRAUD-150.md"], "sin /hdu previo también funciona")
+        archivo = r["specs"][0]
+        self.assertIn("1. La consulta responde en menos de 800 ms.", archivo.read_text(encoding="utf-8"))
+        self.assertEqual(modulo.registrar_manuales("FRAUD-100", True)["specs"], [], "no pisa una spec que ya existe")
+        archivo.write_text(re.sub(r"<completar[^>]*>", "fraude-core", archivo.read_text(encoding="utf-8")), encoding="utf-8")
+        self.assertEqual(modulo.errores_refinamiento("FRAUD-100"), [])
+        rechazada = self.hdu("Incompleta")
+        with self.assertRaises(rechazada.ErrorHdu):
+            rechazada.registrar_manuales("FRAUD-100", False)
 
     def test_todo_producto_nace_con_su_harness(self) -> None:
         import productos
