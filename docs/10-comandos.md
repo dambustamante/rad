@@ -7,16 +7,17 @@ Los comandos del harness (`/hdu`, `/tarea`, `/desarrollar` y `/listo`) están en
 
 ## Qué comando usar
 
-Son seis comandos. Si no sabes cuál usar, empieza por `/estado`.
+Son seis comandos. Si no sabes cuál usar, empieza por `/estado`. Cada uno tiene todas sus opciones en
+[Detalle de cada comando](#detalle-de-cada-comando).
 
 | Comando | Para qué sirve |
 |---|---|
-| [`/estado`](#estado) | Saber qué sigue. Con [`semanal`](#estado-semanal), ver qué cambió en la semana |
-| [`/actualizar`](#actualizar) | Traer y publicar las reglas nuevas. Con `fuentes`, agregar o retirar un repositorio de arquitectura |
-| [`/producto <nombre>`](#producto) | Registrar un producto con su harness, o administrar sus repositorios y terceros |
-| [`/revisar <producto> [repo]`](#revisar) | Conocer el estado real de un repositorio. Con [`/revisar mr`](#revisar-mr), revisar los MR abiertos |
-| [`/triar <producto> [repo]`](#triar) | Decidir qué hacer con los hallazgos |
-| [`/crear <producto> <tipo>`](#crear) | Crear un ADR, una excepción, una Tarea de deuda, un Spike, un Error o un Hotfix |
+| [`/estado`](#estado) | Saber qué sigue y qué cambió |
+| [`/actualizar`](#actualizar) | Traer y publicar las reglas nuevas |
+| [`/producto`](#producto) | Registrar y administrar un producto |
+| [`/revisar`](#revisar) | Conocer el estado real de un repositorio y revisar MR |
+| [`/triar`](#triar) | Decidir qué hacer con los hallazgos |
+| [`/crear`](#crear) | Crear un ADR, una excepción o una incidencia de Jira |
 
 ## Orden de uso
 
@@ -38,35 +39,21 @@ Después: `/estado` y `/revisar mr` cada día; `/estado semanal` y `/actualizar`
 
 ### /estado
 
-**Cuándo:** al empezar, o si no se sabe qué comando usar.
+| Comando | Qué hace |
+|---|---|
+| `/estado` | Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos locales: no usa la red ni gasta análisis |
+| `/estado semanal` | Actualiza las copias de los repositorios y escribe `productos/<producto>/semanal/<AAAA-Wnn>.md` con commits, ramas activas y hallazgos nuevos, corregidos y reaparecidos. No publica nada |
 
-```text
-/estado
-```
-
-Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos locales: no usa la red ni gasta análisis.
-
-### /estado semanal
-
-**Cuándo:** cada semana.
-
-```text
-/estado semanal
-```
-
-Actualiza las copias de los repositorios y escribe `productos/<producto>/semanal/<AAAA-Wnn>.md` con commits, ramas
-activas y hallazgos nuevos, corregidos y reaparecidos. No publica nada.
+**Cuándo:** `/estado` al empezar, o si no se sabe qué comando usar. `/estado semanal` cada semana.
 
 ### /actualizar
 
+| Comando | Qué hace |
+|---|---|
+| `/actualizar` | Trae y publica las reglas, con los pasos de abajo. La primera vez, pide los repositorios de arquitectura |
+| `/actualizar fuentes` | Agrega o retira un repositorio de arquitectura en `harness.yaml` |
+
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
-
-```text
-/actualizar
-```
-
-La primera vez, como no hay repositorios de arquitectura registrados, los pide antes de seguir. Para agregar o retirar
-uno después, se usa `/actualizar fuentes`.
 
 1. Descarga arquitectura y actualiza su índice.
 2. Trae los ADR propuestos en cada harness.
@@ -78,11 +65,11 @@ Un harness con coherencia por evaluar queda retenido y no se sube.
 
 ### /producto
 
-**Cuándo:** al recibir o iniciar un producto, y para agregar o retirar repositorios.
+| Comando | Qué hace |
+|---|---|
+| `/producto <nombre>` | Si el producto no existe, lo crea con su harness. Si existe, permite administrar sus repositorios y terceros |
 
-```text
-/producto motor-fraudes
-```
+**Cuándo:** al recibir o iniciar un producto, y para agregar o retirar repositorios.
 
 - **Producto nuevo:** pide descripción, origen (`heredado` o `nuevo`) y sigla, y crea el producto **con su harness**.
   La sigla queda fija.
@@ -94,23 +81,21 @@ muestra el script.
 
 ### /revisar
 
-**Cuándo:** al recibir un producto y cuando cambia la rama principal de un repositorio. Se usa un chat por repositorio.
+| Comando | Qué hace |
+|---|---|
+| `/revisar <producto>` | Revisa el primer repositorio pendiente del producto, o consolida el producto si todos están al día |
+| `/revisar <producto> <repo>` | Revisa ese repositorio |
+| `/revisar mr` | Publica las reglas nuevas y revisa los MR abiertos |
+| `/revisar mr --producto <producto>` | Muestra solo los MR de ese producto |
+| `/revisar mr --mios` | Muestra solo los MR donde eres revisor. Necesita `GITLAB_USUARIO` en `.env` |
 
-```text
-/revisar motor-fraudes fraude-core
-```
+**Cuándo:** `/revisar <producto>` al recibir un producto y cuando cambia la rama principal de un repositorio, con un chat por repositorio. `/revisar mr` una o dos veces al día.
 
-Ejecuta las verificaciones automáticas y Sonar, y Cursor revisa el código. Deja el estado del repositorio
+**Revisión de un repositorio:** Ejecuta las verificaciones automáticas y Sonar, y Cursor revisa el código. Deja el estado del repositorio
 (`as-is/<repo>.md`), sus hallazgos y su veredicto. Cuando todos están revisados, consolida el producto en
 `as-is/PRODUCTO.md`.
 
-### /revisar mr
-
-**Cuándo:** una o dos veces al día.
-
-```text
-/revisar mr
-```
+**Revisión de MR:**
 
 1. **Publica las reglas nuevas:** ejecuta `make harness-al-dia` y `harness.py subir`, y pide confirmación si hay cambios.
 2. **Muestra la bandeja:** primero las specs, después los ADR y los MR de código.
@@ -128,11 +113,12 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 ### /triar
 
-**Cuándo:** después de revisar.
+| Comando | Qué hace |
+|---|---|
+| `/triar <producto>` | Decide sobre los hallazgos de todo el producto |
+| `/triar <producto> <repo>` | Decide sobre los hallazgos de ese repositorio |
 
-```text
-/triar motor-fraudes
-```
+**Cuándo:** después de revisar.
 
 | Decisión | Significado |
 |---|---|
@@ -143,18 +129,22 @@ radiografia no aprueba ni integra MR: eso se hace en GitLab.
 
 ### /crear
 
-**Cuándo:** cuando hace falta. Sin indicar el tipo, `/crear motor-fraudes` pregunta qué crear y no crea nada todavía.
-
-| Comando | Qué crea |
+| Comando | Qué hace |
 |---|---|
-| `/crear motor-fraudes adr` | ADR del producto, en su harness |
-| `/crear motor-fraudes adr --desde-historias` | ADR propuestos a partir de historias |
-| `/crear motor-fraudes excepcion` | Excepción a una regla, con vencimiento |
+| `/crear <producto>` | Pregunta qué crear. No crea nada todavía |
+| `/crear <producto> adr` | ADR del producto, en su harness |
+| `/crear <producto> adr --desde-historias` | ADR propuestos a partir de historias |
+| `/crear <producto> excepcion` | Excepción a una regla, con vencimiento |
 | `/crear equipo adr` | ADR del equipo |
-| `/crear motor-fraudes tarea --desde H-0041,H-0052` | Tarea de Deuda Técnica desde hallazgos |
-| `/crear motor-fraudes tarea --deuda FRAUD-200` | Tarea desde la deuda declarada en `/listo` |
-| `/crear motor-fraudes spike`, `error` o `hotfix` | Spike, Error o Hotfix |
-| `/crear motor-fraudes error --hotfix FRAUD-300` | Error de seguimiento de un Hotfix |
+| `/crear <producto> tarea` | Tarea de deuda |
+| `/crear <producto> tarea --desde H-0041,H-0052` | Tarea de Deuda Técnica desde hallazgos |
+| `/crear <producto> tarea --deuda FRAUD-200` | Tarea desde la deuda declarada en `/listo` |
+| `/crear <producto> spike` | Spike |
+| `/crear <producto> error` | Error |
+| `/crear <producto> error --hotfix FRAUD-300` | Error de seguimiento de un Hotfix |
+| `/crear <producto> hotfix` | Hotfix |
+
+**Cuándo:** cuando hace falta.
 
 Todo lo que va a Jira muestra una vista previa y se crea solo con confirmación. Las Tareas de desarrollo no se crean
 aquí, sino con `/hdu` en el harness o a mano.

@@ -23,11 +23,14 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 
 ### /hdu
 
-**Cuándo:** al empezar una historia.
+| Comando | Qué hace |
+|---|---|
+| `/hdu <HISTORIA>` | Refina la historia, propone sus Tareas y, si confirmas, las crea |
+| `/hdu <CLAVE>` | Toma un Error, un Hotfix, un Spike o una Tarea sin historia. Ver [Casos distintos](#casos-distintos) |
+| `/hdu <CLAVE> --repos a,b` | Indica los repositorios, si no se pueden deducir de Jira |
+| `/hdu <CLAVE> --sin-rama` | No crea la rama en este repositorio |
 
-```text
-/hdu FRAUD-123
-```
+**Cuándo:** al empezar una historia. Ejemplo: `/hdu FRAUD-123`.
 
 1. **Prepara:** trae la última versión de las reglas y revisa la Medición HU. Crea la rama `docs/FRAUD-123-tareas` en este
    repositorio y `trabajo/FRAUD-123/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados.
@@ -52,12 +55,13 @@ Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda
 
 ### /tarea
 
+| Comando | Qué hace |
+|---|---|
+| `/tarea <HISTORIA>` | Crea la rama y la spec de las Tareas hechas a mano |
+| `/tarea <HISTORIA> --sin-rama` | Hace lo mismo, sin crear la rama |
+
 **Cuándo:** solo si creaste Tareas a mano en Jira, colgando de la historia, en lugar de usar las que propone `/hdu`, o si
 agregaste una después. No escribe en Jira.
-
-```text
-/tarea FRAUD-123
-```
 
 Escribe la spec de cada Tarea que todavía no la tiene. Cursor ayuda a completarla y a dejar solo los criterios que cubre y
 sus repositorios. Se valida igual que en `/hdu`.
@@ -79,16 +83,13 @@ El MR se abre en GitLab y revisa de una vez la división del trabajo. Las specs 
 
 ### /desarrollar
 
-**Cuándo:** con la spec aprobada, por cada Tarea.
-
-```text
-/desarrollar FRAUD-200
-```
-
-| Opción | Para qué |
+| Comando | Qué hace |
 |---|---|
-| `--tipo refactor` | Cambia el tipo de la rama: `feat`, `fix`, `docs`, `chore`, `test` o `refactor` |
-| `--sin-rama` | No crea ramas |
+| `/desarrollar <CLAVE>` | Comprueba la aprobación, crea las ramas y programa contra la spec |
+| `/desarrollar <CLAVE> --tipo refactor` | Cambia el tipo de la rama: `feat`, `fix`, `docs`, `chore`, `test` o `refactor` |
+| `/desarrollar <CLAVE> --sin-rama` | Hace lo mismo, sin crear ramas |
+
+**Cuándo:** con la spec aprobada, por cada Tarea.
 
 - Vuelve a `main`, trae las reglas y comprueba la aprobación.
 - Crea la rama `feat/FRAUD-200-...` en cada repositorio de la spec y deja visibles en Cursor solo esos repositorios.
@@ -104,11 +105,11 @@ detiene y se corrige la spec en un MR.
 
 ### /listo
 
-**Cuándo:** con el código terminado y todo en commits.
+| Comando | Qué hace |
+|---|---|
+| `/listo <CLAVE>` | Verifica el código contra su spec y escribe la descripción del MR |
 
-```text
-/listo FRAUD-200
-```
+**Cuándo:** con el código terminado y todo en commits.
 
 1. **Prepara:** trae las reglas y busca secretos, salidas a consola, `TODO`, cambios de API sin contrato,
    integraciones nuevas, pruebas debilitadas, y ramas o commits fuera de formato.
