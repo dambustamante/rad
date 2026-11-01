@@ -1,11 +1,10 @@
 # 6. Triaje (`/triar`)
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 ```
 /triar motor-fraudes [fraude-core]
 ```
-
-El triaje registra qué se hace con cada hallazgo. La decisión es siempre del usuario: Cursor puede
-recomendar, pero no marca filas por su cuenta.
 
 ## Las cuatro decisiones
 

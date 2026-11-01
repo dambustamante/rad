@@ -474,23 +474,33 @@ def main(argumentos: list[str] | None = None) -> int:
             print(f"  Para subirlo: crear el repositorio harness-{o.producto} en GitLab y ejecutar\n"
                   f"    git -C {relativa} remote add origin <url> && git -C {relativa} push -u origin main")
         elif o.accion == "traer":
-            for nombre in con_harness(raiz, o.producto):
-                print(f"  harness-{nombre}: {traer(raiz, nombre)}")
+            distintos = {nombre: r for nombre in con_harness(raiz, o.producto) if (r := traer(raiz, nombre)) != "actualizado"}
+            for nombre, r in distintos.items():
+                print(f"  harness-{nombre}: {r}")
+            if not distintos:
+                print("Harness: al día con su remoto.")
         elif o.accion == "generar":
+            hubo_cambios = False
             for nombre in con_harness(raiz, o.producto):
                 r = generar(raiz, nombre)
-                detalle = f"versión {r['version']}, commit local hecho: {', '.join(r['cambiados']) or 'índices de decisiones'}" \
-                    if r["commit"] else "sin cambios"
-                print(f"  harness-{nombre}: {detalle}")
+                if r["commit"]:
+                    hubo_cambios = True
+                    cambiados = r["cambiados"]
+                    print(f"  harness-{nombre}: versión {r['version']}, commit local: {len(cambiados)} archivo(s)")
                 for aviso in r["avisos"]:
                     print(f"    La plantilla cambió {aviso}: revisar si el cambio se lleva al harness (por MR).")
+            if not hubo_cambios:
+                print("Harness: sin cambios generados.")
             faltantes = sin_regla_rapida(raiz)
             if faltantes:
                 print(f"  Documentos de arquitectura vigentes sin regla rápida: {', '.join(faltantes)}")
         elif o.accion == "subir":
             resultados = {nombre: subir(raiz, nombre, o.confirmar) for nombre in con_harness(raiz, o.producto)}
             for nombre, r in resultados.items():
-                print(f"  harness-{nombre}: {r['resultado']} ({r['detalle']})")
+                if r["resultado"] != "al dia":
+                    print(f"  harness-{nombre}: {r['resultado']} ({r['detalle']})")
+            if all(r["resultado"] == "al dia" for r in resultados.values()):
+                print("Harness: nada por subir.")
             if any(r["resultado"] in ("bloqueado", "retenido") for r in resultados.values()):
                 return 1
         elif o.accion == "guardar":

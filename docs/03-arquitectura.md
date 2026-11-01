@@ -1,5 +1,7 @@
 # 3. Arquitectura y coherencia (`/actualizar`)
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 `/actualizar` deja todo al día: herramientas, documentos de arquitectura, coherencia de las
 decisiones, repositorios, páginas de Confluence e índices. Conviene
 ejecutarlo antes de cada sesión de revisión. `/estado` avisa cuando la copia de arquitectura tiene
@@ -107,4 +109,4 @@ pares:
 |---|---|
 | `arquitectura/INDICE.md` | cada documento con su estado, fuente y regla rápida |
 | `equipo/COHERENCIA.md` | resultado por ADR-EQ, criterios suspendidos y detalle de cada choque |
-| `productos/<p>/decisiones/COHERENCIA.md` | lo mismo para los ADR del producto |
+| `decisiones/COHERENCIA.md` del harness | lo mismo para los ADR del producto |

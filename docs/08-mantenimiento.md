@@ -1,5 +1,7 @@
 # 8. Mantenimiento y uso habitual
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 ## `/estado`
 
 Es el punto de entrada. Solo lee archivos locales: no usa la red ni IA.
@@ -14,7 +16,7 @@ Muestra un resumen y la lista "Qué sigue", en orden de prioridad:
 - coherencia con pares sin evaluar;
 - Sonar sin configurar;
 - por producto: repositorios por revisar, consolidación pendiente, hallazgos sin triar, excepciones
-  vencidas o inactivas, borradores sin crear en Jira, fichas de terceros incompletas, 
+  vencidas o inactivas, borradores sin crear en Jira, fichas de terceros incompletas,
   reporte semanal pendiente (más de 7 días) y la definición de terminado que se verifica sola: Tareas
   de Jira cuyos hallazgos de origen ya están corregidos (EQ-008.5, se pueden cerrar) y Spikes que
   superaron los 2 días sin un ADR de producto propuesto (EQ-008.8) y Hotfix sin su Error de

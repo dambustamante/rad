@@ -347,6 +347,9 @@ def escribir_indice_md(archivo: Path, documentos: list[dict], lock: dict, genera
 
 
 def imprimir_resumen(documentos: list[dict], cambios: dict, errores: list[str]) -> None:
+    if not errores and not any(cambios.values()) and not any(d["vigencia"] == NO_DETERMINADO for d in documentos):
+        print(f"Arquitectura: {len(documentos)} documento(s). Sin cambios respecto de la sincronización anterior.")
+        return
     print("Sincronización de arquitectura\n")
     conteo = {v: sum(1 for d in documentos if d["vigencia"] == v) for v in (*VIGENCIAS, NO_DETERMINADO)}
     print(f"  Documentos: {len(documentos)} (vigentes {conteo['vigente']}, pendientes {conteo['pendiente']}, "

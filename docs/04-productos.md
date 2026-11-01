@@ -1,5 +1,7 @@
 # 4. Productos y terceros (`/producto`)
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 ## Crear un producto
 
 ```

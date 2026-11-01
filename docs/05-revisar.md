@@ -1,5 +1,7 @@
 # 5. Revisión de repositorios y MR (`/revisar`)
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 ```
 /revisar motor-fraudes [fraude-core]
 ```

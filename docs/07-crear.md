@@ -1,5 +1,7 @@
 # 7. Crear ADR, Tareas, Spikes, Errores y Hotfix (`/crear`)
 
+> Qué hace este comando y cuándo se usa: [Comandos](10-comandos.md). Aquí está solo el detalle.
+
 ```
 /crear motor-fraudes [adr | excepcion | tarea | spike | error | hotfix]
 ```
@@ -9,8 +11,8 @@ usuario no sepa queda `NO DETERMINADO`.
 
 | Tipo | Para qué | Dónde queda |
 |---|---|---|
-| `adr` | regla propia del producto, que `/revisar` evalúa | `productos/<p>/decisiones/` |
-| `excepcion` | apartarse formalmente de una regla, con vencimiento | `productos/<p>/decisiones/` |
+| `adr` | regla propia del producto, que `/revisar` evalúa | `decisiones/` del harness |
+| `excepcion` | apartarse formalmente de una regla, con vencimiento | `decisiones/` del harness |
 | `tarea` | Deuda Técnica o Deuda Operativa | `productos/<p>/historias/borradores/` y Jira |
 | `spike` | investigar para decidir (2 días como máximo) | `productos/<p>/historias/borradores/` y Jira |
 | `error` | algo que falla en producción | `productos/<p>/historias/borradores/` y Jira |
@@ -116,19 +118,7 @@ reproduce la falla:
 La clave del Hotfix queda en las historias relacionadas del Error. `/estado` avisa si un Hotfix creado
 todavía no tiene su Error de seguimiento (EQ-008.9).
 
-### Paso 1: preguntas por tipo
-
-| Tipo | Qué pregunta Cursor |
-|---|---|
-| Spike | qué hay que decidir (una sola pregunta), por qué ahora, qué opciones se conocen, qué pesa más al decidir y qué repositorios o terceros toca |
-| Error | qué falla y dónde, desde cuándo y en qué entorno, el impacto, cómo reproducirlo, la evidencia (logs, `trace_id`, incidente) y si es el seguimiento de un Hotfix |
-| Hotfix | solo lo mínimo para actuar ya: qué falla y desde cuándo, el impacto, la evidencia y la corrección con su vuelta atrás. La causa y cómo reproducirlo van en el Error de seguimiento |
-| Deuda Operativa | qué tarea manual se hace hoy, con qué frecuencia y cuánto tarda, quién la hace y con qué riesgo, y qué repositorios intervienen |
-| Deuda Técnica | con `--desde`, solo si conviene agrupar otros hallazgos del mismo tema; sin `--desde`, qué corregir, dónde, qué problema causa y qué evidencia hay |
-
-Además pide unas palabras clave del tema para buscar en la documentación de terceros y en Jira.
-
-### Paso 2: borrador y contexto
+### Paso 1: borrador y contexto
 
 ```sh
 .venv/bin/python herramientas/jira.py nueva motor-fraudes --tipo tarea --titulo "Agregar timeout al cliente del buró" \
@@ -145,7 +135,7 @@ Opciones: `--categoria "Deuda Operativa"`, `--repos <repo1,repo2>`, `--desde <ha
 
 Si una historia de Jira ya cubre lo mismo, Cursor avisa antes de seguir.
 
-### Paso 3: redactar
+### Paso 2: redactar
 
 - **Como** un rol real (nunca "sistema"), **Quiero** lo concreto, **Para** el valor sin repetir el
   Quiero.
@@ -154,7 +144,7 @@ Si una historia de Jira ya cubre lo mismo, Cursor avisa antes de seguir.
 - Solo las decisiones que el trabajo debe respetar, con su regla rápida.
 - El título de una Tarea o un Spike empieza con un verbo en infinitivo ("Agregar…", "Evaluar…").
 
-### Paso 4: validar y ver la vista previa
+### Paso 3: validar y ver la vista previa
 
 ```sh
 .venv/bin/python herramientas/jira.py crear motor-fraudes <borrador>
@@ -167,7 +157,7 @@ y como máximo 2 días, y la regla de lenguaje. Si hay errores, se corrigen y se
 Sin errores, y sin `--confirmar`, no escribe nada: muestra el proyecto, el tipo, el título y el
 texto completo tal como quedará en Jira.
 
-### Paso 5: crear en Jira
+### Paso 4: crear en Jira
 
 Solo si el usuario lo confirma explícitamente sobre la vista previa:
 
