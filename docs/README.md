@@ -19,9 +19,9 @@ Explicación paso a paso de cómo funciona cada etapa. Para empezar rápido, ver
 ## El ciclo completo
 
 ```
-/actualizar fuentes ─► /actualizar ─► /producto ─► /revisar (un chat por repo) ─► /triar ─► /crear
-        ▲                                                                                     │
-        └──────────────────────────── /estado indica qué sigue ◄──────────────────────────────┘
+/actualizar ─► /producto ─► /revisar (un chat por repo) ─► /triar ─► /crear
+     ▲                                                                       │
+     └───────────────── /estado indica qué sigue ◄──────────────────────────────┘
 ```
 
 Cada comando ejecuta primero su parte determinista (scripts de `herramientas/`, sin IA) y después

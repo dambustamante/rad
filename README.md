@@ -83,8 +83,7 @@ Abrir la carpeta en Cursor y escribir `/estado`: indica qué hacer a continuaci�
 |---|---|
 | `/estado` | Ver qué está pendiente y qué sigue |
 | `/estado semanal` | Ver qué cambió en la semana |
-| `/actualizar` | Traer las reglas nuevas de arquitectura y publicarlas en los harness |
-| `/actualizar fuentes` | Agregar o retirar un repositorio de arquitectura |
+| `/actualizar` | Traer las reglas nuevas de arquitectura y publicarlas en los harness. La primera vez, pide los repositorios de arquitectura; después, se cambian con `/actualizar fuentes` |
 | `/producto <nombre>` | Registrar un producto y crear su harness |
 | `/revisar <producto>` | Revisar un repositorio del producto y dejar su estado y sus hallazgos |
 | `/revisar mr` | Revisar los MR abiertos |
@@ -105,8 +104,6 @@ Esta semana se recibe el producto `motor-fraudes`.
 | | Revisar sus repositorios, un chat por cada uno | `/revisar motor-fraudes` |
 | **Miércoles** | Decidir qué hacer con los hallazgos | `/triar motor-fraudes` |
 | | Crear las Tareas en Jira | `/crear motor-fraudes` |
-
-Antes de la primera semana, se ejecuta una vez `/actualizar fuentes`.
 
 ## Dónde ver los resultados
 

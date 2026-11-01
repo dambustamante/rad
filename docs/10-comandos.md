@@ -9,8 +9,6 @@ en el chat de Cursor. Los comandos del harness (`/tarea`, `/hdu`, `/desarrollar`
 ```text
 make venv y make doctor                 Una sola vez
         ↓
-/actualizar fuentes                     Una sola vez, o al cambiar los repositorios de arquitectura
-        ↓
 /actualizar                             Trae y publica las reglas
         ↓
 /producto motor-fraudes                 Registra el producto y crea su harness
@@ -53,16 +51,6 @@ Muestra un resumen y la lista "Qué sigue", por prioridad. Solo lee archivos loc
 Actualiza las copias de los repositorios y escribe `productos/<producto>/semanal/<AAAA-Wnn>.md` con commits, ramas
 activas y hallazgos nuevos, corregidos y reaparecidos. No publica nada.
 
-## `/actualizar fuentes`: registrar arquitectura
-
-**Cuándo:** la primera vez, y al agregar o retirar un repositorio de arquitectura.
-
-```text
-/actualizar fuentes
-```
-
-Registra en `harness.yaml` qué repositorios contienen los ADR y los estándares de arquitectura.
-
 ## `/actualizar`: traer y publicar las reglas
 
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
@@ -70,6 +58,9 @@ Registra en `harness.yaml` qué repositorios contienen los ADR y los estándares
 ```text
 /actualizar
 ```
+
+La primera vez, como no hay repositorios de arquitectura registrados, los pide antes de seguir. Para agregar o retirar
+uno después, se usa `/actualizar fuentes`.
 
 1. Descarga arquitectura y actualiza su índice.
 2. Trae los ADR propuestos en cada harness.
