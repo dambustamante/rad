@@ -18,7 +18,7 @@ make venv y make doctor                 Una sola vez
         ↓
 /triar motor-fraudes                    Decide qué hacer con cada hallazgo
         ↓
-/crear motor-fraudes                    Lleva a Jira lo que corresponde
+/crear motor-fraudes <tipo>             Crea un ADR o una incidencia de Jira
         ↓
 Cada día: /estado y /revisar mr         Cada semana: /estado semanal y /actualizar
 ```
