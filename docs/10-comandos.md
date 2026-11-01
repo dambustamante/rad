@@ -51,8 +51,6 @@ Después: `/estado` y `/revisar mr` cada día; `/estado semanal` y `/actualizar`
 | Comando | Qué hace |
 |---|---|
 | `/actualizar` | Trae y publica las reglas. La primera vez, pide los repositorios de arquitectura |
-| `/actualizar agrega el repositorio <url>` | Agrega un repositorio de arquitectura y sigue con la actualización |
-| `/actualizar retira el repositorio <id>` | Retira un repositorio de arquitectura y sigue con la actualización |
 
 **Cuándo:** cada semana, o al saber que hay reglas nuevas.
 
