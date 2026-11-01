@@ -304,11 +304,12 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     disponibles = documentos_producto.listar(raiz, producto) if (raiz / "productos" / producto / "harness" / "documentos").exists() else []
     if disponibles:
         lineas += ["## Documentos del producto", "",
-                   "Contrastarlos con este repositorio. Abrir solo los relacionados, por su nombre, o buscar con "
-                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"`. Citarlos como `[doc] documentos/<archivo>`. "
+                   "Contrastarlos con este repositorio. No abrir documentos completos: buscar con "
+                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"` y leer solo la parte que sirve con "
+                   f"`documentos.py titulos` y `documentos.py ver`. Citarlos como `[doc] documentos/<archivo>`. "
                    "Manda el código: lo que un documento afirma y el código contradice es un hallazgo de categoría `documentacion`, "
                    "con evidencia en el código y la cita del documento.", ""]
-        lineas += [f"- `{d['archivo']}` · {d['tipo']}" + (" · por completar: no usar como evidencia" if d["pendiente"] else "")
+        lineas += [f"- `{d['archivo']}` · {d['tipo']} · {d['lineas']} líneas" + (" · por completar: no usar como evidencia" if d["pendiente"] else "")
                    for d in disponibles[:MAXIMO_DOCUMENTOS]]
         if len(disponibles) > MAXIMO_DOCUMENTOS:
             lineas.append(f"- … y {len(disponibles) - MAXIMO_DOCUMENTOS} más: usar la búsqueda.")

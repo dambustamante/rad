@@ -10,7 +10,7 @@ da por cierto.
    .venv/bin/python herramientas/harness.py subir
    ```
 
-   Si hay un harness `retenido`, evaluar los pares con el paso 2 de `.cursor/commands/actualizar.md` y repetir
+   Si hay un harness `retenido`, evaluar los pares con `.cursor/partes/actualizar-coherencia.md` y repetir
    `subir`. Si hay alguno `por subir`, mostrar la vista previa y, con la confirmación del usuario, ejecutar
    `harness.py subir --confirmar`. Sin cambios, seguir sin comentarios.
 
@@ -56,7 +56,7 @@ da por cierto.
    ```
 
    Deja la rama del MR en una copia de solo lectura, valida los ADR cambiados y muestra los pares de
-   coherencia por evaluar. Evaluarlos como en `/actualizar` (un lote) con
+   coherencia por evaluar. Evaluarlos como indica `.cursor/partes/actualizar-coherencia.md` (un lote) con
    `.venv/bin/python herramientas/coherencia.py --decisiones <carpeta> lote <archivo>`. Responder si el ADR
    se puede aprobar: solo sin choques ni pares pendientes. La aprobación se hace en GitLab.
 

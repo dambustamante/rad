@@ -7,6 +7,8 @@ Uso:
   python herramientas/documentos.py sincronizar [<producto>]     trae las páginas de Confluence que cambiaron
   python herramientas/documentos.py listar <producto>
   python herramientas/documentos.py buscar <producto> <texto>
+  python herramientas/documentos.py titulos <producto> <archivo>     títulos de un documento y sus líneas
+  python herramientas/documentos.py ver <producto> <archivo> [--seccion TEXTO | --desde N]   una parte, nunca el documento entero
 
 Opción común: --raiz RUTA (raíz de radiografia, para pruebas).
 
@@ -36,6 +38,8 @@ CARPETA = "documentos"
 PENDIENTE = "<completar"
 MARCA_CONFLUENCE = re.compile(r"<!-- confluence id=(\d+) version=(\d+) -->")
 POR_PAGINA = 50
+MAXIMO_LINEAS_VER = 150
+ENCABEZADO = re.compile(r"^(#{1,6})\s+(.*)$")
 NIVELES = {f"h{n}": "#" * n for n in range(1, 7)}
 
 
@@ -283,7 +287,8 @@ def listar(raiz: Path, producto: str) -> list[dict]:
     for archivo in sorted(carpeta(raiz, producto).glob("*.md")):
         texto = archivo.read_text(encoding="utf-8")
         tipo = re.search(r"^- \*\*Tipo:\*\* (.+)$", texto, re.MULTILINE)
-        filas.append({"archivo": archivo.name, "tipo": tipo.group(1) if tipo else "—", "pendiente": PENDIENTE in texto})
+        filas.append({"archivo": archivo.name, "tipo": tipo.group(1) if tipo else "—", "pendiente": PENDIENTE in texto,
+                      "lineas": len(texto.splitlines())})
     return filas
 
 
@@ -295,6 +300,32 @@ def buscar(raiz: Path, producto: str, consulta: str, limite: int = 20) -> list[s
             if all(p in linea.lower() for p in palabras):
                 resultado.append(f"{CARPETA}/{archivo.name}:{numero}: {linea.strip()[:160]}")
     return resultado[:limite]
+
+
+def _lineas(raiz: Path, producto: str, archivo: str) -> list[str]:
+    ruta = carpeta(raiz, producto) / Path(archivo).name
+    if not ruta.is_file():
+        raise ErrorRadiografia(f"No existe el documento '{archivo}'. Verlos con: documentos.py listar {producto}")
+    return ruta.read_text(encoding="utf-8").splitlines()
+
+
+def titulos(raiz: Path, producto: str, archivo: str) -> list[str]:
+    return [f"{numero}: {linea}" for numero, linea in enumerate(_lineas(raiz, producto, archivo), start=1) if ENCABEZADO.match(linea)]
+
+
+def ver(raiz: Path, producto: str, archivo: str, seccion: str | None = None, desde: int = 1) -> str:
+    """Una sección, o un tramo desde una línea. Siempre con un máximo de líneas, para no gastar tokens en el documento completo."""
+    lineas = _lineas(raiz, producto, archivo)
+    inicio, fin = max(desde, 1) - 1, len(lineas)
+    if seccion:
+        inicio = next((i for i, l in enumerate(lineas) if ENCABEZADO.match(l) and seccion.lower() in l.lower()), None)
+        if inicio is None:
+            raise ErrorRadiografia(f"'{archivo}' no tiene una sección con '{seccion}'. Ver sus títulos con: documentos.py titulos")
+        nivel = len(ENCABEZADO.match(lineas[inicio]).group(1))
+        fin = next((i for i in range(inicio + 1, len(lineas)) if (m := ENCABEZADO.match(lineas[i])) and len(m.group(1)) <= nivel), len(lineas))
+    tramo = lineas[inicio:min(fin, inicio + MAXIMO_LINEAS_VER)]
+    resto = fin - inicio - len(tramo)
+    return "\n".join(f"{inicio + n}: {l}" for n, l in enumerate(tramo, start=1)) + (f"\n… {resto} línea(s) más: seguir con --desde {inicio + len(tramo) + 1}" if resto > 0 else "")
 
 
 # --- Programa principal ------------------------------------------------------------------------
@@ -319,6 +350,14 @@ def main(argumentos: list[str] | None = None) -> int:
     p = sub.add_parser("buscar")
     p.add_argument("producto")
     p.add_argument("texto")
+    p = sub.add_parser("titulos")
+    p.add_argument("producto")
+    p.add_argument("archivo")
+    p = sub.add_parser("ver")
+    p.add_argument("producto")
+    p.add_argument("archivo")
+    p.add_argument("--seccion")
+    p.add_argument("--desde", type=int, default=1)
     o = parser.parse_args(argumentos)
     raiz = o.raiz.resolve()
     try:
@@ -340,7 +379,11 @@ def main(argumentos: list[str] | None = None) -> int:
                     print(f"    NO DETERMINADO - {error}")
         elif o.accion == "listar":
             for fila in listar(raiz, o.producto):
-                print(f"  {fila['archivo']} · {fila['tipo']}" + (" · por completar" if fila["pendiente"] else ""))
+                print(f"  {fila['archivo']} · {fila['tipo']} · {fila['lineas']} líneas" + (" · por completar" if fila["pendiente"] else ""))
+        elif o.accion == "titulos":
+            print("\n".join(titulos(raiz, o.producto, o.archivo)) or "Sin títulos: usar buscar o ver --desde.")
+        elif o.accion == "ver":
+            print(ver(raiz, o.producto, o.archivo, o.seccion, o.desde))
         else:
             for linea in buscar(raiz, o.producto, o.texto):
                 print(f"  {linea}")

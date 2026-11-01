@@ -65,7 +65,7 @@ Solo se evalúan los pares nuevos o los que cambiaron desde la última vez. Curs
 pendiente en dos etapas y registra todos los de un ámbito en **un solo lote**.
 
 **Etapa A, filtro por tema.** Con los títulos y reglas rápidas decide si los dos documentos tratan
-el mismo tema. Los que no, se registran como `sin_relacion` sin leer más. Ante la duda, pasan a la
+el mismo tema. Los que no, no se escriben: el lote lleva `resto_sin_relacion: true` y quedan como `sin_relacion`. Ante la duda, pasan a la
 etapa B.
 
 **Etapa B, comparación.** Lee los extractos (decisión, regla rápida y criterios) y clasifica:
@@ -80,8 +80,8 @@ Ejemplo de lote, `.cache/coherencia-equipo.yaml`:
 
 ```yaml
 ambito: equipo
+resto_sin_relacion: true
 pares:
-  - {decision: ADR-EQ-002, doc: decision-records:ADR-011, relacion: sin_relacion}
   - decision: ADR-EQ-002
     doc: decision-records:ADR-010
     relacion: choca

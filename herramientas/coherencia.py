@@ -376,6 +376,12 @@ def registrar_lote(raiz: Path, archivo: Path) -> dict:
                 criterios, par.get("explicacion"), par.get("manual"))
         except ErrorRadiografia as error:
             errores.append(f"pares[{indice}] ({decision} × {doc}): {error}")
+    if datos.get("resto_sin_relacion") is True:  # solo se escriben los pares relacionados: los demás pendientes quedan sin relación
+        for id_decision, documentos in preparar(ambito)["pendientes"].items():
+            for clave_doc in documentos:
+                if clave_par(id_decision, clave_doc) not in evaluaciones:
+                    evaluaciones[clave_par(id_decision, clave_doc)] = evaluacion_valida(
+                        ambito, id_decision, clave_doc, "sin_relacion", None, None, [], None, None)
     if errores:
         raise ErrorRadiografia(f"El lote tiene {len(errores)} error(es); no se registró nada:\n  - " + "\n  - ".join(errores))
     estado = leer_estado(ambito)

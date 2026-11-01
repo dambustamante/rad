@@ -1,6 +1,7 @@
 # /producto: documentos del producto
 
-Toda la documentación del producto queda en markdown, en `documentos/` de su harness. Es evidencia de tipo `[doc]`: si
+Toda la documentación del producto queda en markdown, en `documentos/` de su harness. Para leerla, usar
+`documentos.py buscar`, `titulos` y `ver`: nunca abrir un documento completo. Es evidencia de tipo `[doc]`: si
 contradice al código, manda el código y la diferencia es un hallazgo. Lo que no sea de un tercero va aquí; lo de un
 tercero, en `.cursor/partes/producto-terceros.md`.
 

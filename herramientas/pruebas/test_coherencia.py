@@ -194,6 +194,17 @@ class PruebaCoherencia(unittest.TestCase):
         self.assertEqual(codigo, 1)
         self.assertIn("exige --criterios", salida)
 
+    def test_lote_por_excepcion(self) -> None:
+        lote = self.raiz / "lote.yaml"
+        total = coherencia.preparar(coherencia.ambito_equipo(self.raiz))["total_pares"]
+        self.assertGreater(total, 1)
+        lote.write_text("pares: []\n", encoding="utf-8")
+        self.ejecutar("lote", str(lote))
+        self.assertEqual(coherencia.preparar(coherencia.ambito_equipo(self.raiz))["total_pares"], total, "sin la marca no se asume nada")
+        lote.write_text("resto_sin_relacion: true\npares: []\n", encoding="utf-8")
+        self.ejecutar("lote", str(lote))
+        self.assertEqual(coherencia.preparar(coherencia.ambito_equipo(self.raiz))["total_pares"], 0)
+
     def test_lote_todo_o_nada(self) -> None:
         lote = self.raiz / "lote.yaml"
         pares = """\

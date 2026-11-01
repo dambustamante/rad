@@ -142,6 +142,9 @@ repositorio. `/revisar mr`, una o dos veces al día.
 
 Lo que un documento afirma y el código contradice queda como hallazgo de `documentacion`: manda el código.
 
+Los documentos no se abren completos: Cursor busca con `documentos.py buscar` y lee solo la parte que sirve con
+`documentos.py titulos` y `ver`, hasta 150 líneas por vez.
+
 **Cómo consolida el producto:** cuando todos los repositorios están al día, Cursor escribe la visión y las conclusiones, incluido lo
 que los documentos describen y no se encontró en ningún repositorio. Los scripts generan el C4 del producto y los cruces.
 

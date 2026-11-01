@@ -130,8 +130,22 @@ class PruebaDocumentos(unittest.TestCase):
         documentos.importar(self.raiz, "motor-fraudes", imagen)
         paquete = revision.generar_paquete(self.raiz, "motor-fraudes", "fraude-core").read_text(encoding="utf-8")
         self.assertIn("## Documentos del producto", paquete)
-        self.assertIn("- `flujo.md` · txt", paquete)
-        self.assertIn("- `diagrama.md` · dibujo · por completar: no usar como evidencia", paquete)
+        self.assertIn("- `flujo.md` · txt · ", paquete)
+        self.assertIn("por completar: no usar como evidencia", paquete)
+
+    def test_lee_por_partes(self) -> None:
+        origen = self.raiz / "largo.md"
+        origen.write_text("# Uno\n\ntexto\n\n## Dos\n\n" + "linea\n" * 400 + "\n## Tres\n\nfin\n", encoding="utf-8")
+        documentos.importar(self.raiz, "motor-fraudes", origen, "Largo")
+        self.assertIn("## Tres", " ".join(documentos.titulos(self.raiz, "motor-fraudes", "largo.md")))
+        tres = documentos.ver(self.raiz, "motor-fraudes", "largo.md", "tres")
+        self.assertIn("fin", tres)
+        self.assertNotIn("linea", tres, "la sección termina en el título siguiente")
+        dos = documentos.ver(self.raiz, "motor-fraudes", "largo.md", "dos")
+        self.assertEqual(len(dos.splitlines()), documentos.MAXIMO_LINEAS_VER + 1, "nunca entrega más del máximo")
+        self.assertIn("línea(s) más: seguir con --desde", dos)
+        with self.assertRaises(ErrorRadiografia):
+            documentos.ver(self.raiz, "motor-fraudes", "largo.md", "no existe")
 
     def test_cli(self) -> None:
         origen = self.raiz / "nota.md"
