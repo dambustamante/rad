@@ -71,13 +71,14 @@ ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No public
 
 **Cómo lo hace:**
 
-1. **Scripts:** descargan los ADR y estándares de arquitectura y actualizan su índice.
-2. **Scripts:** traen los ADR propuestos en cada harness.
-3. **Scripts:** buscan pares nuevos de decisión y documento de arquitectura.
-4. **Cursor:** evalúa esos pares. Primero filtra por tema, con la regla rápida, y lee más solo si tratan lo mismo. Cada par queda
-   como `sin_relacion`, `compatible`, `duplica` o `choca`, con citas textuales. Lo que choca queda suspendido.
-5. **Scripts:** actualizan repositorios, terceros, historias y páginas de Confluence, y regeneran las reglas de cada harness.
-6. **Scripts:** muestran qué cambió y, si confirmas, lo suben a GitLab.
+1. **Scripts (`make actualizar`):** descargan los ADR y estándares de arquitectura, traen los ADR propuestos en cada harness,
+   buscan pares nuevos de decisión y documento, actualizan repositorios, terceros, historias y páginas de Confluence, y
+   regeneran las reglas de cada harness.
+2. **Cursor:** evalúa los pares nuevos, si los hay. Primero filtra por tema, con la regla rápida, y lee más solo si tratan lo
+   mismo. Cada par queda como `sin_relacion`, `compatible`, `duplica` o `choca`, con citas textuales. Lo que choca queda
+   suspendido.
+3. **Scripts (`harness.py subir`):** vuelven a generar las reglas con ese resultado, muestran qué cambió y, si confirmas, lo
+   suben a GitLab.
 
 **Qué deja:** `arquitectura/INDICE.md`, `equipo/COHERENCIA.md`, reglas al día en cada harness y un resumen de los cambios.
 
