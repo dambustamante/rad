@@ -23,13 +23,14 @@ un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código
    componentes y hallazgos relacionados. Abrir un texto completo de `.cursor/arquitectura/` solo si el extracto no alcanza
    o si otra regla rápida toca el cambio.
 
-3. **Historia: completar `specs/<HISTORIA>/propuesta.md`.**
+3. **Historia: proponer las Tareas.** Leer la historia y el código relacionado, y escribir la propuesta en
+   `specs/<HISTORIA>/propuesta.md`, sin esperar a que la pidan:
    - **Preguntas para refinar:** criterios ambiguos o faltantes. La historia no se edita en Jira: se preguntan. Si no hay,
      escribir `Ninguna`.
    - **Tareas propuestas:** una fila por Tarea, con título en infinitivo, números de los criterios que cubre y repositorios.
      Entre todas deben cubrir todos los criterios.
 
-   Mostrarla, pedir confirmación y seguir con `/tarea <HISTORIA>`. Quien prefiera crear las Tareas a mano las crea en Jira
+   Mostrarla, aceptar cambios, pedir confirmación y seguir con `/tarea <HISTORIA>`. Ninguna Tarea se crea en este paso. Quien prefiera crear las Tareas a mano las crea en Jira
    colgando de la historia, y `/tarea` les genera su spec.
 
 4. **Error, Hotfix o Tarea sin historia: completar `specs/<CLAVE>/<CLAVE>.md`**, como en `/tarea`. Validar con

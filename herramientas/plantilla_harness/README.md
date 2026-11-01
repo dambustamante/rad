@@ -11,7 +11,7 @@ dice qué se construirá, cómo se probará y qué reglas aplican.
 
 | Paso | Dónde | Qué pasa |
 |---|---|---|
-| 1. `/hdu <HISTORIA>` | Harness | Trae la historia, ayuda a refinarla y propone las Tareas |
+| 1. `/hdu <HISTORIA>` | Harness | Trae la historia, ayuda a refinarla y **propone las Tareas**: título, criterios que cubre y repositorios |
 | 2. `/tarea <HISTORIA>` | Harness y Jira | Crea las Tareas propuestas y una spec por cada una. También se pueden crear a mano |
 | 3. MR de las Tareas | Harness | Se revisan y se aprueban todas las specs, antes de programar |
 | 4. `/desarrollar <TAREA>` | `code/<repo>/` | Crea la rama de código y programa contra la spec aprobada |

@@ -35,8 +35,9 @@ Los comandos que empiezan con `/` se escriben en el chat de Cursor. Los ejemplos
 - Escribe `trabajo/FRAUD-123/contexto.md`, con hasta 3 extractos de los documentos de arquitectura más relacionados, y el
   borrador `specs/FRAUD-123/propuesta.md`.
 
-Cursor ayuda a completar la propuesta: preguntas sobre criterios ambiguos o faltantes, y una fila por Tarea con su título,
-los criterios que cubre y sus repositorios. La historia no se edita en Jira: las dudas quedan como preguntas.
+**Cursor te propone las Tareas:** lee la historia y el código, y escribe en la propuesta una fila por Tarea con su título,
+los criterios que cubre y sus repositorios. También deja como preguntas los criterios ambiguos o faltantes, porque la
+historia no se edita en Jira. Revisas la propuesta y puedes cambiarla antes de seguir. Ninguna Tarea se crea en este paso.
 
 **Se detiene si:** no puede actualizar las reglas, este repositorio no está en `main`, o la Medición HU no es Óptima,
 Completa o Adecuada. Si está vacía, se toma, y `/listo` exige revisar la deuda.
