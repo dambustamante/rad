@@ -38,6 +38,7 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `SONAR_ORGANIZACION` | solo SonarCloud | clave de la organización |
 | `SONAR_TOKEN` | sí | token con permiso de lectura (Browse) sobre los proyectos |
 | `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | leer historias de usuario y crear Tareas, Spikes, Errores y Hotfix |
+| `CONFLUENCE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_TOKEN` | no | importar documentos del producto desde Confluence, en solo lectura |
 | `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar MR o PR y publicar el comentario |
 
 Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden leer

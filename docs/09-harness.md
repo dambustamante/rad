@@ -23,6 +23,7 @@ harness-motor-fraudes/
 │   ├── commands/                         /hdu, /tarea, /desarrollar y /listo
 │   └── hooks.json                        guardia de comandos
 ├── docs/comandos.md                      guía de comandos, de principio a fin
+├── documentos/                           documentación del producto, en markdown
 ├── specs/<HISTORIA>/                     propuesta.md y una spec por Tarea (<TAREA>.md), aprobadas por MR
 ├── decisiones/                           ADR del producto, plantilla, INDICE.md y COHERENCIA.md (estos dos, generados)
 ├── herramientas/                         harness.py (code, doctor, foco, adr), hdu.py, listo.py y guardia.py

@@ -63,6 +63,7 @@ def revisar() -> list[tuple[str, str, str]]:
 
     for variable in ("JIRA_URL", "JIRA_EMAIL", "JIRA_TOKEN"):
         resultados.append(_variable(env, variable, "necesario solo para productos con historias en Jira"))
+    resultados.append(_variable(env, "CONFLUENCE_URL", "necesario solo para importar documentos desde Confluence"))
 
     if shutil.which("pdftotext"):
         resultados.append((OK, "pdftotext", "instalado"))

@@ -17,7 +17,7 @@ este comando: siempre mediante el script.
 
    - Si el producto existe, mostrar sus repositorios en una tabla (`id`, `tipo`, `rama`, `sonar`,
      `estado`) y preguntar: agregar repositorios, retirar uno, registrar o completar terceros
-     (el producto comprado y las integraciones), configurar las historias de usuario (ver
+     (el producto comprado y las integraciones), cargar documentos, configurar las historias de usuario (ver
      `.cursor/partes/crear-historias.md`, "Fuente de historias") o nada.
    - Si no existe, pedir una descripción de una frase, el **origen** (`heredado`: se recibe de otro
      equipo y se toma el control; `nuevo`: se construye desde el inicio) y la sigla para numerar sus
@@ -93,6 +93,11 @@ este comando: siempre mediante el script.
 
 Para registrar o completar el producto comprado y las integraciones, leer y seguir
 `.cursor/partes/producto-terceros.md`.
+
+## Documentos del producto
+
+Para cargar Confluence, PDF, conversaciones, dibujos y otros documentos, leer y seguir
+`.cursor/partes/producto-documentos.md`.
 
 ## Reglas
 

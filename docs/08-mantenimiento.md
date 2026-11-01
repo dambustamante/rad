@@ -64,6 +64,7 @@ Primero actualiza las copias de los repositorios. Después escribe, por producto
 | `make terceros` | indexa la documentación de terceros |
 | `make historias` | sincroniza las historias de usuario configuradas |
 | `make harness-traer` | trae la última versión de cada harness de producto |
+| `make documentos` | trae las páginas de Confluence ya importadas que cambiaron |
 | `make harness-generar` | regenera lo generado en cada harness y hace commit local si cambió |
 | `make harness-al-dia` | reglas de arquitectura y de equipo al día en cada harness, sin subirlas |
 | `make indices` | regenera los `INDICE.md` |

@@ -13,6 +13,7 @@ Entra
   Código, documentación y MR de los productos
   Sonar
   Historias de Jira
+  Documentos del producto: Confluence, PDF, conversaciones y dibujos
   Documentos de terceros
         │
         ▼

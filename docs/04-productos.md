@@ -156,6 +156,27 @@ código:
 Un hallazgo puede citar la documentación del tercero (`terceros/<id>/docs/<archivo>`); la cita se
 valida contra el texto indexado.
 
+## Documentos del producto
+
+Toda la documentación del producto, salvo la de un tercero, queda **en markdown** en `documentos/` de su harness, con su
+tipo, origen y fecha.
+
+| Qué se trae | Comando | Resultado |
+|---|---|---|
+| Página de Confluence | `documentos.py confluence motor-fraudes <url>` | Se convierte a markdown |
+| Espacio de Confluence | `documentos.py confluence motor-fraudes --espacio FRAUDE` | Una página de markdown por cada página del espacio |
+| PDF, Word, PowerPoint, Excel, HTML, texto | `documentos.py importar motor-fraudes <archivo>` | Se convierte a markdown |
+| Dibujo o imagen | `documentos.py importar motor-fraudes <imagen>` | Markdown por completar: Cursor mira la imagen y escribe qué muestra |
+| Conversación | `documentos.py importar motor-fraudes <archivo> --conversacion` | Markdown por completar: fecha, decisiones y pendientes, sin copiar el chat |
+
+- **Confluence es de solo lectura.** Se configura en `.env`: `CONFLUENCE_URL` y, si difieren de los de Jira,
+  `CONFLUENCE_EMAIL` y `CONFLUENCE_TOKEN`. `/actualizar` trae las páginas importadas que cambiaron.
+- **Lo que no se importa:** las imágenes dentro de una página de Confluence, los formatos antiguos (`.doc`, `.ppt`, `.xls`) y
+  los PDF escaneados.
+- **Secretos:** un documento con un posible secreto no se guarda. Necesita `gitleaks`. Los datos personales no se detectan.
+- **Evidencia:** se cita como `[doc]`. Si contradice al código, manda el código y la diferencia es un hallazgo.
+- **Acceso:** todos los que usan el harness ven estos documentos. Lo confidencial no se importa.
+
 ## Fuente de historias de usuario
 
 Opcional. Permite proponer ADR a partir de historias de Jira y crear Tareas, Spikes, Errores y Hotfix. Se

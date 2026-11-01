@@ -427,7 +427,7 @@ def subir(raiz: Path, producto: str, confirmar: bool) -> dict:
 def guardar(raiz: Path, producto: str, mensaje: str) -> bool:
     destino = ruta(raiz, producto)
     indices_decisiones(raiz, producto)
-    return commit(destino, mensaje, ["decisiones/"])
+    return commit(destino, mensaje, ["decisiones/", *(["documentos/"] if (destino / "documentos").exists() else [])])
 
 
 def estado(raiz: Path, producto: str) -> dict:

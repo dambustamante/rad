@@ -299,6 +299,13 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
         lineas += [f"- `{a}`" for a in base["cambiados"][:200]] + ([f"- … y {len(base['cambiados']) - 200} más"] if len(base["cambiados"]) > 200 else [])
         lineas.append("")
 
+    documentos_producto = list((raiz / "productos" / producto / "harness" / "documentos").glob("*.md"))
+    if documentos_producto:
+        lineas += ["## Documentos del producto", "",
+                   f"Hay {len(documentos_producto)} en `documentos/` de su harness. Buscar con "
+                   f"`.venv/bin/python herramientas/documentos.py buscar {producto} \"<palabras>\"` y citar como `[doc]`. Si contradicen "
+                   "al código, manda el código y la diferencia es un hallazgo.", ""]
+
     fichas = terceros.para_repo(raiz, producto, repo)
     if fichas:
         lineas += ["## Terceros", "",

@@ -21,7 +21,8 @@ un Error, un Hotfix, un Spike o una Tarea sin historia. No crea ramas de código
 
 2. **Leer** `trabajo/<CLAVE>/contexto.md`: criterios, descripción, extractos de arquitectura y, por repositorio, terceros,
    componentes y hallazgos relacionados. Abrir un texto completo de `.cursor/arquitectura/` solo si el extracto no alcanza
-   o si otra regla rápida toca el cambio.
+   o si otra regla rápida toca el cambio. Para saber cómo funciona el producto, buscar en `documentos/`; si contradice al
+   código, manda el código.
 
 3. **Historia: proponer las Tareas.** Leer la historia y el código relacionado, y escribir la propuesta en
    `specs/<HISTORIA>/propuesta.md`, sin esperar a que la pidan:

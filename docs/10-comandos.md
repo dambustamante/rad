@@ -72,7 +72,10 @@ Un harness con coherencia por evaluar queda retenido y no se sube.
 
 - **Producto nuevo:** pide descripción, origen (`heredado` o `nuevo`) y sigla, y crea el producto **con su harness**.
   La sigla queda fija.
-- **Producto existente:** permite agregar o retirar repositorios, registrar terceros y configurar historias.
+- **Producto existente:** permite agregar o retirar repositorios, registrar terceros, cargar documentos y configurar
+  historias.
+- **Documentos:** Confluence, PDF, Word, PowerPoint, Excel, HTML, texto, conversaciones y dibujos quedan en markdown en
+  `documentos/` del harness. Ver [Documentos del producto](04-productos.md#documentos-del-producto).
 - **Repositorios:** inspecciona cada uno, propone el registro y los agrega solo con confirmación.
 
 **Paso manual:** crear el repositorio `harness-motor-fraudes` en GitLab y hacer el primer push, con los comandos que
