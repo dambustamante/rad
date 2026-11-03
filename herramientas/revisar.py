@@ -188,6 +188,8 @@ def escribir_ficha(raiz: Path, producto: str, repo: dict, revision: dict, regist
                                   "## Revisión de código\n\nPendiente: completar con /revisar en Cursor "
                                   "(AS IS y comparación con arquitectura).")
     archivo.write_text(texto, encoding="utf-8")
+    import ficha
+    ficha.componer(raiz, producto, repo["id"])
 
 
 # --- Revisión ----------------------------------------------------------------------------------

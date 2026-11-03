@@ -38,6 +38,23 @@ class PruebaDeteccion(unittest.TestCase):
             self.assertTrue(revision.SIN_REVISAR.search(normalizar(motivo)), motivo)
         self.assertFalse(revision.SIN_REVISAR.search(normalizar("El tier del servicio no está declarado en el repositorio.")))
 
+    def test_la_ficha_agrupa_y_acorta(self) -> None:
+        import ficha
+        base = {"repo": "r", "rama": "main", "estado": "abierto", "modo": "propuesta", "nivel": 3, "criterio": "EQ-001.1",
+                "fuente": "ADR-EQ-001", "severidad": "bloqueante", "titulo": "Posible secreto (jwt) en a.json"}
+        lista = [{**base, "id": f"H-{n}", "evidencia": [{"archivo": "a.json", "linea": n}]} for n in (404, 430, 461)]
+        grupos = ficha.grupos(lista)
+        self.assertEqual((len(grupos), grupos[0]["ids"]), (1, ["H-404", "H-430", "H-461"]), "los repetidos van en una fila")
+        self.assertIn("(líneas 404, 430, 461)", ficha.donde(grupos[0]))
+        self.assertFalse(grupos[0]["cuenta"], "un ADR en Propuesto informa")
+        self.assertEqual(ficha.regla_de(base), "ADR-EQ-001")
+        largo = "<!-- automatico:inicio -->\n## Datos generales\n\n## Sonar\n\nNO DETERMINADO - x [SSL: CERTIFICATE_VERIFY_FAILED] y\n" \
+                "\n## Hallazgos automáticos abiertos\n\n| ID |\n<!-- automatico:fin -->"
+        corto = ficha.limpiar_automatico(largo)
+        self.assertIn("configurar `CA_BUNDLE`", corto)
+        self.assertNotIn("Hallazgos automáticos abiertos", corto)
+        self.assertTrue(corto.endswith("<!-- automatico:fin -->"))
+
     def test_certificados_de_la_red(self) -> None:
         with tempfile.TemporaryDirectory() as carpeta, mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("REQUESTS_CA_BUNDLE", None)

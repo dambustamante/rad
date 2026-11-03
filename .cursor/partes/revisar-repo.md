@@ -21,8 +21,8 @@ revisar solo lo que el cambio afecta: lo demás se hereda.
 
 ## 3. AS IS
 
-`revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`, cada afirmación con su etiqueta
-de evidencia:
+`revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`. Cada afirmación primero y, al final entre paréntesis,
+su etiqueta y su ubicación, para que se lea de corrido: «Usa Spring WebFlux ([hecho] `build.gradle:47`).»
 
 1. **Propósito**: qué hace y qué capacidad de negocio soporta.
 2. **Arquitectura real**: estilo, módulos y cómo dependen entre sí; lo que hay, no lo que debería haber.

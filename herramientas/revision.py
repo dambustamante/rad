@@ -822,23 +822,54 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             hallazgos_por_clave.setdefault(clave_de(h["fuente"], h["criterio"]), []).append(h["id"])
     lineas = ["## Componentes", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     lineas += tabla_componentes(trabajo.get("componentes", []))
-    lineas += ["", "## Comparación con lo decidido", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
-    for nivel, titulo in ((1, "Nivel 1: ADR de arquitectura"), (2, "Nivel 2: estándares de arquitectura"),
-                          (3, "Nivel 3: decisiones del equipo (revisión de código)"),
-                          (4, "Nivel 4: decisiones del producto (revisión de código)")):
+    lineas += ["", "## Cumplimiento", "", "> Sección generada al cerrar la revisión de código. No se edita a mano. "
+               "«Cuenta» indica si la regla está vigente: las de ADR en Propuesto informan y no cambian el veredicto.", "",
+               "| Nivel | ✅ Cumple | ❌ No cumple | ❔ No determinado | ➖ No aplica |", "|---|---|---|---|---|"]
+    niveles = ((1, "ADR de arquitectura"), (2, "Estándares de arquitectura"), (3, "ADR de equipo"), (4, "ADR del producto"))
+    for nivel, titulo in niveles:
+        cuenta = Counter(e["resultado"] for e in trabajo["evaluaciones"].values() if e["nivel"] == nivel)
+        lineas.append(f"| {titulo} | {cuenta['CUMPLE']} | {cuenta['NO CUMPLE']} | {cuenta['NO DETERMINADO']} | {cuenta['NO APLICA']} |")
+    for nivel, titulo in niveles:
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
-        lineas += [f"### {titulo}", ""]
         if not evaluaciones:
-            lineas += ["Nada que evaluar.", ""]
             continue
-        lineas += ["| Fuente | Resultado | Modo | Motivo | Hallazgos |", "|---|---|---|---|---|"]
-        for clave, e in evaluaciones:
-            lineas.append(f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} | {e['modo']} "
-                          f"| {e['motivo'].replace('|', '/')} | {', '.join(hallazgos_por_clave.get(clave, [])) or '—'} |")
-        lineas.append("")
-    lineas.append(f"Veredicto: **{veredicto(registro, repo, ctx['rama'])}**")
+        principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
+        resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
+        fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
+                             f"| {'sí' if e['modo'] == 'vigente' else 'no'} | {e['motivo'].replace('|', '/')} "
+                             f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
+        lineas += ["", f"### {titulo}", ""]
+        if principales:
+            lineas += ["| Regla | Resultado | Cuenta | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in principales)]
+        else:
+            lineas.append("Todo cumple o no aplica.")
+        if resto:
+            lineas += ["", f"<details><summary>{len(resto)} que cumplen o no aplican</summary>", "",
+                       "| Regla | Resultado | Cuenta | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in resto),
+                       "", "</details>"]
+    lineas += ["", f"Veredicto: **{veredicto(registro, repo, ctx['rama'])}**"]
     texto = reemplazar_bloque(texto, MARCA_COMPARACION, "\n".join(lineas))
     archivo.write_text(texto, encoding="utf-8")
+    import ficha
+    ficha.componer(raiz, producto, repo)
+
+
+def regenerar_fichas(raiz: Path, producto: str, repo: str | None = None) -> list[Path]:
+    """Recompone las fichas con lo ya registrado: el cumplimiento sale del lote de la última revisión de código."""
+    import ficha
+    registro = registro_hallazgos.cargar(raiz, producto)
+    archivos = []
+    for id_repo, estado in sorted((registro.get("repos") or {}).items()):
+        if repo and id_repo != repo:
+            continue
+        codigo = estado.get("codigo")
+        asis = carpeta_revision(raiz, producto, codigo["id"]) / "revision" / f"{id_repo}-asis.md" if codigo else None
+        if codigo and asis.exists():
+            ctx = {"id_revision": codigo["id"], "commit": codigo["commit"], "rama": estado["rama"]}
+            escribir_ficha_revision(raiz, producto, id_repo, ctx, leer_trabajo(raiz, producto, codigo["id"], id_repo),
+                                    asis.read_text(encoding="utf-8"), registro)
+        archivos.append(ficha.componer(raiz, producto, id_repo))
+    return archivos
 
 
 # --- Producto ----------------------------------------------------------------------------------
@@ -983,6 +1014,9 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("producto")
     p.add_argument("repo")
     p.add_argument("--archivos-leidos", type=int)
+    p = sub.add_parser("ficha", help="vuelve a componer las fichas con el diseño vigente, sin repetir la revisión")
+    p.add_argument("producto")
+    p.add_argument("repo", nargs="?")
     p = sub.add_parser("producto")
     p.add_argument("producto")
     p.add_argument("--narrativa", type=Path)
@@ -1016,6 +1050,9 @@ def main(argumentos: list[str] | None = None) -> int:
                   f"reaparecidos {len(s['reaparecidos'])}.")
             for aviso in r["avisos"]:
                 print(f"  Aviso: {aviso}")
+        elif o.accion == "ficha":
+            for archivo in regenerar_fichas(raiz, o.producto, o.repo):
+                print(f"Ficha: {archivo.relative_to(raiz)}")
         elif o.accion == "producto":
             print(f"Generado: {consolidar_producto(raiz, o.producto, o.narrativa).relative_to(raiz)}")
     except ErrorRadiografia as error:

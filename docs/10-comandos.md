@@ -149,7 +149,18 @@ Los documentos no se abren completos: Cursor busca con `documentos.py buscar` y 
 **Cómo consolida el producto:** cuando todos los repositorios están al día, Cursor escribe la visión y las conclusiones, incluido lo
 que los documentos describen y no se encontró en ningún repositorio. Los scripts generan el C4 del producto y los cruces.
 
-**Qué deja:** `as-is/<repo>.md`, `as-is/PRODUCTO.md`, los hallazgos con archivo y línea, y el veredicto.
+**Qué deja:** `as-is/<repo>.md`, la ficha de cada repositorio, y `as-is/PRODUCTO.md`. La ficha empieza por lo importante:
+
+| Sección | Qué muestra |
+|---|---|
+| Resumen | Veredicto, hallazgos por severidad, **qué ADR de arquitectura, estándares y ADR de equipo se incumplen**, y qué hacer primero |
+| Hallazgos | Una tabla de lo más grave a lo menos, con los repetidos del mismo archivo en una fila |
+| Revisión de código | Cómo es hoy: propósito, arquitectura, configuración, observabilidad y riesgos |
+| Componentes y cumplimiento | Conteo por nivel y detalle de lo que no cumple o no se pudo determinar. Lo que cumple o no aplica queda plegado |
+| Datos técnicos | Commit, Sonar y verificaciones automáticas |
+
+«Cuenta» indica si el hallazgo cambia el veredicto: los de ADR en Propuesto solo informan. Para aplicar este diseño a fichas ya
+generadas, sin repetir la revisión: `.venv/bin/python herramientas/revision.py ficha <producto> [repo]`.
 
 **Cómo revisa los MR:**
 

@@ -190,7 +190,14 @@ class PruebaRevision(unittest.TestCase):
 
         ficha = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").read_text(encoding="utf-8")
         self.assertIn("## Arquitectura real", ficha)
-        self.assertIn("| decisiones:ADR-010 | ❌ NO CUMPLE | vigente |", ficha)
+        self.assertIn("| decisiones:ADR-010 | ❌ NO CUMPLE | sí |", ficha)
+        self.assertLess(ficha.index("## Resumen"), ficha.index("## Revisión de código"), "lo importante primero")
+        self.assertIn("- `decisiones:ADR-010` Timeouts obligatorios: 1 hallazgo(s), cuenta", ficha)
+        self.assertIn("**ADR de equipo**", ficha)
+        self.assertLess(ficha.index("## Cumplimiento"), ficha.index("## Datos técnicos"), "los datos técnicos al final")
+        self.assertNotIn("## Hallazgos automáticos abiertos", ficha)
+        archivo_ficha = revision.regenerar_fichas(self.raiz, "motor-fraudes", "fraude-core")[0]
+        self.assertEqual(archivo_ficha.read_text(encoding="utf-8"), ficha, "recomponer no cambia una ficha al día")
         self.assertIn("Veredicto: **NO PASA (1 bloqueante(s) o alto(s) vigente(s))**", ficha)
         self.assertIn("fraude-core (propio): al día", self.ejecutar("pendientes", "motor-fraudes")[1])
 
