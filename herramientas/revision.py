@@ -821,13 +821,9 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             hallazgos_por_clave.setdefault(clave_de(h["fuente"], h["criterio"]), []).append(h["id"])
     lineas = ["## Componentes", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     lineas += tabla_componentes(trabajo.get("componentes", []))
-    lineas += ["", "## Cumplimiento", "", "> Sección generada al cerrar la revisión de código. No se edita a mano. "
-               "«Cuenta» indica si la regla está vigente: las de ADR en Propuesto informan y no cambian el veredicto.", "",
-               "| Nivel | ✅ Cumple | ❌ No cumple | ❔ No determinado | ➖ No aplica |", "|---|---|---|---|---|"]
+    lineas += ["", "## Detalle del cumplimiento", "", "> El resumen está al inicio, en Cumplimiento. «Afecta el veredicto»: «Sí» si la "
+               "regla está vigente, «No» si es un ADR en Propuesto."]
     niveles = ((1, "ADR de arquitectura"), (2, "Estándares de arquitectura"), (3, "ADR de equipo"), (4, "ADR del producto"))
-    for nivel, titulo in niveles:
-        cuenta = Counter(e["resultado"] for e in trabajo["evaluaciones"].values() if e["nivel"] == nivel)
-        lineas.append(f"| {titulo} | {cuenta['CUMPLE']} | {cuenta['NO CUMPLE']} | {cuenta['NO DETERMINADO']} | {cuenta['NO APLICA']} |")
     for nivel, titulo in niveles:
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
         if not evaluaciones:
@@ -835,16 +831,16 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
         principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
         resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
         fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
-                             f"| {'—' if e['resultado'] == 'NO APLICA' else 'sí' if e['modo'] == 'vigente' else 'no'} | {e['motivo'].replace('|', '/')} "
+                             f"| {'—' if e['resultado'] == 'NO APLICA' else 'Sí' if e['modo'] == 'vigente' else 'No'} | {e['motivo'].replace('|', '/')} "
                              f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
         lineas += ["", f"### {titulo}", ""]
         if principales:
-            lineas += ["| Regla | Resultado | Cuenta | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in principales)]
+            lineas += ["| Regla | Resultado | Afecta el veredicto | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in principales)]
         else:
             lineas.append("Todo cumple o no aplica.")
         if resto:
             lineas += ["", f"<details><summary>{len(resto)} que cumplen o no aplican</summary>", "",
-                       "| Regla | Resultado | Cuenta | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in resto),
+                       "| Regla | Resultado | Afecta el veredicto | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in resto),
                        "", "</details>"]
     texto = reemplazar_bloque(texto, MARCA_COMPARACION, "\n".join(lineas))
     archivo.write_text(texto, encoding="utf-8")

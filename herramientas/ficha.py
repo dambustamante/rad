@@ -80,32 +80,61 @@ def regla_de(h: dict) -> str:
     return h["fuente"]
 
 
-def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dict, revision: str | None) -> str:
+AFECTA = ("**Afecta el veredicto:** «Sí» si la regla está vigente. «No» si es un ADR en Propuesto, una deuda aceptada o un "
+          "falso positivo: se informa, pero no cambia el veredicto.")
+ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, en el archivo y la línea indicados; **[doc]** lo dice "
+             "la documentación del repositorio o del producto; **[inferencia]** deducción sin verificación directa.")
+
+
+def fila_cumplimiento(nombre: str, conteo: dict) -> str:
+    evaluados = sum(conteo.values())
+    resultado = ("Sin evaluar" if not evaluados else "❌ No cumple" if conteo.get("NO CUMPLE") else
+                 "❔ Incompleto" if conteo.get("NO DETERMINADO") else "✅ Cumple")
+    return (f"| {nombre} | {resultado} | {conteo.get('CUMPLE', 0)} | {conteo.get('NO CUMPLE', 0)} | {conteo.get('NO DETERMINADO', 0)} "
+            f"| {conteo.get('NO APLICA', 0)} |")
+
+
+def tabla_cumplimiento(evaluaciones: dict, verificaciones: list[dict], sonar_estado: dict, sonar_abiertos: int) -> list[str]:
+    from collections import Counter
+    lineas = ["| Qué se revisó | Resultado | ✅ Cumple | ❌ No cumple | ❔ No determinado | ➖ No aplica |", "|---|---|---|---|---|---|"]
+    for nivel in (1, 2, 3, 4):
+        lineas.append(fila_cumplimiento(NIVELES[nivel], Counter(e["resultado"] for e in evaluaciones.values() if e["nivel"] == nivel)))
+    lineas.append(fila_cumplimiento("Verificaciones automáticas", Counter(v["resultado"] for v in verificaciones)))
+    if sonar_estado.get("estado") == "ok":
+        compuerta = sonar_estado.get("quality_gate") or "—"
+        lineas.append(f"| Sonar | {'✅' if compuerta == 'OK' else '❌'} Quality gate {compuerta}, {sonar_abiertos} issue(s) | — | — | — | — |")
+    else:
+        lineas.append("| Sonar | ❔ No se pudo consultar | — | — | — | — |")
+    return lineas
+
+
+def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dict, revision: str | None,
+                  evaluaciones: dict, verificaciones: list[dict], sonar_estado: dict) -> str:
     lista = abiertos(registro, repo, rama)
     lineas = [f"**Veredicto: {veredicto(registro, repo, rama)}**" + (f" · revisión `{revision}`" if revision else ""), "",
-              "| Severidad | Cuentan para el veredicto | Informativos |", "|---|---|---|"]
-    for s in SEVERIDADES:
-        lineas.append(f"| {s.capitalize()} | {sum(1 for h in lista if h['severidad'] == s and cuenta(h))} "
-                      f"| {sum(1 for h in lista if h['severidad'] == s and not cuenta(h))} |")
-    lineas += ["", "Informativos: hallazgos de ADR en Propuesto, aceptados como deuda o marcados como falso positivo. No cambian el "
-               "veredicto.", "", "## Qué se incumple"]
+              "## Cumplimiento", "", *tabla_cumplimiento(evaluaciones, verificaciones, sonar_estado, sum(1 for h in lista if h["nivel"] == 5)),
+              "", "El detalle de cada regla está al final, en [Detalle del cumplimiento](#detalle-del-cumplimiento).", "",
+              "## Qué se incumple", ""]
     nombres = titulos(raiz, producto)
     por_nivel: dict[int, dict[str, list[dict]]] = {}
     for h in lista:
         por_nivel.setdefault(h["nivel"], {}).setdefault(regla_de(h), []).append(h)
-    if not por_nivel:
-        lineas.append("Nada: no hay hallazgos abiertos.")
-    for nivel in sorted(por_nivel):
-        lineas += ["", f"**{NIVELES.get(nivel, f'Nivel {nivel}')}**", ""]
-        if nivel == 5:
-            lineas.append(f"- {len(por_nivel[nivel].get('sonar', [])) or sum(len(v) for v in por_nivel[nivel].values())} issue(s) de Sonar")
+    for nivel in [1, 2, 3, *[n for n in (4, 5) if n in por_nivel]]:
+        lineas += [f"**{NIVELES[nivel]}**", ""]
+        reglas = por_nivel.get(nivel, {})
+        if not reglas:
+            lineas += ["Ninguno.", ""]
             continue
-        for regla, hallazgos in sorted(por_nivel[nivel].items()):
+        if nivel == 5:
+            lineas += [f"- {sum(len(v) for v in reglas.values())} issue(s) de Sonar", ""]
+            continue
+        for regla, hallazgos in sorted(reglas.items()):
             criterios = sorted({h["criterio"] for h in hallazgos if h.get("criterio")})
-            estado = "cuenta" if any(cuenta(h) for h in hallazgos) else "informativo"
-            lineas.append(f"- `{regla}` {nombres.get(regla, '')}".rstrip() + f": {len(hallazgos)} hallazgo(s), {estado}"
+            afecta = "afecta el veredicto" if any(cuenta(h) for h in hallazgos) else "no afecta el veredicto"
+            lineas.append(f"- `{regla}` {nombres.get(regla, '')}".rstrip() + f": {len(hallazgos)} hallazgo(s), {afecta}"
                           + (f" (criterios {', '.join(criterios)})" if criterios else ""))
-    lineas += ["", "## Qué hacer primero", ""]
+        lineas.append("")
+    lineas += ["## Qué hacer primero", ""]
     acciones = grupos(lista)[:MAXIMO_ACCIONES]
     lineas += [f"{n}. {que(g)} ({', '.join(g['ids'][:3])}{'…' if len(g['ids']) > 3 else ''})"
                for n, g in enumerate(acciones, start=1)] or ["Nada pendiente."]
@@ -116,12 +145,16 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
 
 def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lista = grupos(abiertos(registro, repo, rama))
-    lineas = ["## Hallazgos", "", "> De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
+    todos = abiertos(registro, repo, rama)
+    lineas = ["## Hallazgos", "", "| Severidad | Afectan el veredicto | No afectan |", "|---|---|---|",
+              *(f"| {s.capitalize()} | {sum(1 for h in todos if h['severidad'] == s and cuenta(h))} "
+                f"| {sum(1 for h in todos if h['severidad'] == s and not cuenta(h))} |" for s in SEVERIDADES),
+              "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
     if not lista:
         return "\n".join(lineas + ["Sin hallazgos abiertos."])
-    lineas += ["| Severidad | Cuenta | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
+    lineas += ["| Severidad | Afecta el veredicto | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
     for g in lista:
-        lineas.append(f"| {g['severidad']} | {'sí' if g['cuenta'] else 'no'} | {g['regla']} | {que(g)} | {donde(g)} "
+        lineas.append(f"| {g['severidad']} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g)} "
                       f"| {', '.join(g['ids'])} |")
     return "\n".join(lineas)
 
@@ -170,14 +203,26 @@ def componer(raiz: Path, producto: str, repo: str) -> Path:
     estado = (registro.get("repos") or {}).get(repo) or {}
     rama = estado.get("rama", "main")
     revision = (estado.get("codigo") or estado.get("automatica") or {}).get("id")
-    texto = reemplazar_bloque(texto, MARCA_RESUMEN, texto_resumen(raiz, producto, repo, rama, registro, revision))
+    automatica, codigo = estado.get("automatica") or {}, estado.get("codigo") or {}
+    carpeta = raiz / "productos" / producto / "revisiones"
+    datos = leer_json(carpeta / str(automatica.get("id")) / f"{repo}.json") if automatica else {}
+    sonar_estado = dict(datos.get("sonar") or {})
+    if sonar_estado.get("estado") == "ok":
+        sonar_estado["quality_gate"] = (leer_json(carpeta / str(automatica.get("id")) / "crudo" / f"{repo}-sonar.json")
+                                        .get("quality_gate") or {}).get("estado")
+    evaluaciones = leer_json(carpeta / str(codigo.get("id")) / "revision" / f"{repo}.json").get("evaluaciones", {}) if codigo else {}
+    verificaciones = datos.get("verificaciones") or []
+    texto = reemplazar_bloque(texto, MARCA_RESUMEN, texto_resumen(raiz, producto, repo, rama, registro, revision, evaluaciones,
+                                                                  verificaciones, sonar_estado))
     texto = reemplazar_bloque(texto, MARCA_HALLAZGOS, texto_hallazgos(registro, repo, rama))
     automatico = bloque(texto, MARCA_AUTOMATICO)
     if automatico:
         texto = texto.replace(automatico, limpiar_automatico(automatico))
-    automatica = estado.get("automatica") or {}
-    datos = leer_json(raiz / "productos" / producto / "revisiones" / str(automatica.get("id")) / f"{repo}.json") if automatica else {}
-    texto = verificaciones_en_cumplimiento(texto, datos.get("verificaciones") or [])
+    texto = verificaciones_en_cumplimiento(texto, verificaciones)
+    revision_codigo = bloque(texto, MARCA_REVISION)
+    if revision_codigo and ETIQUETAS not in revision_codigo:
+        nuevo_bloque = revision_codigo.replace("## Revisión de código\n", "## Cómo es hoy (revisión de código)\n\n" + ETIQUETAS + "\n", 1)
+        texto = texto.replace(revision_codigo, nuevo_bloque)
     texto = re.sub(r"^> Revisión `[^`]+` sobre el commit `[^`]+`\.\n\n?", "", texto, flags=re.M)  # el commit ya está en Datos técnicos
     partes = [b for marcas in ORDEN if (b := bloque(texto, marcas))]
     archivo.parent.mkdir(parents=True, exist_ok=True)

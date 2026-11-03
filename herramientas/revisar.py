@@ -188,8 +188,6 @@ def escribir_ficha(raiz: Path, producto: str, repo: dict, revision: dict, regist
                                   "## Revisión de código\n\nPendiente: completar con /revisar en Cursor "
                                   "(AS IS y comparación con arquitectura).")
     archivo.write_text(texto, encoding="utf-8")
-    import ficha
-    ficha.componer(raiz, producto, repo["id"])
 
 
 # --- Revisión ----------------------------------------------------------------------------------
@@ -267,6 +265,10 @@ def revisar(raiz: Path, producto: str, solo_repo: str | None = None, usar_sonar:
         resultados.append(revision)
 
     registro_hallazgos.guardar(raiz, producto, registro)
+    import ficha
+    for r in resultados:
+        if r["estado"] == "ok":
+            ficha.componer(raiz, producto, r["repo"])  # después de guardar el registro: la ficha lee lo recién registrado
     contexto = {
         "id_revision": id_revision, "producto": producto, "fecha": hoy, "tipo": "linea-base",
         "arquitectura": leer_json(raiz / "arquitectura" / "estado" / "fuentes.lock"),

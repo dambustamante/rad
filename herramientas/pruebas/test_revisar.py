@@ -184,7 +184,7 @@ class PruebaRevisar(unittest.TestCase):
         ficha = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").read_text(encoding="utf-8")
         self.assertIn(revisar.MARCA_AUTOMATICO[0], ficha)
         self.assertIn("Quality gate: **ERROR**", ficha)
-        self.assertIn("## Revisión de código", ficha)
+        self.assertIn("## Cómo es hoy (revisión de código)", ficha)
 
     @unittest.skipUnless(shutil.which("gitleaks"), "gitleaks no está instalado")
     def test_secretos_tambien_en_repos_de_configuracion(self) -> None:
