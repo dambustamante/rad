@@ -57,10 +57,13 @@ SENALES_API = re.compile(
     r"|@(app|router)\.(get|post|put|delete|patch)\("
     r"|\b(r|router|e|g)\.(GET|POST|PUT|DELETE|PATCH)\(\s*\"/"
     r"|\[(HttpGet|HttpPost|HttpPut|HttpDelete|ApiController)\b"
+    r"|\bRouterFunctions?\b|\bRequestPredicates\.(GET|POST|PUT|DELETE|PATCH)\("
+    r"|\.(GET|POST|PUT|DELETE|PATCH)\(\s*[\"'/]"
 )
 SENALES_EVENTOS = re.compile(
     r"@(KafkaListener|RabbitListener|JmsListener|SqsListener|EventPattern|MessagePattern)\b"
     r"|\b(KafkaTemplate|RabbitTemplate|JmsTemplate|StreamBridge)\b"
+    r"|\b(KafkaReceiver|KafkaSender|ReactiveKafkaConsumerTemplate|ReactiveKafkaProducerTemplate|ReceiverOptions|SenderOptions)\b"
     r"|from ['\"](kafkajs|amqplib)['\"]|require\(['\"](kafkajs|amqplib)['\"]\)"
     r"|\b(confluent_kafka|aiokafka|pika)\b|github\.com/(segmentio/kafka-go|confluentinc|rabbitmq)"
 )
@@ -340,8 +343,16 @@ def ejecutar_gitleaks(repo: Path) -> list[dict] | None:
         if not reporte.exists():
             return None
         datos = json.loads(reporte.read_text(encoding="utf-8") or "[]")
-    return [{"regla": d.get("RuleID"), "archivo": d.get("File"), "linea": d.get("StartLine"),
-             "commit": (d.get("Commit") or "")[:12]} for d in datos]
+    return secretos_unicos(datos)
+
+
+def secretos_unicos(datos: list[dict]) -> list[dict]:
+    """Un hallazgo por secreto: gitleaks lo informa una vez por cada commit del historial que lo contiene."""
+    unicos: dict[tuple, dict] = {}
+    for d in datos:
+        unicos.setdefault((d.get("RuleID"), d.get("File"), d.get("StartLine")), {
+            "regla": d.get("RuleID"), "archivo": d.get("File"), "linea": d.get("StartLine"), "commit": (d.get("Commit") or "")[:12]})
+    return list(unicos.values())
 
 
 def verificar_secretos(v: Verificador, gitleaks: list[dict] | None) -> None:

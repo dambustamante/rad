@@ -46,6 +46,7 @@ from comun import RAIZ, ErrorRadiografia, git, normalizar
 from revisar import MARCA_REVISION, decisiones_con_criterios, leer_json, reemplazar_bloque, veredicto
 
 MAXIMO_DOCUMENTOS = 40
+SIN_REVISAR = re.compile(r"\bno se (reviso|revisaron|contrasto|verifico|evaluo|aplico|ejecuto|leyo|confirmo)\b")
 MARCA_COMPARACION = ("<!-- comparacion:inicio -->", "<!-- comparacion:fin -->")
 MARCA_PRODUCTO_AUTOMATICO = ("<!-- producto-automatico:inicio -->", "<!-- producto-automatico:fin -->")
 MARCA_PRODUCTO_NARRATIVA = ("<!-- producto-narrativa:inicio -->", "<!-- producto-narrativa:fin -->")
@@ -343,7 +344,9 @@ def generar_paquete(raiz: Path, producto: str, repo: str, completa: bool = False
     lineas += ["## Qué evaluar", "",
                "Clasificar **cada clave** en el lote: `cumple: [clave, …]`, `no_aplica: {clave: motivo}` o "
                "`no_determinado: {clave: motivo}`. Lo que no cumple va solo como hallazgo, con la misma fuente y criterio: "
-               "eso ya lo registra como NO CUMPLE.", ""]
+               "eso ya lo registra como NO CUMPLE. `NO DETERMINADO` es solo para lo que no se puede saber desde el repositorio, con "
+               "el motivo (qué falta y dónde está): «no se revisó» no se acepta. En los criterios de diseño (SOLID y KISS), evaluar "
+               "las clases con más responsabilidades, no cada clase.", ""]
     arquitectura = [e for e in control if e["nivel"] in (1, 2)]
     lineas += ["### Niveles 1 y 2: arquitectura vigente (clave: el documento)", ""]
     lineas += [f"- `{e['fuente']}` {PREFIJO_ID.sub('', e['titulo'])}: {e['texto']}" for e in arquitectura] or ["Nada que evaluar."]
@@ -618,6 +621,9 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
             errores.append(f"{campo}: se espera un mapa clave: motivo.")
             continue
         clasificados += [(str(c), resultado, m) for c, m in valor.items()]
+    errores += [f"{c}: «{m}» no es un motivo de NO DETERMINADO. Revisarlo y clasificarlo, o indicar qué evidencia falta "
+                "y dónde está (por ejemplo, otro repositorio o la plataforma)." for c, m in (datos.get("no_determinado") or {}).items()
+                if isinstance(datos.get("no_determinado"), dict) and SIN_REVISAR.search(normalizar(str(m)))]
     for clave_corta, resultado, motivo in clasificados:
         elemento = por_clave_corta.get(clave_corta)
         if elemento is None:

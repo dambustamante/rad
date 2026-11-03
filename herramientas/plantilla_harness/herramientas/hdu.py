@@ -16,6 +16,7 @@ import base64
 import json
 import os
 import re
+import ssl
 import subprocess
 import sys
 import unicodedata
@@ -66,11 +67,16 @@ def cargar_env() -> dict[str, str]:
             if "=" in linea and not linea.lstrip().startswith("#"):
                 clave, valor = linea.split("=", 1)
                 env[clave.strip()] = valor.split(" #")[0].strip()
-    env.update({k: v for k, v in os.environ.items() if k.startswith("JIRA_")})
+    env.update({k: v for k, v in os.environ.items() if k.startswith("JIRA_") or k == "CA_BUNDLE"})
     return env
 
 
 # --- Jira ------------------------------------------------------------------------------------
+
+def contexto_tls(env: dict) -> ssl.SSLContext:
+    """Certificados del sistema, o los de CA_BUNDLE si la red usa una autoridad propia."""
+    return ssl.create_default_context(cafile=os.path.expanduser(env["CA_BUNDLE"]) if env.get("CA_BUNDLE") else None)
+
 
 def pedir(env: dict, ruta: str, parametros: dict | None = None):
     faltantes = [v for v in ("JIRA_URL", "JIRA_EMAIL", "JIRA_TOKEN") if not env.get(v)]
@@ -80,7 +86,7 @@ def pedir(env: dict, ruta: str, parametros: dict | None = None):
     credencial = base64.b64encode(f"{env['JIRA_EMAIL']}:{env['JIRA_TOKEN']}".encode()).decode()
     pedido = urllib.request.Request(url, headers={"Authorization": f"Basic {credencial}", "Accept": "application/json"})
     try:
-        with urllib.request.urlopen(pedido, timeout=30) as respuesta:
+        with urllib.request.urlopen(pedido, timeout=30, context=contexto_tls(env)) as respuesta:
             return json.loads(respuesta.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         if error.code == 404:
@@ -97,7 +103,7 @@ def enviar(env: dict, ruta: str, cuerpo: dict) -> dict:
     pedido = urllib.request.Request(url, data=json.dumps(cuerpo).encode("utf-8"), method="POST", headers={
         "Authorization": f"Basic {credencial}", "Accept": "application/json", "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(pedido, timeout=60) as respuesta:
+        with urllib.request.urlopen(pedido, timeout=60, context=contexto_tls(env)) as respuesta:
             contenido = respuesta.read().decode("utf-8")
             return json.loads(contenido) if contenido else {}
     except urllib.error.HTTPError as error:

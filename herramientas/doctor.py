@@ -8,7 +8,9 @@ Termina con código 1 si falta algo obligatorio.
 
 from __future__ import annotations
 
+import os
 import shutil
+from pathlib import Path
 import sys
 
 from comun import RAIZ, ErrorRadiografia, cargar_config, cargar_env
@@ -64,6 +66,9 @@ def revisar() -> list[tuple[str, str, str]]:
     for variable in ("JIRA_URL", "JIRA_EMAIL", "JIRA_TOKEN"):
         resultados.append(_variable(env, variable, "necesario solo para productos con historias en Jira"))
     resultados.append(_variable(env, "CONFLUENCE_URL", "necesario solo para importar documentos desde Confluence"))
+    if env.get("CA_BUNDLE"):
+        existe = Path(os.path.expanduser(env["CA_BUNDLE"])).is_file()
+        resultados.append((OK if existe else ERROR, "CA_BUNDLE", "archivo de certificados encontrado" if existe else "el archivo indicado no existe"))
 
     if shutil.which("pdftotext"):
         resultados.append((OK, "pdftotext", "instalado"))

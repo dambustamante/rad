@@ -38,6 +38,8 @@ def cargar_env(raiz: Path = RAIZ) -> dict[str, str]:
     for clave, valor in os.environ.items():
         if clave in valores or clave.isupper():
             valores[clave] = valor
+    if valores.get("CA_BUNDLE") and not os.environ.get("REQUESTS_CA_BUNDLE"):
+        os.environ["REQUESTS_CA_BUNDLE"] = os.path.expanduser(valores["CA_BUNDLE"])  # certificados de la red, para Sonar, Jira y Confluence
     return valores
 
 
