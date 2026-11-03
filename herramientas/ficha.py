@@ -80,7 +80,8 @@ def regla_de(h: dict) -> str:
     return h["fuente"]
 
 
-AFECTA = ("**Afecta el veredicto:** «Sí» si la regla está vigente. «No» si es un ADR en Propuesto, una deuda aceptada o un "
+SI, NO = "❌ Sí", "ℹ️ No"
+AFECTA = ("**Afecta el veredicto:** ❌ Sí, si la regla está vigente. ℹ️ No, si es un ADR en Propuesto, una deuda aceptada o un "
           "falso positivo: se informa, pero no cambia el veredicto.")
 ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, en el archivo y la línea indicados; **[doc]** lo dice "
              "la documentación del repositorio o del producto; **[inferencia]** deducción sin verificación directa.")
@@ -123,15 +124,16 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
         lineas += [f"**{NIVELES[nivel]}**", ""]
         reglas = por_nivel.get(nivel, {})
         if not reglas:
-            lineas += ["Ninguno.", ""]
+            lineas += ["✅ Ninguno.", ""]
             continue
         if nivel == 5:
             lineas += [f"- {sum(len(v) for v in reglas.values())} issue(s) de Sonar", ""]
             continue
         for regla, hallazgos in sorted(reglas.items()):
             criterios = sorted({h["criterio"] for h in hallazgos if h.get("criterio")})
-            afecta = "afecta el veredicto" if any(cuenta(h) for h in hallazgos) else "no afecta el veredicto"
-            lineas.append(f"- `{regla}` {nombres.get(regla, '')}".rstrip() + f": {len(hallazgos)} hallazgo(s), {afecta}"
+            afecta = any(cuenta(h) for h in hallazgos)
+            lineas.append(f"- {'❌' if afecta else 'ℹ️'} `{regla}` {nombres.get(regla, '')}".rstrip()
+                          + f": {len(hallazgos)} hallazgo(s), {'afecta' if afecta else 'no afecta'} el veredicto"
                           + (f" (criterios {', '.join(criterios)})" if criterios else ""))
         lineas.append("")
     lineas += ["## Qué hacer primero", ""]
@@ -154,7 +156,7 @@ def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
         return "\n".join(lineas + ["Sin hallazgos abiertos."])
     lineas += ["| Severidad | Afecta el veredicto | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
     for g in lista:
-        lineas.append(f"| {g['severidad']} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g)} "
+        lineas.append(f"| {g['severidad']} | {SI if g['cuenta'] else NO} | {g['regla']} | {que(g)} | {donde(g)} "
                       f"| {', '.join(g['ids'])} |")
     return "\n".join(lineas)
 
