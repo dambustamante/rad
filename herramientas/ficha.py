@@ -89,7 +89,7 @@ ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, e
 def fila_cumplimiento(nombre: str, conteo: dict) -> str:
     evaluados = sum(conteo.values())
     resultado = ("Sin evaluar" if not evaluados else "❌ No cumple" if conteo.get("NO CUMPLE") else
-                 "❔ Incompleto" if conteo.get("NO DETERMINADO") else "✅ Cumple")
+                 "❔ Incompleto" if conteo.get("NO DETERMINADO") else "➖ No aplica" if not conteo.get("CUMPLE") else "✅ Cumple")
     return (f"| {nombre} | {resultado} | {conteo.get('CUMPLE', 0)} | {conteo.get('NO CUMPLE', 0)} | {conteo.get('NO DETERMINADO', 0)} "
             f"| {conteo.get('NO APLICA', 0)} |")
 
