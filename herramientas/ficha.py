@@ -148,7 +148,7 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
 def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lista = grupos(abiertos(registro, repo, rama))
     todos = abiertos(registro, repo, rama)
-    lineas = ["## Hallazgos", "", "| Severidad | Afectan el veredicto | No afectan |", "|---|---|---|",
+    lineas = ["## Hallazgos", "", "| Severidad | ❌ Afectan el veredicto | ℹ️ No afectan |", "|---|---|---|",
               *(f"| {s.capitalize()} | {sum(1 for h in todos if h['severidad'] == s and cuenta(h))} "
                 f"| {sum(1 for h in todos if h['severidad'] == s and not cuenta(h))} |" for s in SEVERIDADES),
               "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]

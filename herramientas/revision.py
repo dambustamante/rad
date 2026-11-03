@@ -831,7 +831,7 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
         principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
         resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
         fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
-                             f"| {'—' if e['resultado'] == 'NO APLICA' else 'Sí' if e['modo'] == 'vigente' else 'No'} | {e['motivo'].replace('|', '/')} "
+                             f"| {'—' if e['resultado'] == 'NO APLICA' else '❌ Sí' if e['modo'] == 'vigente' and e['resultado'] == 'NO CUMPLE' else 'Sí' if e['modo'] == 'vigente' else 'ℹ️ No'} | {e['motivo'].replace('|', '/')} "
                              f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
         lineas += ["", f"### {titulo}", ""]
         if principales:
