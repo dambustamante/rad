@@ -814,8 +814,7 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
     archivo = raiz / "productos" / producto / "as-is" / f"{repo}.md"
     texto = archivo.read_text(encoding="utf-8") if archivo.exists() else f"# {repo}: ficha AS IS\n"
     cuerpo_asis = re.sub(r"^#\s.*\n", "", texto_asis.strip() + "\n", count=1)
-    texto = reemplazar_bloque(texto, MARCA_REVISION, f"## Revisión de código\n\n> Revisión `{ctx['id_revision']}` "
-                              f"sobre el commit `{ctx['commit'][:12]}`.\n\n" + cuerpo_asis)
+    texto = reemplazar_bloque(texto, MARCA_REVISION, "## Revisión de código\n\n" + cuerpo_asis)
     hallazgos_por_clave: dict[str, list[str]] = {}
     for h in registro["hallazgos"].values():
         if h["repo"] == repo and h["rama"] == ctx["rama"] and h["estado"] == "abierto" and h["origen"] == "revision":
@@ -836,7 +835,7 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
         principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
         resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
         fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
-                             f"| {'sí' if e['modo'] == 'vigente' else 'no'} | {e['motivo'].replace('|', '/')} "
+                             f"| {'—' if e['resultado'] == 'NO APLICA' else 'sí' if e['modo'] == 'vigente' else 'no'} | {e['motivo'].replace('|', '/')} "
                              f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
         lineas += ["", f"### {titulo}", ""]
         if principales:
@@ -847,7 +846,6 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             lineas += ["", f"<details><summary>{len(resto)} que cumplen o no aplican</summary>", "",
                        "| Regla | Resultado | Cuenta | Motivo | Hallazgos |", "|---|---|---|---|---|", *(fila(c, e) for c, e in resto),
                        "", "</details>"]
-    lineas += ["", f"Veredicto: **{veredicto(registro, repo, ctx['rama'])}**"]
     texto = reemplazar_bloque(texto, MARCA_COMPARACION, "\n".join(lineas))
     archivo.write_text(texto, encoding="utf-8")
     import ficha

@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 import hallazgos as registro_hallazgos
+from comun import leer_json
 from coherencia import leer_arquitectura_vigente, leer_decisiones_equipo, leer_decisiones_producto
 from revisar import MARCA_AUTOMATICO, MARCA_REVISION, descontado_por_triaje, reemplazar_bloque, veredicto
 
@@ -58,8 +59,10 @@ def donde(g: dict) -> str:
 
 
 def que(g: dict) -> str:
+    """El texto del hallazgo sin la ruta, que ya va en «Dónde»."""
     cantidad = len(g["ids"])
-    return g["titulo"].replace("|", "/") + (f" ({cantidad} casos)" if cantidad > 1 else "")
+    titulo = g["titulo"].replace(f" en {g['archivo']}", "").replace(f" ({g['archivo']})", "").replace("|", "/")
+    return titulo + (f" ({cantidad} casos)" if cantidad > 1 else "")
 
 
 def titulos(raiz: Path, producto: str) -> dict[str, str]:
@@ -104,8 +107,10 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
                           + (f" (criterios {', '.join(criterios)})" if criterios else ""))
     lineas += ["", "## Qué hacer primero", ""]
     acciones = grupos(lista)[:MAXIMO_ACCIONES]
-    lineas += [f"{n}. {que(g)}: {donde(g)} ({', '.join(g['ids'][:3])}{'…' if len(g['ids']) > 3 else ''})"
+    lineas += [f"{n}. {que(g)} ({', '.join(g['ids'][:3])}{'…' if len(g['ids']) > 3 else ''})"
                for n, g in enumerate(acciones, start=1)] or ["Nada pendiente."]
+    if acciones:
+        lineas += ["", "Dónde está cada uno: [Hallazgos](#hallazgos)."]
     return "## Resumen\n\n" + "\n".join(lineas)
 
 
@@ -121,10 +126,30 @@ def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     return "\n".join(lineas)
 
 
+VERIFICACIONES = re.compile(r"\n## Verificaciones automáticas de las decisiones del equipo\n.*?(?=\n## |\n<!-- )", re.S)
+SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
+
+
+def verificaciones_en_cumplimiento(texto: str, verificaciones: list[dict]) -> str:
+    """Las verificaciones automáticas van con el cumplimiento; las que no cumplen ya están en Hallazgos."""
+    automatico, comparacion = bloque(texto, MARCA_AUTOMATICO), bloque(texto, MARCA_COMPARACION)
+    if not automatico or not comparacion or not verificaciones:
+        return texto
+    no_cumplen = [v["criterio"] for v in verificaciones if v["resultado"] == "NO CUMPLE"]
+    lineas = ["", "### Verificaciones automáticas", "",
+              *([f"No cumplen, y están en [Hallazgos](#hallazgos): {', '.join(no_cumplen)}.", ""] if no_cumplen else []),
+              "| Regla | Resultado | Motivo |", "|---|---|---|",
+              *(f"| {v['criterio']} | {SIMBOLOS[v['resultado']]} {v['resultado']} | {v['motivo'].replace('|', '/')} |"
+                for v in verificaciones if v["resultado"] != "NO CUMPLE")]
+    nueva = re.sub(r"\n### Verificaciones automáticas\n.*?(?=\n### |\n<!-- )", "", comparacion, flags=re.S)
+    nueva = nueva.replace(MARCA_COMPARACION[1], "").rstrip() + "\n" + "\n".join(lineas).rstrip() + "\n" + MARCA_COMPARACION[1]
+    return texto.replace(comparacion, nueva).replace(automatico, VERIFICACIONES.sub("", automatico))
+
+
 def limpiar_automatico(texto: str) -> str:
     """Datos técnicos al final: sin la tabla de hallazgos (ya está arriba) y con el error de Sonar en una línea."""
     texto = re.sub(r"\n## Hallazgos automáticos abiertos\n.*?(?=\n## |\n<!-- )", "", texto, flags=re.S)
-    texto = texto.replace("## Datos generales", "## Datos técnicos")
+    texto = texto.replace("## Datos generales", "## Datos técnicos").replace("| Revisión |", "| Revisión automática |")
     def sonar_breve(m: re.Match) -> str:
         motivo = m.group(1)
         if "CERTIFICATE_VERIFY_FAILED" in motivo:
@@ -150,6 +175,10 @@ def componer(raiz: Path, producto: str, repo: str) -> Path:
     automatico = bloque(texto, MARCA_AUTOMATICO)
     if automatico:
         texto = texto.replace(automatico, limpiar_automatico(automatico))
+    automatica = estado.get("automatica") or {}
+    datos = leer_json(raiz / "productos" / producto / "revisiones" / str(automatica.get("id")) / f"{repo}.json") if automatica else {}
+    texto = verificaciones_en_cumplimiento(texto, datos.get("verificaciones") or [])
+    texto = re.sub(r"^> Revisión `[^`]+` sobre el commit `[^`]+`\.\n\n?", "", texto, flags=re.M)  # el commit ya está en Datos técnicos
     partes = [b for marcas in ORDEN if (b := bloque(texto, marcas))]
     archivo.parent.mkdir(parents=True, exist_ok=True)
     archivo.write_text(f"# {repo}\n\n" + "\n\n".join(partes) + "\n", encoding="utf-8")

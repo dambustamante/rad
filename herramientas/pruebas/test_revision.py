@@ -198,7 +198,11 @@ class PruebaRevision(unittest.TestCase):
         self.assertNotIn("## Hallazgos automáticos abiertos", ficha)
         archivo_ficha = revision.regenerar_fichas(self.raiz, "motor-fraudes", "fraude-core")[0]
         self.assertEqual(archivo_ficha.read_text(encoding="utf-8"), ficha, "recomponer no cambia una ficha al día")
-        self.assertIn("Veredicto: **NO PASA (1 bloqueante(s) o alto(s) vigente(s))**", ficha)
+        self.assertIn("**Veredicto: NO PASA (1 bloqueante(s) o alto(s) vigente(s))**", ficha)
+        self.assertEqual(ficha.count("Veredicto:"), 1, "el veredicto va una sola vez")
+        self.assertIn("### Verificaciones automáticas", ficha)
+        self.assertNotIn("## Verificaciones automáticas de las decisiones del equipo", ficha)
+        self.assertNotIn("sobre el commit", ficha)
         self.assertIn("fraude-core (propio): al día", self.ejecutar("pendientes", "motor-fraudes")[1])
 
         narrativa = self.raiz / "narrativa.md"

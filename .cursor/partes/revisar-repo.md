@@ -22,13 +22,15 @@ revisar solo lo que el cambio afecta: lo demás se hereda.
 ## 3. AS IS
 
 `revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`. Cada afirmación primero y, al final entre paréntesis,
-su etiqueta y su ubicación, para que se lea de corrido: «Usa Spring WebFlux ([hecho] `build.gradle:47`).»
+su etiqueta y su ubicación, para que se lea de corrido: «Usa Spring WebFlux ([hecho] `build.gradle:47`).» Describe cómo es el
+servicio: **no repetir lo que ya es un hallazgo** (va en la tabla de hallazgos) ni lo que ya va en `componentes` (bases, colas,
+integraciones y APIs).
 
 1. **Propósito**: qué hace y qué capacidad de negocio soporta.
 2. **Arquitectura real**: estilo, módulos y cómo dependen entre sí; lo que hay, no lo que debería haber.
 3. **Configuración y despliegue**: variables (solo nombres), empaquetado, CI y entornos.
 4. **Observabilidad**: logs, métricas, trazas y alertas.
-5. **Riesgos y deuda principales**: de tres a cinco, con evidencia.
+5. **Riesgos y deuda principales**: solo lo que no es un hallazgo, como contexto, decisiones heredadas o riesgos sin una regla que los cubra. Si no hay, escribir «Los riesgos están en la tabla de hallazgos.»
 
 Bases, colas, integraciones, APIs y datos no se describen aquí: van como `componentes` en el lote. El
 cierre genera con ellos la tabla de la ficha y los borradores C4.
