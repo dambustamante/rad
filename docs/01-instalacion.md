@@ -39,7 +39,7 @@ Completar `.env`. Nunca se versiona y ningún comando muestra sus valores.
 | `SONAR_TOKEN` | sí | token con permiso de lectura (Browse) sobre los proyectos |
 | `JIRA_URL`, `JIRA_EMAIL`, `JIRA_TOKEN` | no | crear Tareas de deuda, Spikes, Errores y Hotfix |
 | `CONFLUENCE_URL`, `CONFLUENCE_EMAIL`, `CONFLUENCE_TOKEN` | no | importar documentos del producto desde Confluence, en solo lectura |
-| `CA_BUNDLE` | no | archivo de certificados (formato PEM, Privacy-Enhanced Mail: texto que empieza con `BEGIN CERTIFICATE`) con las autoridades certificadoras, si la red usa una propia y una conexión falla con `CERTIFICATE_VERIFY_FAILED` |
+| `CA_BUNDLE` | no | archivo de certificados en formato PEM (Privacy-Enhanced Mail), el texto que empieza con `BEGIN CERTIFICATE`, con las autoridades certificadoras, si la red usa una propia y una conexión falla con `CERTIFICATE_VERIFY_FAILED` |
 | `GIT_PLATAFORMA`, `GITLAB_*`, `GITHUB_*` | no | revisar MR o PR y publicar el comentario |
 
 Sin Sonar, el nivel 5 queda `NO DETERMINADO` en cada revisión. Sin Jira, no se pueden crear
