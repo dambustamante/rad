@@ -57,7 +57,7 @@ c4: null
 #   estado: activo | retirado
 repos: []
 
-# Proyecto de Jira donde se crean Tareas de deuda, Spikes, Errores y Hotfix. Las historias se leen desde el harness.
+# Espacio de Jira del producto (proyecto: SYF). La etiqueta es el nombre del producto, salvo que se indique otra.
 jira: {{}}
 """
 
@@ -270,13 +270,16 @@ def datos_nuevos(raiz: Path, producto: str, descripcion: str | None, origen: str
     return datos
 
 
-def crear(raiz: Path, producto: str, descripcion: str | None, origen: str, sigla: str | None = None) -> None:
+def crear(raiz: Path, producto: str, descripcion: str | None, origen: str, sigla: str | None = None,
+          proyecto_jira: str | None = None) -> None:
     """Crea un producto sin repositorios (por ejemplo, uno nuevo que todavía no tiene código)."""
     archivo = archivo_producto(raiz, producto)
     if archivo.exists():
         raise ErrorRadiografia(f"El producto '{producto}' ya existe.")
     datos = datos_nuevos(raiz, producto, descripcion, origen, sigla)
     archivo.parent.mkdir(parents=True, exist_ok=True)
+    if proyecto_jira:
+        datos["jira"] = CommentedMap(proyecto=proyecto_jira)
     escribir_yaml_conservador(archivo, datos)
 
 
@@ -415,6 +418,7 @@ def main(argumentos: list[str] | None = None) -> int:
     p_crear.add_argument("--origen", required=True, choices=ORIGENES)
     p_crear.add_argument("--descripcion", required=True)
     p_crear.add_argument("--sigla")
+    p_crear.add_argument("--jira", help="clave del espacio de Jira del producto, por ejemplo SYF")
     p_retirar = sub.add_parser("retirar", help="marca un repositorio como retirado")
     p_retirar.add_argument("--producto", required=True)
     p_retirar.add_argument("--id", required=True)
@@ -443,7 +447,7 @@ def main(argumentos: list[str] | None = None) -> int:
             agregar(raiz, opciones.producto, opciones.id, opciones.url, opciones.rama, opciones.tipo, opciones.sonar, None)
             print(f"Repositorio '{opciones.id}' agregado al producto '{opciones.producto}'.")
         elif opciones.accion == "crear":
-            crear(raiz, opciones.producto, opciones.descripcion, opciones.origen, opciones.sigla)
+            crear(raiz, opciones.producto, opciones.descripcion, opciones.origen, opciones.sigla, opciones.jira)
             sigla = leer_productos(raiz)[opciones.producto].get("sigla")
             print(f"Producto '{opciones.producto}' ({opciones.origen}) creado con la sigla {sigla}, sin repositorios.")
             crear_harness(raiz, opciones.producto)

@@ -134,6 +134,11 @@ class PruebaProductos(unittest.TestCase):
         datos = productos.leer_productos(self.raiz)["motor-fraude"]
         self.assertEqual((datos["origen"], datos["sigla"], len(datos["repos"])), ("nuevo", "MF", 0))
         crear_harness.assert_called_once_with(self.raiz.resolve(), "motor-fraude")
+        self.assertEqual(self.ejecutar("crear", "--producto", "aquiles", "--origen", "heredado", "--descripcion", "x",
+                                       "--jira", "SYF")[0], 0)
+        import jira
+        self.assertEqual(jira.destino_jira(self.raiz, "aquiles"), {"proyecto": "SYF", "etiqueta": "aquiles"},
+                         "la etiqueta es el nombre del producto")
         self.assertEqual(self.ejecutar("crear", "--producto", "motor-fraude", "--origen", "nuevo", "--descripcion", "x")[0], 1)
         codigo, salida = self.ejecutar("crear", "--producto", "3ds", "--origen", "heredado", "--descripcion", "3DS", "--sigla", "MF")
         self.assertIn("ya está en uso", salida)

@@ -215,7 +215,8 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
         "producto": producto, "sigla": sigla_de(raiz, producto),
         "jira": {"campo_medicion": jira["campo_medicion"], "medicion_aceptada": jira["medicion_aceptada"],
                  "campo_tipo": jira["campo_tipo"], "campo_equipos": jira["campo_equipos"], "equipos": jira["equipos"],
-                 "tipos_incidencia": jira["tipos_incidencia"], "tipo_tarea_desarrollo": jira["tipo_tarea_desarrollo"]}}, indent=2, ensure_ascii=False) + "\n"
+                 "tipos_incidencia": jira["tipos_incidencia"], "tipo_tarea_desarrollo": jira["tipo_tarea_desarrollo"],
+                 **destino_o_nada(raiz, producto)}}, indent=2, ensure_ascii=False) + "\n"
     import lenguaje
     reglas = lenguaje.cargar_reglas(raiz)
     archivos["lenguaje.json"] = json.dumps({"voseo": reglas["voseo"], "expresiones": [e["texto"] for e in reglas["expresiones"]]},
@@ -223,6 +224,15 @@ def contenido_generado(raiz: Path, producto: str) -> dict[str, str]:
     archivos["contexto.json"] = json.dumps(contexto_estructurado(raiz, producto, activos, registro), indent=2,
                                            ensure_ascii=False, sort_keys=True) + "\n"
     return archivos
+
+
+def destino_o_nada(raiz: Path, producto: str) -> dict:
+    """Espacio y etiqueta de Jira del producto, si está configurado."""
+    from jira import destino_jira
+    try:
+        return destino_jira(raiz, producto)
+    except ErrorRadiografia:
+        return {}
 
 
 def contexto_estructurado(raiz: Path, producto: str, activos: list[dict], registro: dict) -> dict:

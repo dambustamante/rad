@@ -603,7 +603,9 @@ def solicitud_tarea(historia: dict, titulo: str, config: dict, campos: list[dict
         return {campo["id"]: [{"value": dato}] if (campo.get("schema") or {}).get("type") == "array" else {"value": dato}}
     parrafos = [f"Parte del desarrollo de la historia {historia['clave']}: {historia['titulo']}.",
                 f"La spec indica los criterios que cubre y queda en specs/{historia['clave']}/ del harness."]
-    return {"fields": {"project": {"key": historia["clave"].rsplit("-", 1)[0]}, "parent": {"key": historia["clave"]},
+    etiqueta = jira.get("etiqueta")
+    return {"fields": {"project": {"key": jira.get("proyecto") or historia["clave"].rsplit("-", 1)[0]}, "parent": {"key": historia["clave"]},
+                       **({"labels": [etiqueta]} if etiqueta else {}),
                        "issuetype": {"name": jira["tipos_incidencia"]["tarea_desarrollo"]}, "summary": titulo,
                        "description": {"type": "doc", "version": 1, "content": [
                            {"type": "paragraph", "content": [{"type": "text", "text": p}]} for p in parrafos]},

@@ -94,9 +94,10 @@ ramas activas y hallazgos nuevos, corregidos, reaparecidos y vencidos. No public
 
 **Qué te pide:**
 
-- **Producto nuevo:** descripción, origen (`heredado` o `nuevo`) y sigla, que queda fija.
+- **Producto nuevo:** descripción, origen (`heredado` o `nuevo`), sigla, que queda fija, y espacio de Jira, por ejemplo
+  `SYF`. Las incidencias llevan el nombre del producto como etiqueta.
 - **De una vez, lo que tengas:** repositorios git, páginas o espacios de Confluence, y documentos en otros formatos.
-- **Producto existente:** qué hacer: agregar o retirar repositorios, cargar documentos, registrar terceros o indicar su proyecto de Jira.
+- **Producto existente:** qué hacer: agregar o retirar repositorios, cargar documentos, registrar terceros o cambiar su espacio de Jira.
 
 **Cómo lo hace:**
 

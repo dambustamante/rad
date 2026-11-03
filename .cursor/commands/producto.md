@@ -18,14 +18,14 @@ este comando: siempre mediante el script.
 
    - Si el producto existe, mostrar sus repositorios en una tabla (`id`, `tipo`, `rama`, `sonar`,
      `estado`) y preguntar: agregar repositorios, retirar uno, registrar o completar terceros
-     (el producto comprado y las integraciones), cargar documentos, indicar su proyecto de Jira
+     (el producto comprado y las integraciones), cargar documentos, cambiar su espacio de Jira
      (`productos.py jira <producto> --proyecto <CLAVE>`) o nada.
    - Si no existe, pedir una descripción de una frase, el **origen** (`heredado`: se recibe de otro
-     equipo y se toma el control; `nuevo`: se construye desde el inicio) y la sigla para numerar sus
-     ADR (proponer una: `MF` para motor-fraude). Crearlo:
+     equipo y se toma el control; `nuevo`: se construye desde el inicio) la sigla para numerar sus
+     ADR (proponer una: `MF` para motor-fraude) y la clave de su espacio de Jira (por ejemplo `SYF`). Crearlo:
 
      ```sh
-     .venv/bin/python herramientas/productos.py crear --producto <producto> --origen <heredado|nuevo> --descripcion "<frase>" [--sigla <SIGLA>]
+     .venv/bin/python herramientas/productos.py crear --producto <producto> --origen <heredado|nuevo> --descripcion "<frase>" [--sigla <SIGLA>] [--jira <CLAVE>]
      ```
 
      El script crea también el harness: seguir `.cursor/partes/producto-harness.md` para subirlo. Un producto

@@ -170,12 +170,15 @@ tipo, origen y fecha.
 - **Evidencia:** se cita como `[doc]`. Si contradice al código, manda el código y la diferencia es un hallazgo.
 - **Acceso:** todos los que usan el harness ven estos documentos. Lo confidencial no se importa.
 
-## Proyecto de Jira
+## Espacio de Jira
 
-Para crear Tareas de deuda, Spikes, Errores y Hotfix, se indica una vez por producto el proyecto donde se crean:
+Cada producto se asocia a un espacio de Jira, por ejemplo `SYF`. `/producto` lo pide al crear el producto. Las incidencias que
+crean `/crear` y `/hdu` van a ese espacio, con el nombre del producto como etiqueta, para filtrarlas en un tablero.
+
+Para cambiarlo después, o usar otra etiqueta:
 
 ```sh
-.venv/bin/python herramientas/productos.py jira motor-fraudes --proyecto FRAUD [--etiqueta motor-fraudes]
+.venv/bin/python herramientas/productos.py jira motor-fraudes --proyecto SYF [--etiqueta otra]
 ```
 
 Las historias no se guardan en radiografia: cada harness las lee de Jira cuando se ejecuta `/hdu`.

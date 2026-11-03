@@ -258,6 +258,12 @@ class PruebaHarness(unittest.TestCase):
         self.assertEqual((campos["issuetype"]["name"], campos["customfield_2"], campos["customfield_3"], campos["parent"], campos["summary"]),
                          ("Tarea", {"value": "Producto"}, [{"value": "Back"}], {"key": "FRAUD-100"}, "Consultar el buró"))
 
+        self.assertNotIn("labels", campos, "sin espacio configurado no inventa etiqueta")
+        configurada = json.loads((self.destino / "config.json").read_text(encoding="utf-8"))
+        configurada["jira"].update({"proyecto": "SYF", "etiqueta": "motor-fraudes"})
+        (self.destino / "config.json").write_text(json.dumps(configurada), encoding="utf-8")
+        campos = modulo.crear_tareas("FRAUD-100", False)["solicitudes"][0]["fields"]
+        self.assertEqual((campos["project"], campos["labels"]), ({"key": "SYF"}, ["motor-fraudes"]))
         r = modulo.crear_tareas("FRAUD-100", True)
         self.assertEqual([c["clave"] for c in r["creadas"]], ["FRAUD-201"])
         carpeta = self.destino / "specs" / "FRAUD-100"

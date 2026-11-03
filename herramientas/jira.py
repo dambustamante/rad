@@ -106,8 +106,8 @@ def destino_jira(raiz: Path, producto: str) -> dict:
         raise ErrorRadiografia(f"No existe el producto '{producto}'.")
     config = (yaml.safe_load(archivo.read_text(encoding="utf-8")) or {}).get("jira") or {}
     if not config.get("proyecto"):
-        raise ErrorRadiografia(f"Falta el proyecto de Jira de '{producto}': productos.py jira {producto} --proyecto CLAVE.")
-    return {"proyecto": config["proyecto"], "etiqueta": config.get("etiqueta")}
+        raise ErrorRadiografia(f"Falta el espacio de Jira de '{producto}': indicarlo con /producto {producto}.")
+    return {"proyecto": config["proyecto"], "etiqueta": config.get("etiqueta") or producto}
 
 
 # --- Borradores --------------------------------------------------------------------------------
