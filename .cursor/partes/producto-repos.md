@@ -19,7 +19,7 @@
    - `id`: el `id_sugerido`.
    - `rama`: la `rama_por_defecto`.
    - `Sonar`: el `sonar_detectado`, o "no detectada".
-   - `C4`: contexto y contenedores (✅/❌ cada uno). `Contratos`: cantidad de archivos encontrados.
+   - `C4`: contexto y contenedores (✅/🚫 cada uno). `Contratos`: cantidad de archivos encontrados.
    - `Tipo`: proponer `propio`; el usuario indica `proveedor` (código de un tercero) o `config`
      (configuración o infraestructura).
    - `Aviso`: si `registrado_en` no es nulo, indicar en qué producto ya está; ese repositorio no

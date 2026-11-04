@@ -94,7 +94,7 @@ y cierra. Responder:
 
 **Veredicto:** <PASA / NO PASA> · **Archivos leídos:** <N>
 
-| Nivel | Evaluados | ✅ | ❌ | ➖ | ❔ |
+| Nivel | Evaluados | ✅ | 🚫 | 🔹 | 🔍 |
 |---|---|---|---|---|---|
 
 ### Hallazgos principales

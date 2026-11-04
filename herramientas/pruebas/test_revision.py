@@ -190,10 +190,10 @@ class PruebaRevision(unittest.TestCase):
 
         ficha = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").read_text(encoding="utf-8")
         self.assertIn("## Arquitectura real", ficha)
-        self.assertIn("| decisiones:ADR-010 | ❌ NO CUMPLE | ❌ Sí |", ficha)
+        self.assertIn("| decisiones:ADR-010 | 🚫 NO CUMPLE | 🚫 Sí |", ficha)
         self.assertLess(ficha.index("## Resumen"), ficha.index("## Cómo es hoy (revisión de código)"), "lo importante primero")
-        self.assertIn("- ❌ `decisiones:ADR-010` Timeouts obligatorios: 1 hallazgo(s), afecta el veredicto", ficha)
-        self.assertIn("| ADR de arquitectura | ❌ No cumple | 0 | 1 | 0 | 0 |", ficha)
+        self.assertIn("- 🚫 `decisiones:ADR-010` Timeouts obligatorios: 1 hallazgo(s), afecta el veredicto", ficha)
+        self.assertIn("| ADR de arquitectura | 🚫 No cumple | 0 | 1 | 0 | 0 |", ficha)
         self.assertIn("| Verificaciones automáticas |", ficha)
         self.assertIn("| Sonar |", ficha)
         self.assertIn("**Estándares de arquitectura**\n\n✅ Ninguno.", ficha, "los tres niveles se muestran siempre")
@@ -217,7 +217,7 @@ class PruebaRevision(unittest.TestCase):
         codigo, salida = self.ejecutar("producto", "motor-fraudes", "--narrativa", str(narrativa))
         self.assertEqual(codigo, 0, salida)
         producto = (self.raiz / "productos" / "motor-fraudes" / "as-is" / "PRODUCTO.md").read_text(encoding="utf-8")
-        self.assertIn("| 1 | decisiones:ADR-010 | ❌ |", producto)
+        self.assertIn("| 1 | decisiones:ADR-010 | 🚫 |", producto)
         self.assertIn("Nivel 1 · decisiones:ADR-010: 1 hallazgo(s)", producto)
         self.assertIn("Texto del producto.", producto)
 

@@ -37,7 +37,7 @@
 
    | id | rama | Stack | Sonar | README | C4 | Contratos | Tipo |
    |---|---|---|---|---|---|---|---|
-   | `fraude-core` | `main` | Java 21, Spring Boot | `fraude-core` | ✅ | ❌/❌ | 1 | propio |
+   | `fraude-core` | `main` | Java 21, Spring Boot | `fraude-core` | ✅ | 🚫/🚫 | 1 | propio |
 
    | Tipo | Cuándo | Qué se le exige |
    |---|---|---|

@@ -346,7 +346,7 @@ def listar(raiz: Path, producto: str) -> list[dict]:
                   "| Tercero | Rol | Dirección | Protocolo | p95 (ms) | Política ante falla | Repositorios | Documentos | Estado de la ficha |",
                   "|---|---|---|---|---|---|---|---|---|"]
         for f in filas:
-            estado = ("❌ " + "; ".join(f["errores"])) if f["errores"] else (
+            estado = ("🚫 " + "; ".join(f["errores"])) if f["errores"] else (
                 f"⏳ por completar: {', '.join(f['pendientes'])}" if f["pendientes"] else "✅ completa")
             lineas.append(f"| [{f['nombre'] or f['id']}]({f['id']}/ficha.yaml) | {f['rol']} | {f['direccion']} | {f['protocolo']} "
                           f"| {f['p95_ms'] if f['p95_ms'] is not None else '—'} | {f['politica']} | {', '.join(f['repos']) or '—'} "

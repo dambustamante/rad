@@ -230,7 +230,7 @@ class PruebaCoherencia(unittest.TestCase):
         codigo, salida = self.ejecutar("lote", str(lote))
         self.assertEqual(codigo, 0, salida)
         self.assertIn("3 par(es) registrado(s). Pares pendientes: 3. Criterios suspendidos: 1.", salida)
-        self.assertIn("❌ 1 choque(s) · ⏳ 1 par(es) pendiente(s) de evaluar | EQ-002.2", (self.raiz / "equipo" / "COHERENCIA.md").read_text(encoding="utf-8"))
+        self.assertIn("🚫 1 choque(s) · ⏳ 1 par(es) pendiente(s) de evaluar | EQ-002.2", (self.raiz / "equipo" / "COHERENCIA.md").read_text(encoding="utf-8"))
 
     def test_genera_coherencia_con_choque_y_suspension(self) -> None:
         self.registrar_todo()
@@ -239,7 +239,7 @@ class PruebaCoherencia(unittest.TestCase):
         codigo, salida = self.ejecutar("generar")
         self.assertEqual(codigo, 0, salida)
         texto = (self.raiz / "equipo" / "COHERENCIA.md").read_text(encoding="utf-8")
-        self.assertIn("❌ 1 choque(s) | EQ-002.2", texto)
+        self.assertIn("🚫 1 choque(s) | EQ-002.2", texto)
         self.assertIn("⚠️ 1 duplicación(es)", texto)
         self.assertIn("### ADR-EQ-002 × decisiones:ADR-010", texto)
         self.assertIn("decisiones@", texto)

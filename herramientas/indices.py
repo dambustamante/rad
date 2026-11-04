@@ -25,7 +25,7 @@ def _coherencia(archivo: Path, id_decision: str) -> str:
     estado = json.loads(archivo.read_text(encoding="utf-8"))
     propias = [e for e in estado.get("evaluaciones", {}).values() if e.get("decision") == id_decision]
     choques = sum(1 for e in propias if e["relacion"] == "choca")
-    return f"❌ {choques} choque(s)" if choques else ("✅ evaluada" if propias else "sin evaluar")
+    return f"🚫 {choques} choque(s)" if choques else ("✅ evaluada" if propias else "sin evaluar")
 
 
 def indice_equipo(raiz: Path) -> Path:

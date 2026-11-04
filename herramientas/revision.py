@@ -57,7 +57,7 @@ SECCIONES_AS_IS = ("Propósito", "Arquitectura real", "Configuración y desplieg
 VENTANA_FRAGMENTO = 3
 UMBRAL_INCREMENTAL = 0.4   # si cambió más de esta fracción de archivos, la revisión es completa
 MINIMO_ARCHIVOS_UMBRAL = 20  # en repositorios más chicos el umbral no se aplica
-SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
+SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "🚫", "NO APLICA": "🔹", "NO DETERMINADO": "🔍"}
 TIPOS_COMPONENTE = ("base-de-datos", "mensajeria", "cache", "integracion", "api-expuesta", "almacenamiento", "programado")
 DIRECCIONES = ("produce", "consume", "saliente", "entrante")
 PREFIJO_ID = re.compile(r"^[A-Z]+-[0-9]+:\s*")
@@ -831,7 +831,7 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
         principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
         resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
         fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
-                             f"| {'—' if e['resultado'] == 'NO APLICA' else '❌ Sí' if e['modo'] == 'vigente' and e['resultado'] == 'NO CUMPLE' else 'Sí' if e['modo'] == 'vigente' else 'ℹ️ No'} | {e['motivo'].replace('|', '/')} "
+                             f"| {'—' if e['resultado'] == 'NO APLICA' else '🚫 Sí' if e['modo'] == 'vigente' and e['resultado'] == 'NO CUMPLE' else 'Sí' if e['modo'] == 'vigente' else '💬 No'} | {e['motivo'].replace('|', '/')} "
                              f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
         lineas += ["", f"### {titulo}", ""]
         if principales:
@@ -939,7 +939,7 @@ def consolidar_producto(raiz: Path, producto: str, narrativa: Path | None) -> Pa
         lineas.append(f"| [{e['repo']}]({e['repo']}.md) | {e['tipo']} | {e['situacion']} "
                       f"| {('`' + codigo['commit'][:12] + '`') if codigo else '—'} | {veredicto(registro, e['repo'], rama) if codigo else '—'} |")
     lineas += ["", "## Matriz de cumplimiento", "",
-               "✅ cumple · ❌ no cumple · ➖ no aplica · ❔ no determinado · (vacío) sin revisar", "",
+               "✅ cumple · 🚫 no cumple · 🔹 no aplica · 🔍 no determinado · (vacío) sin revisar", "",
                "| Nivel | Fuente | " + " | ".join(repos) + " |", "|---|---|" + "---|" * len(repos)]
     for clave in sorted(matriz, key=lambda c: titulos[c]):
         nivel, nombre = titulos[clave]

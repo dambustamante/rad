@@ -206,7 +206,7 @@ class PruebaAdrProducto(unittest.TestCase):
             self.assertEqual(codigo, 0, salida.getvalue())
             coherencia.main(["--raiz", str(self.raiz), "generar", "--ambito", "motor-fraudes"])
         texto = (self.raiz / "productos" / "motor-fraudes" / "decisiones" / "COHERENCIA.md").read_text(encoding="utf-8")
-        self.assertIn("❌ 1 choque(s) · ⏳", texto, "se ven el choque y los pares que faltan")
+        self.assertIn("🚫 1 choque(s) · ⏳", texto, "se ven el choque y los pares que faltan")
         self.assertIn("| MF-001.1 |", texto)
         self.assertEqual(coherencia.suspendidos(self.raiz, "motor-fraudes").get("ADR-MF-001"), ["MF-001.1"])
         control = {e["clave"] for e in revision.lista_de_control(self.raiz, "propio", "motor-fraudes", "fraude-core")}

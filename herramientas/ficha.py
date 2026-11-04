@@ -80,8 +80,8 @@ def regla_de(h: dict) -> str:
     return h["fuente"]
 
 
-SI, NO = "❌ Sí", "ℹ️ No"
-AFECTA = ("**Afecta el veredicto:** ❌ Sí, si la regla está vigente. ℹ️ No, si es un ADR en Propuesto, una deuda aceptada o un "
+SI, NO = "🚫 Sí", "💬 No"
+AFECTA = ("**Afecta el veredicto:** 🚫 Sí, si la regla está vigente. 💬 No, si es un ADR en Propuesto, una deuda aceptada o un "
           "falso positivo: se informa, pero no cambia el veredicto.")
 ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, en el archivo y la línea indicados; **[doc]** lo dice "
              "la documentación del repositorio o del producto; **[inferencia]** deducción sin verificación directa.")
@@ -89,23 +89,23 @@ ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, e
 
 def fila_cumplimiento(nombre: str, conteo: dict) -> str:
     evaluados = sum(conteo.values())
-    resultado = ("Sin evaluar" if not evaluados else "❌ No cumple" if conteo.get("NO CUMPLE") else
-                 "❔ Incompleto" if conteo.get("NO DETERMINADO") else "➖ No aplica" if not conteo.get("CUMPLE") else "✅ Cumple")
+    resultado = ("Sin evaluar" if not evaluados else "🚫 No cumple" if conteo.get("NO CUMPLE") else
+                 "🔍 Incompleto" if conteo.get("NO DETERMINADO") else "🔹 No aplica" if not conteo.get("CUMPLE") else "✅ Cumple")
     return (f"| {nombre} | {resultado} | {conteo.get('CUMPLE', 0)} | {conteo.get('NO CUMPLE', 0)} | {conteo.get('NO DETERMINADO', 0)} "
             f"| {conteo.get('NO APLICA', 0)} |")
 
 
 def tabla_cumplimiento(evaluaciones: dict, verificaciones: list[dict], sonar_estado: dict, sonar_abiertos: int) -> list[str]:
     from collections import Counter
-    lineas = ["| Qué se revisó | Resultado | ✅ Cumple | ❌ No cumple | ❔ No determinado | ➖ No aplica |", "|---|---|---|---|---|---|"]
+    lineas = ["| Qué se revisó | Resultado | ✅ Cumple | 🚫 No cumple | 🔍 No determinado | 🔹 No aplica |", "|---|---|---|---|---|---|"]
     for nivel in (1, 2, 3, 4):
         lineas.append(fila_cumplimiento(NIVELES[nivel], Counter(e["resultado"] for e in evaluaciones.values() if e["nivel"] == nivel)))
     lineas.append(fila_cumplimiento("Verificaciones automáticas", Counter(v["resultado"] for v in verificaciones)))
     if sonar_estado.get("estado") == "ok":
         compuerta = sonar_estado.get("quality_gate") or "—"
-        lineas.append(f"| Sonar | {'✅' if compuerta == 'OK' else '❌'} Quality gate {compuerta}, {sonar_abiertos} issue(s) | — | — | — | — |")
+        lineas.append(f"| Sonar | {'✅' if compuerta == 'OK' else '🚫'} Quality gate {compuerta}, {sonar_abiertos} issue(s) | — | — | — | — |")
     else:
-        lineas.append("| Sonar | ❔ No se pudo consultar | — | — | — | — |")
+        lineas.append("| Sonar | 🔍 No se pudo consultar | — | — | — | — |")
     return lineas
 
 
@@ -132,7 +132,7 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
         for regla, hallazgos in sorted(reglas.items()):
             criterios = sorted({h["criterio"] for h in hallazgos if h.get("criterio")})
             afecta = any(cuenta(h) for h in hallazgos)
-            lineas.append(f"- {'❌' if afecta else 'ℹ️'} `{regla}` {nombres.get(regla, '')}".rstrip()
+            lineas.append(f"- {'🚫' if afecta else '💬'} `{regla}` {nombres.get(regla, '')}".rstrip()
                           + f": {len(hallazgos)} hallazgo(s), {'afecta' if afecta else 'no afecta'} el veredicto"
                           + (f" (criterios {', '.join(criterios)})" if criterios else ""))
         lineas.append("")
@@ -148,7 +148,7 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
 def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lista = grupos(abiertos(registro, repo, rama))
     todos = abiertos(registro, repo, rama)
-    lineas = ["## Hallazgos", "", "| Severidad | ❌ Afectan el veredicto | ℹ️ No afectan |", "|---|---|---|",
+    lineas = ["## Hallazgos", "", "| Severidad | 🚫 Afectan el veredicto | 💬 No afectan |", "|---|---|---|",
               *(f"| {s.capitalize()} | {sum(1 for h in todos if h['severidad'] == s and cuenta(h))} "
                 f"| {sum(1 for h in todos if h['severidad'] == s and not cuenta(h))} |" for s in SEVERIDADES),
               "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
@@ -162,7 +162,7 @@ def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
 
 
 VERIFICACIONES = re.compile(r"\n## Verificaciones automáticas de las decisiones del equipo\n.*?(?=\n## |\n<!-- )", re.S)
-SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "❌", "NO APLICA": "➖", "NO DETERMINADO": "❔"}
+SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "🚫", "NO APLICA": "🔹", "NO DETERMINADO": "🔍"}
 
 
 def verificaciones_en_cumplimiento(texto: str, verificaciones: list[dict]) -> str:

@@ -430,7 +430,7 @@ def generar(raiz: Path, ambito: Ambito) -> dict:
         else:
             partes = []
             if choques:
-                partes.append(f"❌ {choques} choque(s)")
+                partes.append(f"🚫 {choques} choque(s)")
             if duplicados:
                 partes.append(f"⚠️ {duplicados} duplicación(es)")
             if id_decision in pendientes:
