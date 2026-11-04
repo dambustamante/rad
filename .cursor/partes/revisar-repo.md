@@ -73,6 +73,9 @@ componentes:                                  # todo lo que usa o expone, con ev
 
 Reglas:
 
+- **Ser heredado no es motivo de `NO APLICA`: todo se analiza.** Una regla pensada para proyectos nuevos, como una versión
+  de Java o de Spring Boot, se evalúa igual: si el repositorio no la cumple, es un hallazgo de `deuda` con su brecha (versión
+  actual frente a la exigida). Solo un ADR `excepcion` aprobado deja de evaluarla.
 - Copiar fragmentos y citas tal como están en la fuente; el script rechaza lo que no existe. Nunca
   reformular para que pase.
 - `incumplimiento` exige `cita_documento`; sin cita, el hallazgo es `diseño`, `error` o `deuda`.

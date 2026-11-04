@@ -55,3 +55,5 @@ guía paso a paso: [README.md](README.md) y [docs/](docs/README.md).
   `error`, `seguridad`, `deuda`, `documentacion`), severidad (`bloqueante`, `alta`, `media`, `baja`) y
   evidencia `ruta:línea`.
 - Sin cita del documento incumplido, un hallazgo no puede ser `incumplimiento`.
+- Ser heredado no es motivo de `NO APLICA`: todo se analiza. Si una regla pensada para proyectos nuevos no se cumple, es un
+  hallazgo de `deuda`; la única forma de apartarse de ella es un ADR `excepcion`.

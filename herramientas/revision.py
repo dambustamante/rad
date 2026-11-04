@@ -46,6 +46,7 @@ from comun import RAIZ, ErrorRadiografia, git, normalizar
 from revisar import MARCA_REVISION, decisiones_con_criterios, leer_json, reemplazar_bloque, veredicto
 
 MAXIMO_DOCUMENTOS = 40
+POR_HEREDADO = re.compile(r"\b(heredad[oa]s?|legad[oa]s?|legacy)\b|\b(proyectos?|servicios?|desarrollos?) nuev[oa]s?\b")
 SIN_REVISAR = re.compile(r"\bno se (reviso|revisaron|contrasto|verifico|evaluo|aplico|ejecuto|leyo|confirmo)\b")
 MARCA_COMPARACION = ("<!-- comparacion:inicio -->", "<!-- comparacion:fin -->")
 MARCA_PRODUCTO_AUTOMATICO = ("<!-- producto-automatico:inicio -->", "<!-- producto-automatico:fin -->")
@@ -624,6 +625,9 @@ def registrar_lote(raiz: Path, producto: str, repo: str, archivo: Path | None = 
     errores += [f"{c}: «{m}» no es un motivo de NO DETERMINADO. Revisarlo y clasificarlo, o indicar qué evidencia falta "
                 "y dónde está (por ejemplo, otro repositorio o la plataforma)." for c, m in (datos.get("no_determinado") or {}).items()
                 if isinstance(datos.get("no_determinado"), dict) and SIN_REVISAR.search(normalizar(str(m)))]
+    errores += [f"{c}: «{m}». Ser heredado no es motivo de NO APLICA: evaluar la regla. Si no se cumple, registrar un hallazgo de "
+                "deuda; para apartarse de ella, crear un ADR excepcion." for c, m in (datos.get("no_aplica") or {}).items()
+                if isinstance(datos.get("no_aplica"), dict) and POR_HEREDADO.search(normalizar(str(m)))]
     for clave_corta, resultado, motivo in clasificados:
         elemento = por_clave_corta.get(clave_corta)
         if elemento is None:

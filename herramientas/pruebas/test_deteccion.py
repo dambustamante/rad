@@ -55,6 +55,13 @@ class PruebaDeteccion(unittest.TestCase):
         self.assertNotIn("Hallazgos automáticos abiertos", corto)
         self.assertTrue(corto.endswith("<!-- automatico:fin -->"))
 
+    def test_heredado_no_es_motivo_de_no_aplica(self) -> None:
+        for motivo in ("odin-ms es heredado y declara Java 17.", "La regla rápida aplica a servicios nuevos.",
+                       "El baseline es para proyectos nuevos."):
+            self.assertTrue(revision.POR_HEREDADO.search(normalizar(motivo)), motivo)
+        for motivo in ("odin-ms no es un frontend de backoffice.", "El estándar aplica al crear un desarrollo con un template."):
+            self.assertFalse(revision.POR_HEREDADO.search(normalizar(motivo)), motivo)
+
     def test_el_as_is_va_en_tablas(self) -> None:
         tabla = "## Observabilidad\n\n| Aspecto | Qué hay | Evidencia |\n|---|---|---|\n| Trazas | b3 | [hecho] `a.yaml:7` |\n"
         self.assertTrue(revision.tabla_con_evidencia(tabla, "Observabilidad"))
