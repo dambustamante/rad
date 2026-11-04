@@ -119,9 +119,16 @@ def texto_criterios(raiz: Path, producto: str) -> str:
 
 
 def seccion_asis(texto: str, nombre: str) -> str:
-    coincidencia = re.search(rf"^## {re.escape(nombre)}\s*\n(.*?)(?=^## |\Z)", texto, re.MULTILINE | re.DOTALL)
-    resumen = " ".join(coincidencia.group(1).split()) if coincidencia else ""
-    return (resumen[:LARGO_RESUMEN] + "…") if len(resumen) > LARGO_RESUMEN else resumen
+    """Una sección del AS IS, con sus tablas, hasta LARGO_RESUMEN caracteres cortando en una línea completa."""
+    coincidencia = re.search(rf"^## {re.escape(nombre)}\s*\n(.*?)(?=^## |^<!-- |\Z)", texto, re.MULTILINE | re.DOTALL)
+    lineas, total = [], 0
+    for linea in (coincidencia.group(1).strip().splitlines() if coincidencia else []):
+        if total + len(linea) > LARGO_RESUMEN:
+            lineas.append("…")
+            break
+        lineas.append(linea)
+        total += len(linea)
+    return "\n".join(lineas)
 
 
 def archivo_arquitectura(clave: str) -> str:
@@ -164,7 +171,7 @@ def texto_repo(raiz: Path, producto: str, repo: dict, registro: dict) -> str:
     texto_ficha = ficha.read_text(encoding="utf-8") if ficha.exists() else ""
     for nombre in ("Propósito", "Arquitectura real"):
         resumen = seccion_asis(texto_ficha, nombre)
-        lineas += [f"**{nombre}:** {resumen or 'NO DETERMINADO (sin revisión de código)'}", ""]
+        lineas += [f"**{nombre}:**", "", resumen or "NO DETERMINADO (sin revisión de código)", ""]
     codigo = (registro.get("repos", {}).get(id_repo) or {}).get("codigo")
     componentes = revision.leer_trabajo(raiz, producto, codigo["id"], id_repo).get("componentes", []) if codigo else []
     lineas += ["## Componentes", ""]

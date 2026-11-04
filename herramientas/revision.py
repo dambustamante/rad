@@ -719,6 +719,9 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
     sin_seccion = [s for s in SECCIONES_AS_IS if normalizar(s) not in encabezados]
     if sin_seccion:
         raise ErrorRadiografia(f"Al AS IS le faltan secciones: {', '.join(sin_seccion)}.")
+    sin_tabla = [s for s in SECCIONES_AS_IS[1:] if not tabla_con_evidencia(texto_asis, s)]
+    if sin_tabla:
+        raise ErrorRadiografia(f"En el AS IS, estas secciones van como tabla con columna «Evidencia»: {', '.join(sin_tabla)}.")
     import lenguaje
     avisos = [f"lenguaje: {a}" for a in lenguaje.formatear(lenguaje.revisar(texto_asis), asis.name)]
     stack = ", ".join(leer_json(carpeta / f"{repo}.json").get("stack", [])) or "NO DETERMINADO"
@@ -742,6 +745,13 @@ def cerrar(raiz: Path, producto: str, repo: str, archivos_leidos: int | None) ->
     import indices
     indices.indice_producto(raiz, producto)
     return {"resumen": resumen, "avisos": avisos, "evaluaciones": Counter(e["resultado"] for e in trabajo["evaluaciones"].values())}
+
+
+def tabla_con_evidencia(texto: str, seccion: str) -> bool:
+    """Una sección del AS IS escrita como tabla con columna Evidencia, o Riesgos remitiendo a los hallazgos."""
+    coincidencia = re.search(rf"^## {re.escape(seccion)}[ \t]*\n(.*?)(?=^## |\Z)", texto, re.MULTILINE | re.DOTALL)
+    cuerpo = coincidencia.group(1) if coincidencia else ""
+    return bool(re.search(r"^\|.*\bEvidencia\b.*\|\s*$", cuerpo, re.MULTILINE)) or "Los riesgos están en la tabla de hallazgos" in cuerpo
 
 
 def absorber_sonar(registro: dict, repo: str, rama: str) -> None:

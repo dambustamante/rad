@@ -40,7 +40,9 @@ Toda llamada a un sistema externo define un timeout explícito de conexión y de
 > Ninguna llamada externa sin timeout explícito.
 """
 
-AS_IS = "# AS IS\n\n" + "\n\n".join(f"## {s}\n\n[inferencia] Contenido de prueba." for s in revision.SECCIONES_AS_IS) + "\n"
+AS_IS = ("# AS IS\n\n## Propósito\n\n[inferencia] Contenido de prueba.\n\n" + "\n\n".join(
+    f"## {s}\n\n| Aspecto | Qué hay | Evidencia |\n|---|---|---|\n| Prueba | Contenido de prueba | [inferencia] |"
+    for s in revision.SECCIONES_AS_IS[1:]) + "\n")
 
 
 class PruebaRevision(unittest.TestCase):

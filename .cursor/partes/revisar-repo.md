@@ -21,16 +21,20 @@ revisar solo lo que el cambio afecta: lo demás se hereda.
 
 ## 3. AS IS
 
-`revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`. Cada afirmación primero y, al final entre paréntesis,
-su etiqueta y su ubicación, para que se lea de corrido: «Usa Spring WebFlux ([hecho] `build.gradle:47`).» Describe cómo es el
-servicio: **no repetir lo que ya es un hallazgo** (va en la tabla de hallazgos) ni lo que ya va en `componentes` (bases, colas,
-integraciones y APIs).
+`revisiones/<revisión>/revision/<repo>-asis.md` con estas secciones `##`. Describe cómo es el servicio: **no repetir lo que ya
+es un hallazgo** (va en la tabla de hallazgos) ni lo que ya va en `componentes` (bases, colas, integraciones y APIs).
 
-1. **Propósito**: qué hace y qué capacidad de negocio soporta.
+1. **Propósito**: qué hace y qué capacidad de negocio soporta, en dos o tres frases. Debajo, una tabla `| Evidencia | Dónde |`.
 2. **Arquitectura real**: estilo, módulos y cómo dependen entre sí; lo que hay, no lo que debería haber.
 3. **Configuración y despliegue**: variables (solo nombres), empaquetado, CI y entornos.
 4. **Observabilidad**: logs, métricas, trazas y alertas.
-5. **Riesgos y deuda principales**: solo lo que no es un hallazgo, como contexto, decisiones heredadas o riesgos sin una regla que los cubra. Si no hay, escribir «Los riesgos están en la tabla de hallazgos.»
+5. **Riesgos y deuda principales**: solo lo que no es un hallazgo, como contexto, decisiones heredadas o riesgos sin una regla que
+   los cubra. Si no hay, escribir «Los riesgos están en la tabla de hallazgos.»
+
+Las secciones 2 a 5 son tablas de tres columnas: `| Aspecto | Qué hay | Evidencia |` (en Riesgos: `| Riesgo | Por qué importa |
+Evidencia |`). La evidencia lleva su etiqueta y su ubicación: `[hecho] \`RouterConfig.java:29\``. Usar solo el nombre del archivo
+si es único en el repositorio; si no, la ruta desde la carpeta que lo distingue. Lo que no está en el repositorio se escribe
+igual, con `—` como evidencia: «Alertas y dashboard | No están en el repositorio | —».
 
 Bases, colas, integraciones, APIs y datos no se describen aquí: van como `componentes` en el lote. El
 cierre genera con ellos la tabla de la ficha y los borradores C4.

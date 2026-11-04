@@ -55,6 +55,13 @@ class PruebaDeteccion(unittest.TestCase):
         self.assertNotIn("Hallazgos automáticos abiertos", corto)
         self.assertTrue(corto.endswith("<!-- automatico:fin -->"))
 
+    def test_el_as_is_va_en_tablas(self) -> None:
+        tabla = "## Observabilidad\n\n| Aspecto | Qué hay | Evidencia |\n|---|---|---|\n| Trazas | b3 | [hecho] `a.yaml:7` |\n"
+        self.assertTrue(revision.tabla_con_evidencia(tabla, "Observabilidad"))
+        self.assertFalse(revision.tabla_con_evidencia("## Observabilidad\n\nUsa Actuator ([hecho] `b.gradle:49`).\n", "Observabilidad"))
+        self.assertTrue(revision.tabla_con_evidencia("## Riesgos y deuda principales\n\nLos riesgos están en la tabla de hallazgos.\n",
+                                                     "Riesgos y deuda principales"))
+
     def test_certificados_de_la_red(self) -> None:
         with tempfile.TemporaryDirectory() as carpeta, mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("REQUESTS_CA_BUNDLE", None)
