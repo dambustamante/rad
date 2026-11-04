@@ -50,12 +50,26 @@ def grupos(lista: list[dict]) -> list[dict]:
     return sorted(por_clave.values(), key=lambda g: (not g["cuenta"], SEVERIDADES.index(g["severidad"]), g["nivel"], g["ids"][0]))
 
 
-def donde(g: dict) -> str:
+def url_web(url_git: str, commit: str | None) -> str | None:
+    """Dirección web del repositorio en el commit revisado, o None si no es de GitLab ni de GitHub (por ejemplo, una carpeta local)."""
+    texto = url_git.strip().removesuffix("/").removesuffix(".git")
+    coincidencia = (re.match(r"^[\w.-]+@([\w.-]+):(.+)$", texto)
+                    or re.match(r"^(?:https?|ssh)://(?:[^@/]+@)?([^/:]+)(?::\d+)?/(.+)$", texto))
+    if not coincidencia or not commit:
+        return None
+    servidor, proyecto = coincidencia.groups()
+    separador = "/blob/" if "github" in servidor else "/-/blob/"  # GitLab, incluido el propio de la empresa
+    return f"https://{servidor}/{proyecto}{separador}{commit}"
+
+
+def donde(g: dict, base: str | None = None) -> str:
     lineas = sorted(set(g["lineas"]))
+    archivo = f"[`{g['archivo']}`]({base}/{g['archivo']})" if base and g["archivo"] != "—" else f"`{g['archivo']}`"
     if not lineas:
-        return f"`{g['archivo']}`"
-    texto = ", ".join(map(str, lineas[:MAXIMO_LINEAS])) + (f" y {len(lineas) - MAXIMO_LINEAS} más" if len(lineas) > MAXIMO_LINEAS else "")
-    return f"`{g['archivo']}` (línea{'s' if len(lineas) > 1 else ''} {texto})"
+        return archivo
+    numeros = [f"[{n}]({base}/{g['archivo']}#L{n})" if base else str(n) for n in lineas[:MAXIMO_LINEAS]]
+    texto = ", ".join(numeros) + (f" y {len(lineas) - MAXIMO_LINEAS} más" if len(lineas) > MAXIMO_LINEAS else "")
+    return f"{archivo} (línea{'s' if len(lineas) > 1 else ''} {texto})"
 
 
 def que(g: dict) -> str:
@@ -169,14 +183,14 @@ def enlace(id_hallazgo: str) -> str:
     return f"[{id_hallazgo}](#{id_hallazgo.lower()})"
 
 
-def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
+def texto_hallazgos(registro: dict, repo: str, rama: str, base: str | None = None) -> str:
     lista = grupos(abiertos(registro, repo, rama))
     lineas = ["## Anexo A. Hallazgos", "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
     if not lista:
         return "\n".join(lineas + ["Sin hallazgos abiertos."])
     lineas += ["| Severidad | Afecta el veredicto | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
     for g in lista:
-        lineas.append(f"| {g['severidad'].capitalize()} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g)} "
+        lineas.append(f"| {g['severidad'].capitalize()} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g, base)} "
                       f"| {', '.join(ancla(i) for i in g['ids'])} |")
     return "\n".join(lineas)
 
@@ -236,7 +250,10 @@ def componer(raiz: Path, producto: str, repo: str) -> Path:
     verificaciones = datos.get("verificaciones") or []
     texto = reemplazar_bloque(texto, MARCA_RESUMEN, texto_resumen(raiz, producto, repo, rama, registro, estado, evaluaciones,
                                                                   verificaciones, sonar_estado))
-    texto = reemplazar_bloque(texto, MARCA_HALLAZGOS, texto_hallazgos(registro, repo, rama))
+    import productos
+    datos_repo = next((r for r in productos.repos_de(productos.leer_productos(raiz).get(producto) or {}) if str(r["id"]) == repo), {})
+    base = url_web(str(datos_repo.get("url") or ""), (estado.get("codigo") or estado.get("automatica") or {}).get("commit"))
+    texto = reemplazar_bloque(texto, MARCA_HALLAZGOS, texto_hallazgos(registro, repo, rama, base))
     automatico = bloque(texto, MARCA_AUTOMATICO)
     if automatico:
         texto = texto.replace(automatico, limpiar_automatico(automatico))

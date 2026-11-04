@@ -55,6 +55,20 @@ class PruebaDeteccion(unittest.TestCase):
         self.assertNotIn("Hallazgos automáticos abiertos", corto)
         self.assertTrue(corto.endswith("<!-- automatico:fin -->"))
 
+    def test_enlaces_al_codigo(self) -> None:
+        import ficha
+        self.assertEqual(ficha.url_web("git@gitlab.com:tenpo/users/odin-ms.git", "abc123"),
+                         "https://gitlab.com/tenpo/users/odin-ms/-/blob/abc123")
+        self.assertEqual(ficha.url_web("https://github.com/org/repo.git", "abc123"), "https://github.com/org/repo/blob/abc123")
+        self.assertEqual(ficha.url_web("ssh://git@gitlab.empresa.cl:2222/grupo/repo.git", "abc"),
+                         "https://gitlab.empresa.cl/grupo/repo/-/blob/abc")
+        self.assertIsNone(ficha.url_web("/Users/x/repos/local", "abc"), "una carpeta local no tiene dirección web")
+        grupo = {"archivo": "src/A.java", "lineas": [32, 40]}
+        self.assertEqual(ficha.donde(grupo, "https://g/p/-/blob/c"),
+                         "[`src/A.java`](https://g/p/-/blob/c/src/A.java) (líneas [32](https://g/p/-/blob/c/src/A.java#L32), "
+                         "[40](https://g/p/-/blob/c/src/A.java#L40))")
+        self.assertEqual(ficha.donde(grupo), "`src/A.java` (líneas 32, 40)")
+
     def test_heredado_no_es_motivo_de_no_aplica(self) -> None:
         for motivo in ("odin-ms es heredado y declara Java 17.", "La regla rápida aplica a servicios nuevos.",
                        "El baseline es para proyectos nuevos."):
