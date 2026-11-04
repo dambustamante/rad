@@ -169,6 +169,34 @@ class PruebaRevision(unittest.TestCase):
         codigo, salida = self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
         self.assertIn("NO CUMPLE sin hallazgo registrado: decisiones:ADR-010", salida)
 
+    def test_reiniciar_deja_el_producto_sin_revision(self) -> None:
+        self.completar()
+        self.assertEqual(self.ejecutar("cerrar", "motor-fraudes", "fraude-core")[0], 0)
+        registro = hallazgos.cargar(self.raiz, "motor-fraudes")
+        cantidad = len(registro["hallazgos"])
+        self.assertGreater(cantidad, 0)
+        previa = revision.reiniciar(self.raiz, "motor-fraudes")
+        self.assertEqual((previa["hallazgos"], previa["respaldo"]), (cantidad, None), "sin confirmar no borra nada")
+        self.assertEqual(len(hallazgos.cargar(self.raiz, "motor-fraudes")["hallazgos"]), cantidad)
+        r = revision.reiniciar(self.raiz, "motor-fraudes", confirmar=True)
+        registro = hallazgos.cargar(self.raiz, "motor-fraudes")
+        self.assertEqual((registro["hallazgos"], registro["siguiente_id"]), ({}, 1), "los IDs empiezan de nuevo")
+        self.assertNotIn("fraude-core", registro.get("repos", {}))
+        self.assertFalse((self.raiz / "productos" / "motor-fraudes" / "as-is" / "fraude-core.md").exists())
+        self.assertTrue((self.raiz / r["respaldo"] / "hallazgos.json").exists(), "queda un respaldo")
+        self.assertTrue((self.raiz / r["respaldo"] / "fraude-core.md").exists())
+        self.assertEqual(revision.pendientes(self.raiz, "motor-fraudes")[0]["situacion"], "falta la parte automática")
+
+    def test_reiniciar_no_borra_decisiones_de_triaje(self) -> None:
+        self.completar()
+        self.ejecutar("cerrar", "motor-fraudes", "fraude-core")
+        registro = hallazgos.cargar(self.raiz, "motor-fraudes")
+        next(iter(registro["hallazgos"].values()))["triaje"] = {"decision": "deuda"}
+        hallazgos.guardar(self.raiz, "motor-fraudes", registro)
+        with self.assertRaises(revision.ErrorRadiografia) as error:
+            revision.reiniciar(self.raiz, "motor-fraudes", confirmar=True)
+        self.assertIn("triaje", str(error.exception))
+
     def test_cierre_actualiza_registro_ficha_y_producto(self) -> None:
         registro = hallazgos.cargar(self.raiz, "motor-fraudes")
         registro["hallazgos"]["sonar-prueba"] = {

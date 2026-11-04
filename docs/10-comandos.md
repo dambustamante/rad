@@ -160,7 +160,18 @@ que los documentos describen y no se encontró en ningún repositorio. Los scrip
 | Anexo D. Cumplimiento regla por regla | Cada regla con su resultado y motivo, y las verificaciones automáticas |
 | Anexo E. Datos técnicos | Commit, Sonar y datos de la revisión automática |
 
-«Afecta el veredicto» es «Sí» cuando la regla está vigente: los hallazgos de ADR en Propuesto solo informan. Para aplicar este diseño a fichas ya
+«Afecta el veredicto» es «Sí» cuando la regla está vigente: los hallazgos de ADR en Propuesto solo informan.
+
+**Revisar desde cero.** Para descartar las revisiones anteriores de un producto, o de uno de sus repositorios, y empezar de nuevo:
+
+```sh
+.venv/bin/python herramientas/revision.py reiniciar <producto> [repo]              # vista previa: no borra nada
+.venv/bin/python herramientas/revision.py reiniciar <producto> [repo] --confirmar  # respalda y reinicia
+```
+
+Respalda el registro de hallazgos y las fichas en `revisiones/respaldo-<fecha>/`, quita sus hallazgos y fichas, y deja los
+repositorios como pendientes de `/revisar`. Sin indicar repositorio, reinicia todos y los IDs vuelven a empezar en H-0001. Se niega
+si algún hallazgo ya tiene triaje, para no perder esas decisiones. Para aplicar este diseño a fichas ya
 generadas, sin repetir la revisión: `.venv/bin/python herramientas/revision.py ficha <producto> [repo]`.
 
 **Cómo revisa los MR:**

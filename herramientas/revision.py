@@ -32,7 +32,7 @@ import sys
 
 import yaml
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import hallazgos as registro_hallazgos
@@ -863,6 +863,49 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
     ficha.componer(raiz, producto, repo)
 
 
+def reiniciar(raiz: Path, producto: str, repo: str | None = None, confirmar: bool = False) -> dict:
+    """Deja uno o todos los repositorios del producto sin revisión, para revisarlos desde cero.
+
+    Respalda antes el registro y las fichas. Se niega si algún hallazgo ya tiene triaje: esas decisiones se perderían.
+    Las carpetas de revisiones/ se conservan como historial.
+    """
+    registro = registro_hallazgos.cargar(raiz, producto)
+    todos = sorted(set(registro.get("repos") or {}) | {h["repo"] for h in registro["hallazgos"].values()})
+    if repo and repo not in todos:
+        raise ErrorRadiografia(f"'{repo}' no tiene revisiones en '{producto}'.")
+    repos = [repo] if repo else todos
+    con_triaje = sorted(h["id"] for h in registro["hallazgos"].values() if h["repo"] in repos and h.get("triaje"))
+    if con_triaje:
+        raise ErrorRadiografia(f"Hay hallazgos con triaje ({', '.join(con_triaje[:10])}{'…' if len(con_triaje) > 10 else ''}): "
+                               "reiniciar borraría esas decisiones. Revisar sin reiniciar, o quitar antes su triaje.")
+    carpeta_asis = raiz / "productos" / producto / "as-is"
+    fichas = [carpeta_asis / f"{r}.md" for r in repos if (carpeta_asis / f"{r}.md").exists()]
+    if (carpeta_asis / "PRODUCTO.md").exists():
+        fichas.append(carpeta_asis / "PRODUCTO.md")  # el consolidado queda desactualizado en cuanto cambia un repositorio
+    plan = {"repos": repos, "hallazgos": sum(1 for h in registro["hallazgos"].values() if h["repo"] in repos),
+            "fichas": [f.relative_to(raiz) for f in fichas], "respaldo": None}
+    if not confirmar:
+        return plan
+    respaldo = raiz / "productos" / producto / "revisiones" / f"respaldo-{datetime.now():%Y-%m-%d-%H%M%S}"
+    respaldo.mkdir(parents=True)
+    archivo = registro_hallazgos.archivo_registro(raiz, producto)
+    if archivo.exists():
+        shutil.copy2(archivo, respaldo / archivo.name)
+    for ficha in fichas:
+        shutil.copy2(ficha, respaldo / ficha.name)
+    registro["hallazgos"] = {k: h for k, h in registro["hallazgos"].items() if h["repo"] not in repos}
+    registro["repos"] = {k: v for k, v in (registro.get("repos") or {}).items() if k not in repos}
+    registro["ramas"] = {k: v for k, v in (registro.get("ramas") or {}).items() if k.split("@", 1)[0] not in repos}
+    if not registro["hallazgos"]:
+        registro["siguiente_id"] = 1
+    registro_hallazgos.guardar(raiz, producto, registro)
+    for ficha in fichas:
+        ficha.unlink()
+    import indices
+    indices.indice_producto(raiz, producto)
+    return {**plan, "respaldo": respaldo.relative_to(raiz)}
+
+
 def regenerar_fichas(raiz: Path, producto: str, repo: str | None = None) -> list[Path]:
     """Recompone las fichas con lo ya registrado: el cumplimiento sale del lote de la última revisión de código."""
     import ficha
@@ -1023,6 +1066,10 @@ def main(argumentos: list[str] | None = None) -> int:
     p.add_argument("producto")
     p.add_argument("repo")
     p.add_argument("--archivos-leidos", type=int)
+    p = sub.add_parser("reiniciar", help="deja los repositorios sin revisión, para revisarlos desde cero (con respaldo)")
+    p.add_argument("producto")
+    p.add_argument("repo", nargs="?")
+    p.add_argument("--confirmar", action="store_true", help="hace el reinicio; sin esto solo muestra qué se borraría")
     p = sub.add_parser("ficha", help="vuelve a componer las fichas con el diseño vigente, sin repetir la revisión")
     p.add_argument("producto")
     p.add_argument("repo", nargs="?")
@@ -1059,6 +1106,12 @@ def main(argumentos: list[str] | None = None) -> int:
                   f"reaparecidos {len(s['reaparecidos'])}.")
             for aviso in r["avisos"]:
                 print(f"  Aviso: {aviso}")
+        elif o.accion == "reiniciar":
+            r = reiniciar(raiz, o.producto, o.repo, o.confirmar)
+            print(f"Repositorios: {', '.join(r['repos'])} · hallazgos: {r['hallazgos']} · fichas: "
+                  f"{', '.join(map(str, r['fichas'])) or 'ninguna'}")
+            print(f"Reiniciado. Respaldo en {r['respaldo']}. Siguiente: /revisar {o.producto}, un chat por repositorio."
+                  if r["respaldo"] else "Vista previa: no se borró nada. Para reiniciar, repetir con --confirmar.")
         elif o.accion == "ficha":
             for archivo in regenerar_fichas(raiz, o.producto, o.repo):
                 print(f"Ficha: {archivo.relative_to(raiz)}")
