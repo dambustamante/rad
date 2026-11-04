@@ -201,7 +201,8 @@ class PruebaRevision(unittest.TestCase):
         self.assertIn("| Sonar |", ficha)
         self.assertIn("| 1 | Llamada sin timeout | Timeouts obligatorios | Alta |", ficha)
         self.assertIn("## Decisiones pendientes", ficha)
-        self.assertIn("| decisiones:ADR-010 | No cumple | Sí |", ficha)
+        self.assertIn("| decisiones:ADR-010 | No cumple | Sí | motivo de prueba | [H-0007](#h-0007) |", ficha)
+        self.assertIn('<a id="h-0007"></a>H-0007', ficha, "el enlace llega a la fila del hallazgo")
         for icono in ("🚫", "💬", "✅", "🔍", "🔹"):
             self.assertNotIn(icono, ficha, "sin íconos")
         orden = ["## Conclusión", "## Estado por fuente", "## Riesgos principales", "## Decisiones pendientes", "## Anexo A. Hallazgos",

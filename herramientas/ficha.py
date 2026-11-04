@@ -160,6 +160,15 @@ def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dic
     return "\n".join(lineas)
 
 
+def ancla(id_hallazgo: str) -> str:
+    """Destino de un enlace a un hallazgo, en su fila del Anexo A."""
+    return f'<a id="{id_hallazgo.lower()}"></a>{id_hallazgo}'
+
+
+def enlace(id_hallazgo: str) -> str:
+    return f"[{id_hallazgo}](#{id_hallazgo.lower()})"
+
+
 def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lista = grupos(abiertos(registro, repo, rama))
     lineas = ["## Anexo A. Hallazgos", "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
@@ -168,7 +177,7 @@ def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lineas += ["| Severidad | Afecta el veredicto | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
     for g in lista:
         lineas.append(f"| {g['severidad'].capitalize()} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g)} "
-                      f"| {', '.join(g['ids'])} |")
+                      f"| {', '.join(ancla(i) for i in g['ids'])} |")
     return "\n".join(lineas)
 
 
