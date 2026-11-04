@@ -107,7 +107,7 @@ def conclusion(repo: str, lista: list[dict], nombres: dict[str, str], sin_eviden
     else:
         reglas = [nombres.get(r) or r for r in vigentes]
         texto = (f"{repo} no cumple {len(vigentes)} regla(s) vigente(s): {', '.join(reglas[:-1]) + ' y ' + reglas[-1] if len(reglas) > 1 else reglas[0]}. "
-                 f"El riesgo principal: {que(grupos(lista)[0]).rstrip('.').lower()}.")
+                 f"El riesgo principal: {(lambda s: s[:1].lower() + s[1:])(que(grupos(lista)[0]).rstrip('.'))}.")
     if sin_evidencia:
         texto += f" {sin_evidencia} regla(s) no se pudieron confirmar desde el repositorio."
     return texto
