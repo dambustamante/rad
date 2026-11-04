@@ -151,15 +151,16 @@ que los documentos describen y no se encontró en ningún repositorio. Los scrip
 
 **Qué deja:** `as-is/<repo>.md`, la ficha de cada repositorio, y `as-is/PRODUCTO.md`. La ficha empieza por lo importante:
 
-| Sección | Qué muestra |
+| Parte | Qué muestra |
 |---|---|
-| Resumen | Veredicto, hallazgos por severidad, **qué ADR de arquitectura, estándares y ADR de equipo se incumplen**, y qué hacer primero |
-| Hallazgos | Una tabla de lo más grave a lo menos, con los repetidos del mismo archivo en una fila |
-| Revisión de código | Cómo es hoy: propósito, arquitectura, configuración, observabilidad y riesgos |
-| Componentes y cumplimiento | Conteo por nivel y detalle de lo que no cumple o no se pudo determinar. Lo que cumple o no aplica queda plegado |
-| Datos técnicos | Commit, Sonar y verificaciones automáticas |
+| Primera página | Producto, commit, fecha y veredicto; conclusión; estado por fuente (ADR de arquitectura, estándares, ADR de equipo, ADR del producto y Sonar); riesgos principales y decisiones pendientes. Sin rutas de archivos, para leerla con jefatura y arquitectura |
+| Anexo A. Hallazgos | Cada hallazgo, con archivo y línea |
+| Anexo B. Cómo es hoy | Propósito y, en tablas con su evidencia, arquitectura, configuración, observabilidad y riesgos |
+| Anexo C. Componentes | Bases, colas, integraciones y APIs |
+| Anexo D. Cumplimiento regla por regla | Cada regla con su resultado y motivo, y las verificaciones automáticas |
+| Anexo E. Datos técnicos | Commit, Sonar y datos de la revisión automática |
 
-«Cuenta» indica si el hallazgo cambia el veredicto: los de ADR en Propuesto solo informan. Para aplicar este diseño a fichas ya
+«Afecta el veredicto» es «Sí» cuando la regla está vigente: los hallazgos de ADR en Propuesto solo informan. Para aplicar este diseño a fichas ya
 generadas, sin repetir la revisión: `.venv/bin/python herramientas/revision.py ficha <producto> [repo]`.
 
 **Cómo revisa los MR:**

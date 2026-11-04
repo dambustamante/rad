@@ -58,6 +58,7 @@ SECCIONES_AS_IS = ("Propósito", "Arquitectura real", "Configuración y desplieg
 VENTANA_FRAGMENTO = 3
 UMBRAL_INCREMENTAL = 0.4   # si cambió más de esta fracción de archivos, la revisión es completa
 MINIMO_ARCHIVOS_UMBRAL = 20  # en repositorios más chicos el umbral no se aplica
+RESULTADO_TEXTO = {"CUMPLE": "Cumple", "NO CUMPLE": "No cumple", "NO APLICA": "No aplica", "NO DETERMINADO": "Sin evidencia suficiente"}
 SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "🚫", "NO APLICA": "🔹", "NO DETERMINADO": "🔍"}
 TIPOS_COMPONENTE = ("base-de-datos", "mensajeria", "cache", "integracion", "api-expuesta", "almacenamiento", "programado")
 DIRECCIONES = ("produce", "consume", "saliente", "entrante")
@@ -835,8 +836,8 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             hallazgos_por_clave.setdefault(clave_de(h["fuente"], h["criterio"]), []).append(h["id"])
     lineas = ["## Componentes", "", "> Sección generada al cerrar la revisión de código. No se edita a mano.", ""]
     lineas += tabla_componentes(trabajo.get("componentes", []))
-    lineas += ["", "## Detalle del cumplimiento", "", "> El resumen está al inicio, en Cumplimiento. «Afecta el veredicto»: «Sí» si la "
-               "regla está vigente, «No» si es un ADR en Propuesto."]
+    lineas += ["", "## Detalle del cumplimiento", "", "> El resumen está al inicio, en Estado por fuente. «Afecta el veredicto»: «Sí» si "
+               "la regla está vigente, «No» si es un ADR en Propuesto."]
     niveles = ((1, "ADR de arquitectura"), (2, "Estándares de arquitectura"), (3, "ADR de equipo"), (4, "ADR del producto"))
     for nivel, titulo in niveles:
         evaluaciones = sorted(((c, e) for c, e in trabajo["evaluaciones"].items() if e["nivel"] == nivel), key=lambda x: x[0])
@@ -844,8 +845,8 @@ def escribir_ficha_revision(raiz: Path, producto: str, repo: str, ctx: dict, tra
             continue
         principales = [(c, e) for c, e in evaluaciones if e["resultado"] in ("NO CUMPLE", "NO DETERMINADO")]
         resto = [(c, e) for c, e in evaluaciones if e["resultado"] not in ("NO CUMPLE", "NO DETERMINADO")]
-        fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {SIMBOLOS[e['resultado']]} {e['resultado']} "  # noqa: E731
-                             f"| {'—' if e['resultado'] == 'NO APLICA' else '🚫 Sí' if e['modo'] == 'vigente' and e['resultado'] == 'NO CUMPLE' else 'Sí' if e['modo'] == 'vigente' else '💬 No'} | {e['motivo'].replace('|', '/')} "
+        fila = lambda c, e: (f"| {e['criterio'] or e['fuente']} | {RESULTADO_TEXTO[e['resultado']]} "  # noqa: E731
+                             f"| {'—' if e['resultado'] == 'NO APLICA' else 'Sí' if e['modo'] == 'vigente' else 'No'} | {e['motivo'].replace('|', '/')} "
                              f"| {', '.join(hallazgos_por_clave.get(c, [])) or '—'} |")
         lineas += ["", f"### {titulo}", ""]
         if principales:

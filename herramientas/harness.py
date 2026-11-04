@@ -120,7 +120,7 @@ def texto_criterios(raiz: Path, producto: str) -> str:
 
 def seccion_asis(texto: str, nombre: str) -> str:
     """Una sección del AS IS, con sus tablas, hasta LARGO_RESUMEN caracteres cortando en una línea completa."""
-    coincidencia = re.search(rf"^## {re.escape(nombre)}\s*\n(.*?)(?=^## |^<!-- |\Z)", texto, re.MULTILINE | re.DOTALL)
+    coincidencia = re.search(rf"^#{{2,3}} {re.escape(nombre)}\s*\n(.*?)(?=^#{{2,3}} |^<!-- |\Z)", texto, re.MULTILINE | re.DOTALL)
     lineas, total = [], 0
     for linea in (coincidencia.group(1).strip().splitlines() if coincidencia else []):
         if total + len(linea) > LARGO_RESUMEN:

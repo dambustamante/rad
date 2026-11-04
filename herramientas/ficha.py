@@ -80,89 +80,99 @@ def regla_de(h: dict) -> str:
     return h["fuente"]
 
 
-SI, NO = "🚫 Sí", "💬 No"
-AFECTA = ("**Afecta el veredicto:** 🚫 Sí, si la regla está vigente. 💬 No, si es un ADR en Propuesto, una deuda aceptada o un "
-          "falso positivo: se informa, pero no cambia el veredicto.")
+TEXTO = {"CUMPLE": "Cumple", "NO CUMPLE": "No cumple", "NO APLICA": "No aplica", "NO DETERMINADO": "Sin evidencia suficiente"}
+AFECTA = ("«Afecta el veredicto» es «Sí» cuando la regla está vigente. Es «No» cuando la regla es un ADR en Propuesto, una deuda "
+          "aceptada o un falso positivo: se informa, pero no cambia el veredicto.")
 ETIQUETAS = ("> Cómo leer la evidencia: **[hecho]** verificado en el código, en el archivo y la línea indicados; **[doc]** lo dice "
              "la documentación del repositorio o del producto; **[inferencia]** deducción sin verificación directa.")
+ANEXOS = ("Anexos: [A. Hallazgos](#anexo-a-hallazgos) · [B. Cómo es hoy](#anexo-b-cómo-es-hoy) · "
+          "[C. Componentes](#anexo-c-componentes) · [D. Cumplimiento regla por regla](#anexo-d-cumplimiento-regla-por-regla) · "
+          "[E. Datos técnicos](#anexo-e-datos-técnicos)")
 
 
-def fila_cumplimiento(nombre: str, conteo: dict) -> str:
-    evaluados = sum(conteo.values())
-    resultado = ("Sin evaluar" if not evaluados else "🚫 No cumple" if conteo.get("NO CUMPLE") else
-                 "🔍 Incompleto" if conteo.get("NO DETERMINADO") else "🔹 No aplica" if not conteo.get("CUMPLE") else "✅ Cumple")
-    return (f"| {nombre} | {resultado} | {conteo.get('CUMPLE', 0)} | {conteo.get('NO CUMPLE', 0)} | {conteo.get('NO DETERMINADO', 0)} "
-            f"| {conteo.get('NO APLICA', 0)} |")
+def estado_fuente(conteo: dict, vigente: bool) -> str:
+    if not sum(conteo.values()):
+        return "Sin evaluar"
+    if conteo.get("NO CUMPLE"):
+        return "No cumple" if vigente else "Informativo"
+    if conteo.get("CUMPLE"):
+        return "Cumple" if not conteo.get("NO DETERMINADO") else "Cumple en lo evaluado"
+    return "No aplica" if not conteo.get("NO DETERMINADO") else "Sin evidencia suficiente"
 
 
-def tabla_cumplimiento(evaluaciones: dict, verificaciones: list[dict], sonar_estado: dict, sonar_abiertos: int) -> list[str]:
-    from collections import Counter
-    lineas = ["| Qué se revisó | Resultado | ✅ Cumple | 🚫 No cumple | 🔍 No determinado | 🔹 No aplica |", "|---|---|---|---|---|---|"]
-    for nivel in (1, 2, 3, 4):
-        lineas.append(fila_cumplimiento(NIVELES[nivel], Counter(e["resultado"] for e in evaluaciones.values() if e["nivel"] == nivel)))
-    lineas.append(fila_cumplimiento("Verificaciones automáticas", Counter(v["resultado"] for v in verificaciones)))
-    if sonar_estado.get("estado") == "ok":
-        compuerta = sonar_estado.get("quality_gate") or "—"
-        lineas.append(f"| Sonar | {'✅' if compuerta == 'OK' else '🚫'} Quality gate {compuerta}, {sonar_abiertos} issue(s) | — | — | — | — |")
+def conclusion(repo: str, lista: list[dict], nombres: dict[str, str], sin_evidencia: int) -> str:
+    vigentes = sorted({regla_de(h) for h in lista if cuenta(h)})
+    if not vigentes:
+        texto = f"{repo} cumple las reglas vigentes evaluadas."
     else:
-        lineas.append("| Sonar | 🔍 No se pudo consultar | — | — | — | — |")
-    return lineas
+        reglas = [nombres.get(r) or r for r in vigentes]
+        texto = (f"{repo} no cumple {len(vigentes)} regla(s) vigente(s): {', '.join(reglas[:-1]) + ' y ' + reglas[-1] if len(reglas) > 1 else reglas[0]}. "
+                 f"El riesgo principal: {que(grupos(lista)[0]).rstrip('.').lower()}.")
+    if sin_evidencia:
+        texto += f" {sin_evidencia} regla(s) no se pudieron confirmar desde el repositorio."
+    return texto
 
 
-def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dict, revision: str | None,
+def texto_resumen(raiz: Path, producto: str, repo: str, rama: str, registro: dict, estado: dict,
                   evaluaciones: dict, verificaciones: list[dict], sonar_estado: dict) -> str:
+    from collections import Counter
     lista = abiertos(registro, repo, rama)
-    lineas = [f"**Veredicto: {veredicto(registro, repo, rama)}**" + (f" · revisión `{revision}`" if revision else ""), "",
-              "## Cumplimiento", "", *tabla_cumplimiento(evaluaciones, verificaciones, sonar_estado, sum(1 for h in lista if h["nivel"] == 5)),
-              "", "El detalle de cada regla está al final, en [Detalle del cumplimiento](#detalle-del-cumplimiento).", "",
-              "## Qué se incumple", ""]
     nombres = titulos(raiz, producto)
-    por_nivel: dict[int, dict[str, list[dict]]] = {}
-    for h in lista:
-        por_nivel.setdefault(h["nivel"], {}).setdefault(regla_de(h), []).append(h)
-    for nivel in [1, 2, 3, *[n for n in (4, 5) if n in por_nivel]]:
-        lineas += [f"**{NIVELES[nivel]}**", ""]
-        reglas = por_nivel.get(nivel, {})
-        if not reglas:
-            lineas += ["✅ Ninguno.", ""]
-            continue
-        if nivel == 5:
-            lineas += [f"- {sum(len(v) for v in reglas.values())} issue(s) de Sonar", ""]
-            continue
-        for regla, hallazgos in sorted(reglas.items()):
-            criterios = sorted({h["criterio"] for h in hallazgos if h.get("criterio")})
-            afecta = any(cuenta(h) for h in hallazgos)
-            lineas.append(f"- {'🚫' if afecta else '💬'} `{regla}` {nombres.get(regla, '')}".rstrip()
-                          + f": {len(hallazgos)} hallazgo(s), {'afecta' if afecta else 'no afecta'} el veredicto"
-                          + (f" (criterios {', '.join(criterios)})" if criterios else ""))
-        lineas.append("")
-    lineas += ["## Qué hacer primero", ""]
-    acciones = grupos(lista)[:MAXIMO_ACCIONES]
-    lineas += [f"{n}. {que(g)} ({', '.join(g['ids'][:3])}{'…' if len(g['ids']) > 3 else ''})"
-               for n, g in enumerate(acciones, start=1)] or ["Nada pendiente."]
-    if acciones:
-        lineas += ["", "Dónde está cada uno: [Hallazgos](#hallazgos)."]
-    return "## Resumen\n\n" + "\n".join(lineas)
+    codigo = estado.get("codigo") or estado.get("automatica") or {}
+    dictamen = veredicto(registro, repo, rama)
+    conteos = {n: Counter(e["resultado"] for e in evaluaciones.values() if e["nivel"] == n) for n in (1, 2, 3, 4)}
+    conteos[3] += Counter(v["resultado"] for v in verificaciones)
+    vigencia = {n: any(e["modo"] == "vigente" for e in evaluaciones.values() if e["nivel"] == n) for n in (1, 2, 3, 4)}
+    sin_evidencia = sum(c.get("NO DETERMINADO", 0) for c in conteos.values())
+    lineas = ["| Producto | Commit revisado | Fecha | Veredicto |", "|---|---|---|---|",
+              f"| {producto} | {str(codigo.get('commit', '—'))[:7]} | {codigo.get('fecha', '—')} | "
+              f"**{'Aprobado' if dictamen == 'PASA' else 'No aprobado'}** |", "",
+              "## Conclusión", "", conclusion(repo, lista, nombres, sin_evidencia), "",
+              "## Estado por fuente", "", "| Fuente | Estado | Incumplimientos | Sin evidencia suficiente |", "|---|---|---|---|"]
+    for n in (1, 2, 3, 4):
+        nombre = NIVELES[n] + (" (en Propuesto)" if n == 3 and not vigencia[3] and sum(conteos[3].values()) else "")
+        lineas.append(f"| {nombre} | {estado_fuente(conteos[n], vigencia[n] or n in (1, 2))} | {conteos[n].get('NO CUMPLE', 0)} "
+                      f"| {conteos[n].get('NO DETERMINADO', 0)} |")
+    if sonar_estado.get("estado") == "ok":
+        lineas.append(f"| Sonar | Quality gate {sonar_estado.get('quality_gate') or '—'} | {sum(1 for h in lista if h['nivel'] == 5)} | — |")
+    else:
+        lineas.append("| Sonar | No disponible | — | — |")
+    lineas += ["", "## Riesgos principales", ""]
+    principales = grupos(lista)[:MAXIMO_ACCIONES]
+    if principales:
+        lineas += ["| Prioridad | Riesgo | Regla incumplida | Severidad |", "|---|---|---|---|"]
+        for n, g in enumerate(principales, start=1):
+            regla = regla_de({"nivel": g["nivel"], "criterio": g["regla"] if g["nivel"] in (3, 4) else None, "fuente": g["regla"]})
+            lineas.append(f"| {n} | {que(g)} | {nombres.get(regla) or regla}{'' if g['cuenta'] else ' (no afecta el veredicto)'} "
+                          f"| {g['severidad'].capitalize()} |")
+    else:
+        lineas.append("Sin riesgos abiertos.")
+    pendientes = []
+    informativos = sum(1 for h in lista if not cuenta(h))
+    if informativos:
+        pendientes.append(f"**Reglas en Propuesto:** {informativos} hallazgo(s) no afectan el veredicto mientras sus ADR no se aprueben.")
+    if sin_evidencia:
+        pendientes.append(f"**Sin evidencia suficiente:** {sin_evidencia} regla(s) necesitan información que no está en el repositorio, "
+                          "por ejemplo el tier del servicio, sus alertas o Sonar.")
+    if sonar_estado.get("estado") != "ok":
+        pendientes.append("**Sonar:** no se pudo consultar; su calidad de código queda sin evaluar.")
+    lineas += ["", "## Decisiones pendientes", "", *([f"- {p}" for p in pendientes] or ["Ninguna."]), "", "---", "", ANEXOS]
+    return "\n".join(lineas)
 
 
 def texto_hallazgos(registro: dict, repo: str, rama: str) -> str:
     lista = grupos(abiertos(registro, repo, rama))
-    todos = abiertos(registro, repo, rama)
-    lineas = ["## Hallazgos", "", "| Severidad | 🚫 Afectan el veredicto | 💬 No afectan |", "|---|---|---|",
-              *(f"| {s.capitalize()} | {sum(1 for h in todos if h['severidad'] == s and cuenta(h))} "
-                f"| {sum(1 for h in todos if h['severidad'] == s and not cuenta(h))} |" for s in SEVERIDADES),
-              "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
+    lineas = ["## Anexo A. Hallazgos", "", AFECTA, "", "De lo más grave a lo menos. Los repetidos en el mismo archivo van en una fila.", ""]
     if not lista:
         return "\n".join(lineas + ["Sin hallazgos abiertos."])
     lineas += ["| Severidad | Afecta el veredicto | Regla | Qué | Dónde | IDs |", "|---|---|---|---|---|---|"]
     for g in lista:
-        lineas.append(f"| {g['severidad']} | {SI if g['cuenta'] else NO} | {g['regla']} | {que(g)} | {donde(g)} "
+        lineas.append(f"| {g['severidad'].capitalize()} | {'Sí' if g['cuenta'] else 'No'} | {g['regla']} | {que(g)} | {donde(g)} "
                       f"| {', '.join(g['ids'])} |")
     return "\n".join(lineas)
 
 
 VERIFICACIONES = re.compile(r"\n## Verificaciones automáticas de las decisiones del equipo\n.*?(?=\n## |\n<!-- )", re.S)
-SIMBOLOS = {"CUMPLE": "✅", "NO CUMPLE": "🚫", "NO APLICA": "🔹", "NO DETERMINADO": "🔍"}
 
 
 def verificaciones_en_cumplimiento(texto: str, verificaciones: list[dict]) -> str:
@@ -172,9 +182,9 @@ def verificaciones_en_cumplimiento(texto: str, verificaciones: list[dict]) -> st
         return texto
     no_cumplen = [v["criterio"] for v in verificaciones if v["resultado"] == "NO CUMPLE"]
     lineas = ["", "### Verificaciones automáticas", "",
-              *([f"No cumplen, y están en [Hallazgos](#hallazgos): {', '.join(no_cumplen)}.", ""] if no_cumplen else []),
+              *([f"No cumplen, y están en el [Anexo A](#anexo-a-hallazgos): {', '.join(no_cumplen)}.", ""] if no_cumplen else []),
               "| Regla | Resultado | Motivo |", "|---|---|---|",
-              *(f"| {v['criterio']} | {SIMBOLOS[v['resultado']]} {v['resultado']} | {v['motivo'].replace('|', '/')} |"
+              *(f"| {v['criterio']} | {TEXTO[v['resultado']]} | {v['motivo'].replace('|', '/')} |"
                 for v in verificaciones if v["resultado"] != "NO CUMPLE")]
     nueva = re.sub(r"\n### Verificaciones automáticas\n.*?(?=\n### |\n<!-- )", "", comparacion, flags=re.S)
     nueva = nueva.replace(MARCA_COMPARACION[1], "").rstrip() + "\n" + "\n".join(lineas).rstrip() + "\n" + MARCA_COMPARACION[1]
@@ -184,7 +194,8 @@ def verificaciones_en_cumplimiento(texto: str, verificaciones: list[dict]) -> st
 def limpiar_automatico(texto: str) -> str:
     """Datos técnicos al final: sin la tabla de hallazgos (ya está arriba) y con el error de Sonar en una línea."""
     texto = re.sub(r"\n## Hallazgos automáticos abiertos\n.*?(?=\n## |\n<!-- )", "", texto, flags=re.S)
-    texto = texto.replace("## Datos generales", "## Datos técnicos").replace("| Revisión |", "| Revisión automática |")
+    texto = re.sub(r"^## (Datos generales|Datos técnicos)$", "## Anexo E. Datos técnicos", texto, flags=re.M)
+    texto = re.sub(r"^## Sonar$", "### Sonar", texto, flags=re.M).replace("| Revisión |", "| Revisión automática |")
     def sonar_breve(m: re.Match) -> str:
         motivo = m.group(1)
         if "CERTIFICATE_VERIFY_FAILED" in motivo:
@@ -214,7 +225,7 @@ def componer(raiz: Path, producto: str, repo: str) -> Path:
                                         .get("quality_gate") or {}).get("estado")
     evaluaciones = leer_json(carpeta / str(codigo.get("id")) / "revision" / f"{repo}.json").get("evaluaciones", {}) if codigo else {}
     verificaciones = datos.get("verificaciones") or []
-    texto = reemplazar_bloque(texto, MARCA_RESUMEN, texto_resumen(raiz, producto, repo, rama, registro, revision, evaluaciones,
+    texto = reemplazar_bloque(texto, MARCA_RESUMEN, texto_resumen(raiz, producto, repo, rama, registro, estado, evaluaciones,
                                                                   verificaciones, sonar_estado))
     texto = reemplazar_bloque(texto, MARCA_HALLAZGOS, texto_hallazgos(registro, repo, rama))
     automatico = bloque(texto, MARCA_AUTOMATICO)
@@ -222,11 +233,18 @@ def componer(raiz: Path, producto: str, repo: str) -> Path:
         texto = texto.replace(automatico, limpiar_automatico(automatico))
     texto = verificaciones_en_cumplimiento(texto, verificaciones)
     revision_codigo = bloque(texto, MARCA_REVISION)
-    if revision_codigo and ETIQUETAS not in revision_codigo:
-        nuevo_bloque = revision_codigo.replace("## Revisión de código\n", "## Cómo es hoy (revisión de código)\n\n" + ETIQUETAS + "\n", 1)
+    if revision_codigo:
+        nuevo_bloque = re.sub(r"^## (Revisión de código|Cómo es hoy \(revisión de código\))\n(\n> Cómo leer la evidencia:.*\n)?",
+                              "## Anexo B. Cómo es hoy\n\n" + ETIQUETAS + "\n", revision_codigo, count=1, flags=re.M)
+        nuevo_bloque = re.sub(r"(> Cómo leer la evidencia:.*\n)\n+", r"\1\n", nuevo_bloque)
+        nuevo_bloque = re.sub(r"^## (?!Anexo )", "### ", nuevo_bloque, flags=re.M)
         texto = texto.replace(revision_codigo, nuevo_bloque)
+    comparacion = bloque(texto, MARCA_COMPARACION)
+    if comparacion:
+        texto = texto.replace(comparacion, comparacion.replace("## Componentes\n", "## Anexo C. Componentes\n").replace(
+            "## Detalle del cumplimiento\n", "## Anexo D. Cumplimiento regla por regla\n"))
     texto = re.sub(r"^> Revisión `[^`]+` sobre el commit `[^`]+`\.\n\n?", "", texto, flags=re.M)  # el commit ya está en Datos técnicos
     partes = [b for marcas in ORDEN if (b := bloque(texto, marcas))]
     archivo.parent.mkdir(parents=True, exist_ok=True)
-    archivo.write_text(f"# {repo}\n\n" + "\n\n".join(partes) + "\n", encoding="utf-8")
+    archivo.write_text(f"# {repo} · Revisión de arquitectura\n\n" + "\n\n".join(partes) + "\n", encoding="utf-8")
     return archivo
